@@ -1,16 +1,23 @@
 body {
-  margin: 0;
+  /* margin: 0;
   padding: 0;
   display: flex;
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  font-family: "Jost", sans-serif;
+  font-family: "Jost", sans-serif; */
   background: linear-gradient(to bottom, #0f0c29, #302b63, #24243e);
 }
+.auth_container {
+  display: flex;
+  justify-content: space-around;
+  padding-top: 7rem;
+  padding-bottom: 5rem;
+}
+
 .main {
-  width: 350px;
-  height: 500px;
+  width: 500px;
+  height: 600px;
   background: red;
   overflow: hidden;
   background: url("https://doc-08-2c-docs.googleusercontent.com/docs/securesc/68c90smiglihng9534mvqmq1946dmis5/fo0picsp1nhiucmc0l25s29respgpr4j/1631524275000/03522360960922298374/03522360960922298374/1Sx0jhdpEpnNIydS4rnN4kHSJtU1EyWka?e=view&authuser=0&nonce=gcrocepgbb17m&user=03522360960922298374&hash=tfhgbs86ka6divo3llbvp93mg4csvb38")
@@ -37,8 +44,8 @@ label {
   transition: 0.5s ease-in-out;
 }
 input {
-  width: 60%;
-  height: 20px;
+  width: 70%;
+  height: 40px;
   background: #e0dede;
   justify-content: center;
   display: flex;
@@ -49,7 +56,7 @@ input {
   border-radius: 5px;
 }
 button {
-  width: 60%;
+  width: 70%;
   height: 40px;
   margin: 10px auto;
   justify-content: center;
@@ -81,7 +88,7 @@ button:hover {
 }
 
 #chk:checked ~ .login {
-  transform: translateY(-500px);
+  transform: translateY(-600px);
 }
 #chk:checked ~ .login label {
   transform: scale(1);
