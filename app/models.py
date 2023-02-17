@@ -35,6 +35,7 @@ class Users(db.Model, TimestampMixin, UserMixin):
     first_name = db.Column(db.String(50), nullable=False)
     last_name = db.Column(db.String(50), nullable=False)
     email = db.Column(db.String(100), nullable=False)
+    phone_no = db.Column(db.String(20))
     password_hash = db.Column(db.String(128), nullable=False)
     
     # generate user password i.e. hashing

@@ -20,6 +20,14 @@
       rel="apple-touch-icon"
     />
 
+    <!-- Bootstrap
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+      integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC"
+      crossorigin="anonymous"
+    /> -->
+
     <!-- Google Fonts -->
     <link
       href="https://fonts.googleapis.com/css?family=Open+Sans:300,300i,400,400i,600,600i,700,700i|Raleway:300,300i,400,400i,500,500i,600,600i,700,700i|Poppins:300,300i,400,400i,500,500i,600,600i,700,700i"
@@ -52,6 +60,26 @@
       href="../static/assets/vendor/swiper/swiper-bundle.min.css"
       rel="stylesheet"
     />
+
+    <!-- NiceAdmin files  -->
+    <!-- <link
+      href="../static/niceadmin/vendor/quill/quill.snow.css"
+      rel="stylesheet"
+    />
+    <link
+      href="../static/niceadmin/vendor/quill/quill.bubble.css"
+      rel="stylesheet"
+    />
+    <link
+      href="../static/niceadmin/vendor/simple-datatables/style.css"
+      rel="stylesheet"
+    /> -->
+
+    {% if request.endpoint == "main.profile" %}
+    <link href="../static/niceadmin/css/style.css" rel="stylesheet" />
+    {% endif %} {% if request.endpoint == "main.profile" %}
+    <link href="../static/niceadmin/css/style.css" rel="stylesheet" />
+    {% endif %}
 
     <!-- Template Main CSS File -->
     <link href="../static/assets/css/style.css" rel="stylesheet" />
@@ -128,30 +156,23 @@
                 >Pricing</a
               >
             </li>
+            {% if current_user.is_active %}
             <li class="dropdown">
               <a href="#"
-                ><span>Drop Down</span> <i class="bi bi-chevron-down"></i
+                ><span>{{ current_user.display_name() }}</span>
+                <i class="bi bi-chevron-down"></i
               ></a>
               <ul>
-                <li><a href="#">Drop Down 1</a></li>
-                <li class="dropdown">
-                  <a href="#"
-                    ><span>Deep Drop Down</span>
-                    <i class="bi bi-chevron-right"></i
-                  ></a>
-                  <ul>
-                    <li><a href="#">Deep Drop Down 1</a></li>
-                    <li><a href="#">Deep Drop Down 2</a></li>
-                    <li><a href="#">Deep Drop Down 3</a></li>
-                    <li><a href="#">Deep Drop Down 4</a></li>
-                    <li><a href="#">Deep Drop Down 5</a></li>
-                  </ul>
+                <li><a href="{{ url_for('main.profile') }}">My Profile</a></li>
+                <li>
+                  <a href="{{ url_for('main.profile') }}?settings=True"
+                    >Account Settings</a
+                  >
                 </li>
-                <li><a href="#">Drop Down 2</a></li>
-                <li><a href="#">Drop Down 3</a></li>
-                <li><a href="#">Drop Down 4</a></li>
+                <li><a href="{{ url_for('auth.logout') }}">Sign Out</a></li>
               </ul>
             </li>
+            {% endif %} {% if not current_user.is_active %}
             <li>
               <a class="nav-link scrollto" href="{{ url_for('auth.login') }}"
                 >Login</a
@@ -164,6 +185,7 @@
                 >Get Started</a
               >
             </li>
+            {% endif %}
           </ul>
           <i class="bi bi-list mobile-nav-toggle"></i>
         </nav>
@@ -173,8 +195,38 @@
     <!-- End Header -->
 
     <div class="row">
-      {# application content needs to be provided in the app_content block #} {%
-      block app_content %}{% endblock %}
+      {# application content needs to be provided in the app_content block #}
+      <!-- Alerts -->
+      {% block alert_content %} {% with messages =
+      get_flashed_messages(with_categories=true) %} {% if messages %}
+
+      <!-- Position it: -->
+      <!-- - `.toast-container` for spacing between toasts -->
+      <!-- - `.position-absolute`, `top-0` & `end-0` to position the toasts in the upper right corner -->
+      <!-- - `.p-3` to prevent the toasts from sticking to the edge of the container  -->
+      <div class="toast-container position-absolute top-0 end-0 p-3">
+        {% for category, message in messages %}
+        <div
+          class="toast align-items-center text-white {% if category == 'message' %} bg-info {% else %} bg-{{ category }} {% endif %} border-0"
+          role="alert"
+          aria-live="assertive"
+          aria-atomic="true"
+        >
+          <div class="d-flex">
+            <div class="toast-body">{{ message }}</div>
+            <button
+              type="button"
+              class="btn-close btn-close-white me-2 m-auto"
+              data-bs-dismiss="toast"
+              aria-label="Close"
+            ></button>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+
+      {% endif %} {% endwith %} {% endblock %} {% block app_content %} {%
+      endblock %}
     </div>
 
     <!-- ======= Footer ======= -->
@@ -291,6 +343,13 @@
       class="back-to-top d-flex align-items-center justify-content-center"
       ><i class="bi bi-arrow-up-short"></i
     ></a>
+
+    <!-- Bootstrap -->
+    <!-- <script
+      src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"
+      integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM"
+      crossorigin="anonymous"
+    ></script> -->
 
     <!-- Vendor JS Files -->
     <script src="../static/assets/vendor/purecounter/purecounter_vanilla.js"></script>

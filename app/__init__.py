@@ -16,7 +16,7 @@ def create_app(config=Config):
 
     from app.main.routes import main
     from app.auth.routes import auth
-    from app.errors import errors
+    from app.errors.handlers import errors
 
     app.register_blueprint(main)
     app.register_blueprint(auth)

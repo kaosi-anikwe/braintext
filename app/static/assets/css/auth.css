@@ -13,6 +13,7 @@ body {
   justify-content: space-around;
   padding-top: 7rem;
   padding-bottom: 5rem;
+  transition: all 0.3s;
 }
 
 .main {
