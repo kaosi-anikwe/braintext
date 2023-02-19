@@ -83,6 +83,7 @@
     return new bootstrap.Toast(toastEl);
   });
   toastList.forEach((toast) => toast.show());
+
   /**
    * Toggle .header-scrolled class to #header when page is scrolled
    */
