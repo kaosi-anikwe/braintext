@@ -1,11 +1,23 @@
 import jwt
 import time
 import uuid
+import math
+import random
 from app import db, login_manager
 from datetime import datetime
 from flask import current_app
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
+
+
+# generate 6 digit OTP
+def get_otp() -> int:
+    digits = "0123456789"
+    otp = ""
+    for i in range(6):
+        otp += digits[math.floor(random.random() * 10)]
+    return int(otp)
+
 
 # timestamp to be inherited by other class models
 class TimestampMixin(object):
@@ -35,6 +47,7 @@ class Users(db.Model, TimestampMixin, UserMixin):
     first_name = db.Column(db.String(50), nullable=False)
     last_name = db.Column(db.String(50), nullable=False)
     email = db.Column(db.String(100), nullable=False)
+    account_type = db.Column(db.String(20), default="Basic")
     phone_no = db.Column(db.String(20))
     password_hash = db.Column(db.String(128), nullable=False)
     
@@ -87,3 +100,27 @@ class Users(db.Model, TimestampMixin, UserMixin):
         db.session.delete(self)
         db.session.commit()
 
+
+class OTP(db.Model, TimestampMixin):
+    __tablename__ = "otp"
+
+    id = db.Column(db.Integer, primary_key=True)
+    otp = db.Column(db.Integer, nullable=False)
+    phone_no = db.Column(db.String(20), nullable=False)
+    verified = db.Column(db.Boolean, default=False)
+    expired = db.Column(db.Boolean, default=False)
+
+    def __init__(self, phone_no) -> None:
+        self.otp = get_otp()
+        self.phone_no = phone_no
+
+    def update(self):
+        db.session.commit()
+
+    def insert(self):
+        db.session.add(self)
+        db.session.commit()
+
+    def delete(self):
+        db.session.delete(self)
+        db.session.commit()

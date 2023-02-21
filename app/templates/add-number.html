@@ -1,4 +1,8 @@
 {% extends "base.html" %} {% block app_content %}
+<link
+  rel="stylesheet"
+  href="{{ url_for('static', filename='assets/css/add_number.css') }}"
+/>
 <main id="main" class="main">
   <div class="center-title">
     <div class="pagetitle">
@@ -7,7 +11,8 @@
   </div>
   <!-- End Page Title -->
   <section class="section">
-    <div class="row">
+    <!-- Add Number section -->
+    <div class="row" id="add-number-row">
       <div class="centralize">
         <div class="col-lg-6">
           <div class="card">
@@ -19,12 +24,6 @@
               <!-- Vertical Form -->
               <form class="row g-3" id="number-form">
                 <div class="col-12">
-                  <!-- <label
-                    for="whatsapp-phone"
-                    style="display: block"
-                    class="form-label"
-                    >Number</label
-                  > -->
                   <input
                     id="whatsapp-phone"
                     type="tel"
@@ -50,9 +49,121 @@
         </div>
       </div>
     </div>
+    <!-- Verify Number section -->
+    <div class="row" id="verify-otp-row" hidden>
+      <div class="centralize">
+        <div class="col-lg-6">
+          <div class="card">
+            <div class="card-body">
+              <h5 id="enter-code" class="card-title" style="padding: 1rem 0">
+                Enter verification code sent to +2349016456964
+              </h5>
+              <h6 id="invalid" hidden class="card-title" style="color: red">
+                Invalid code.
+              </h6>
+              <h6 id="expired" hidden class="card-title" style="color: red">
+                OTP has expired, please request another.
+              </h6>
+              <!-- Vertical Form -->
+              <form class="row g-3" id="verify-otp-form">
+                <div
+                  style="padding-right: 5rem; padding-left: 5rem"
+                  class="ap-otp-inputs"
+                  data-username="otibij"
+                  data-channel="email"
+                  data-nonce="0-8bf87e338f"
+                  data-length="6"
+                  data-form="registration"
+                >
+                  <input
+                    class="ap-otp-input"
+                    type="tel"
+                    maxlength="1"
+                    data-index="0"
+                  /><input
+                    class="ap-otp-input"
+                    type="tel"
+                    maxlength="1"
+                    data-index="1"
+                  /><input
+                    class="ap-otp-input"
+                    type="tel"
+                    maxlength="1"
+                    data-index="2"
+                  /><input
+                    class="ap-otp-input"
+                    type="tel"
+                    maxlength="1"
+                    data-index="3"
+                  /><input
+                    class="ap-otp-input"
+                    type="tel"
+                    maxlength="1"
+                    data-index="4"
+                  /><input
+                    class="ap-otp-input"
+                    type="tel"
+                    maxlength="1"
+                    data-index="5"
+                  />
+                </div>
+                <div class="container" style="padding-top: 1rem">
+                  <div
+                    class="centralize"
+                    style="justify-content: space-between"
+                  >
+                    <a
+                      id="resend-btn"
+                      class="card-title"
+                      style="padding: 0 0 0 1rem; cursor: pointer"
+                    >
+                      Resend OTP
+                    </a>
+                    <a
+                      id="change-number"
+                      class="card-title"
+                      style="cursor: pointer"
+                    >
+                      Not your number? Change number
+                    </a>
+                  </div>
+                </div>
+
+                <div class="text-center">
+                  <button type="submit" class="btn btn-primary">Submit</button>
+                </div>
+              </form>
+              <!-- Vertical Form -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </section>
 </main>
+<div class="position-absolute top-0 end-0 p-3">
+  <div
+    class="align-items-center text-white bg-success border-0"
+    id="resent-toast"
+    role="alert"
+    aria-live="assertive"
+    aria-atomic="true"
+  >
+    <div class="d-flex">
+      <div class="toast-body">OTP Resent. Check your inbox.</div>
+      <button
+        type="button"
+        class="btn-close btn-close-white me-2 m-auto"
+        data-bs-dismiss="toast"
+        aria-label="Close"
+      ></button>
+    </div>
+  </div>
+</div>
+
 <!-- End #main -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.8/js/intlTelInput.min.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.3/jquery.min.js"></script>
 <script src="{{ url_for('static', filename='assets/js/add_number.js') }}"></script>
+
 {% endblock %}

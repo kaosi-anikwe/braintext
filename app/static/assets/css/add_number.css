@@ -1,0 +1,15 @@
+.ap-otp-input {
+  border: 3px solid #ebebeb;
+  border-radius: 18px;
+  width: 15%;
+  height: 100%;
+  margin: 4px;
+  text-align: center;
+  font-size: 35px;
+}
+
+.ap-otp-input:focus {
+  outline: none !important;
+  border: 3px solid #1f6feb;
+  transition: 0.12s ease-in;
+}

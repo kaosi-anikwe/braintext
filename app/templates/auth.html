@@ -47,8 +47,8 @@
 
 {% if login %}
 <script>
-  const loginLabel = document.getElementById("login-button");
-  loginLabel.click();
+  loginLabel = document.getElementById("login-button");
+  window.onload = loginLabel.click();
 </script>
 {% endif %}
 

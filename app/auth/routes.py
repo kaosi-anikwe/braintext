@@ -21,12 +21,14 @@ def login():
             return redirect(url_for("auth.login"))
 
         login_user(user)
+
         next_page = request.args.get('next')
         if not next_page or url_parse(next_page).netloc != '':
-            next_page = url_for("main.profile")
-        
-        flash("You are now logged in.", "success")
+            next_page = url_for('main.profile')
+        flash("You are now signed in!", "success")
+
         return redirect(next_page)
+
 
 @auth.route("/register", methods=["GET", "POST"])
 def register():
@@ -40,6 +42,11 @@ def register():
         last_name = request.form.get("lastname")
         email = request.form.get("email")
         password = request.form.get("password")
+
+        check = Users.query.filter(Users.email == email).first()
+        if check:
+            flash("An account already exists with this email. Please use a different email to sign up", "danger")
+            return redirect(url_for("auth.register"))
 
         new_user = Users(first_name, last_name, email, password)
         new_user.insert()
