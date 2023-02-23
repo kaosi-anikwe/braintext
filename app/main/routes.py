@@ -1,12 +1,11 @@
 import os
+import time
 from datetime import datetime
 from twilio.rest import Client
-from dotenv import load_dotenv
 from app.models import OTP, get_otp
 from flask_login import login_required, current_user
 from flask import Blueprint, render_template, request, flash, jsonify, redirect, url_for
 
-load_dotenv()
 
 def send_otp_message(otp: int, phone_no: str) -> str:
     message = client.messages.create(body=f'Here is your OTP for verifying your number on BrainText. {otp} \nIt will expire in 3 minutes.', from_='+14706196055', to=f'{phone_no}')
@@ -82,25 +81,19 @@ def verify_otp():
     phone_no = data["phone_no"]
 
     check_otp = OTP.query.filter(OTP.phone_no == phone_no, OTP.verified == False).one_or_none()
-    # if check_otp.updated_at:
-    #     if (datetime.now() - check_otp.updated_at) >= 180:
-    #         print((datetime.now() - check_otp.updated_at), "updated")
-    #         check_otp.expired = True
-    #         check_otp.update()
+    if check_otp.updated_at:
+        if int((datetime.utcnow() - check_otp.updated_at).total_seconds()) >= 180:
 
-    #         return jsonify({"expired": True})
-    # elif check_otp.created_at:
-    #     if (datetime.now() - check_otp.created_at) >= 180:
-    #         print((datetime.now() - check_otp.created_at), "created")
-    #         check_otp.expired = True
-    #         check_otp.update()
+            return jsonify({"expired": True})
+    elif check_otp.created_at:
+        if int((datetime.utcnow() - check_otp.created_at).total_seconds()) >= 180:
 
-    #         return jsonify({"expired": True})
-    
-    print((datetime.now() - check_otp.created_at).seconds, "default")
-    print((datetime.now() - check_otp.updated_at).seconds, "default")
-    # current_user.phone_no = phone_no
-    # current_user.update()
+            return jsonify({"expired": True})
+
+    current_user.phone_no = phone_no
+    current_user.update()
+    check_otp.verified = True
+    check_otp.update()
     flash("Phone number updated successfully", "success")
     return redirect(url_for("main.profile"))
 

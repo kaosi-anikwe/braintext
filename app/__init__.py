@@ -1,7 +1,10 @@
 from flask import Flask
 from flask_login import LoginManager
 from config import Config
+from dotenv import load_dotenv
 from flask_sqlalchemy import SQLAlchemy
+
+load_dotenv()
 
 db = SQLAlchemy()
 login_manager = LoginManager()

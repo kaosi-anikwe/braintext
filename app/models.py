@@ -105,10 +105,9 @@ class OTP(db.Model, TimestampMixin):
     __tablename__ = "otp"
 
     id = db.Column(db.Integer, primary_key=True)
-    otp = db.Column(db.Integer, nullable=False)
     phone_no = db.Column(db.String(20), nullable=False)
+    otp = db.Column(db.Integer, nullable=False)
     verified = db.Column(db.Boolean, default=False)
-    expired = db.Column(db.Boolean, default=False)
 
     def __init__(self, phone_no) -> None:
         self.otp = get_otp()
