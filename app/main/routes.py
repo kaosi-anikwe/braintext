@@ -32,6 +32,7 @@ def profile():
     settings = True if request.args.get("settings") else False
     return render_template("profile.html", settings=settings)
 
+# OTP and Verification ---------------------------------
 @main.route("/verify")
 @login_required
 def add_number():
@@ -97,4 +98,9 @@ def verify_otp():
     flash("Phone number updated successfully", "success")
     return redirect(url_for("main.profile"))
 
+# Checkout --------------------------------------
+# TODO: Make seperate blueprint to improve security
+@main.route("/checkout")
+def checkout():
+    return render_template("checkout.html")
     

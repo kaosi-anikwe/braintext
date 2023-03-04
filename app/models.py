@@ -16,6 +16,8 @@ def get_otp() -> int:
     otp = ""
     for i in range(6):
         otp += digits[math.floor(random.random() * 10)]
+    if otp.startswith("0"):
+        return get_otp()
     return int(otp)
 
 
