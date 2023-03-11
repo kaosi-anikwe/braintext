@@ -1,3 +1,7 @@
 env
-__pycache__
+__pycache__/
+*.pyc
 .env
+app/auth/__pycache__/__init__.cpython-310.pyc
+app/auth/__pycache__/routes.cpython-310.pyc
+gunicorn_command.txt

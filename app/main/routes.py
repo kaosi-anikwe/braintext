@@ -8,7 +8,10 @@ from flask import Blueprint, render_template, request, flash, jsonify, redirect,
 
 
 def send_otp_message(otp: int, phone_no: str) -> str:
-    message = client.messages.create(body=f'Here is your OTP for verifying your number on BrainText. {otp} \nIt will expire in 3 minutes.', from_='+14706196055', to=f'{phone_no}')
+    message = client.messages.create(
+        body=f'Here is your OTP for verifying your number on BrainText. {otp} \nIt will expire in 3 minutes.', 
+        from_='whatsapp:+15076094633', to=f'whatsapp:{phone_no}'
+    )
     print(message.sid)
     return message.sid
 
@@ -28,7 +31,6 @@ def index():
 @main.route("/profile")
 @login_required
 def profile():
-    print(current_user.phone_no)
     settings = True if request.args.get("settings") else False
     return render_template("profile.html", settings=settings)
 

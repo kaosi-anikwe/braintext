@@ -1,5 +1,4 @@
 from app.models import Users
-from werkzeug.urls import url_parse
 from flask_login import login_user, current_user, logout_user
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 
@@ -23,11 +22,11 @@ def login():
         login_user(user)
 
         next_page = request.args.get('next')
-        if not next_page or url_parse(next_page).netloc != '':
-            next_page = url_for('main.profile')
+        if next_page:
+            flash("You are now signed in!", "success")
+            return redirect(next_page)
         flash("You are now signed in!", "success")
-
-        return redirect(next_page)
+        return redirect(url_for("main.profile"))
 
 
 @auth.route("/register", methods=["GET", "POST"])

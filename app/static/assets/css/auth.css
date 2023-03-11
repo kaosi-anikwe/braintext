@@ -22,7 +22,7 @@ body {
   height: 600px;
   background: red;
   overflow: hidden;
-  background: linear-gradient(to bottom, #124265, #2487ce);
+  background: linear-gradient(to bottom, #2487ce, #124265);
   border-radius: 10px;
   box-shadow: 5px 20px 50px #000;
 }
@@ -76,7 +76,7 @@ button {
 button:hover {
   background: #2690db;
 }
-#sign-up-button {
+/* #sign-up-button {
   width: 70%;
   height: 40px;
   margin: 10px auto;
@@ -95,7 +95,7 @@ button:hover {
 }
 #sign-up-button:hover {
   background: #15507a;
-}
+} */
 .login {
   height: 460px;
   background: #eee;

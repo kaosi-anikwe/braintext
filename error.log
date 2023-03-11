@@ -1,0 +1,52 @@
+[2023-03-11 08:15:46 +0000] [11816] [INFO] Handling signal: term
+[2023-03-11 08:15:46 +0000] [11818] [INFO] Worker exiting (pid: 11818)
+[2023-03-11 08:15:46 +0000] [11816] [INFO] Shutting down: Master
+[2023-03-11 08:17:12 +0000] [161461] [INFO] Starting gunicorn 20.1.0
+[2023-03-11 08:17:12 +0000] [161461] [INFO] Listening at: http://0.0.0.0:5000 (161461)
+[2023-03-11 08:17:12 +0000] [161461] [INFO] Using worker: sync
+[2023-03-11 08:17:12 +0000] [161463] [INFO] Booting worker with pid: 161463
+[2023-03-11 08:20:45 +0000] [161461] [INFO] Handling signal: term
+[2023-03-11 08:20:45 +0000] [161463] [INFO] Worker exiting (pid: 161463)
+[2023-03-11 08:20:45 +0000] [161461] [INFO] Shutting down: Master
+[2023-03-11 08:22:01 +0000] [161871] [INFO] Starting gunicorn 20.1.0
+[2023-03-11 08:22:01 +0000] [161871] [INFO] Listening at: http://0.0.0.0:5000 (161871)
+[2023-03-11 08:22:01 +0000] [161871] [INFO] Using worker: sync
+[2023-03-11 08:22:01 +0000] [161873] [INFO] Booting worker with pid: 161873
+None
+[2023-03-11 08:25:04,206] ERROR in app: Exception on /send-otp [POST]
+Traceback (most recent call last):
+  File "/home/braintext/website/env/lib/python3.10/site-packages/flask/app.py", line 2525, in wsgi_app
+    response = self.full_dispatch_request()
+  File "/home/braintext/website/env/lib/python3.10/site-packages/flask/app.py", line 1822, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "/home/braintext/website/env/lib/python3.10/site-packages/flask/app.py", line 1820, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "/home/braintext/website/env/lib/python3.10/site-packages/flask/app.py", line 1796, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)
+  File "/home/braintext/website/env/lib/python3.10/site-packages/flask_login/utils.py", line 290, in decorated_view
+    return current_app.ensure_sync(func)(*args, **kwargs)
+  File "/home/braintext/website/app/main/routes.py", line 60, in send_otp
+    send_otp_message(otp.otp, phone_no)
+  File "/home/braintext/website/app/main/routes.py", line 11, in send_otp_message
+    message = client.messages.create(
+  File "/home/braintext/website/env/lib/python3.10/site-packages/twilio/rest/api/v2010/account/message/__init__.py", line 103, in create
+    payload = self._version.create(method='POST', uri=self._uri, data=data, )
+  File "/home/braintext/website/env/lib/python3.10/site-packages/twilio/base/version.py", line 205, in create
+    raise self.exception(method, uri, response, 'Unable to create record')
+twilio.base.exceptions.TwilioRestException: HTTP 401 error: Unable to create record: Authenticate
+[2023-03-11 08:26:34 +0000] [161871] [INFO] Handling signal: term
+[2023-03-11 08:26:34 +0000] [161873] [INFO] Worker exiting (pid: 161873)
+[2023-03-11 08:26:34 +0000] [161871] [INFO] Shutting down: Master
+[2023-03-11 08:28:06 +0000] [162463] [INFO] Starting gunicorn 20.1.0
+[2023-03-11 08:28:06 +0000] [162463] [INFO] Listening at: http://0.0.0.0:5000 (162463)
+[2023-03-11 08:28:06 +0000] [162463] [INFO] Using worker: sync
+[2023-03-11 08:28:06 +0000] [162465] [INFO] Booting worker with pid: 162465
+[2023-03-11 08:32:31 +0000] [162463] [INFO] Handling signal: term
+[2023-03-11 08:32:31 +0000] [162465] [INFO] Worker exiting (pid: 162465)
+[2023-03-11 08:32:31 +0000] [162463] [INFO] Shutting down: Master
+[2023-03-11 08:32:43 +0000] [162656] [INFO] Starting gunicorn 20.1.0
+[2023-03-11 08:32:43 +0000] [162656] [INFO] Listening at: http://0.0.0.0:5000 (162656)
+[2023-03-11 08:32:43 +0000] [162656] [INFO] Using worker: sync
+[2023-03-11 08:32:43 +0000] [162658] [INFO] Booting worker with pid: 162658
+SM053156c14b53d2023f5c4fa30415d9f1
+SM1c09574990507f5e4f42862106e69086
