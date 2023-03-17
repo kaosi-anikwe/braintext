@@ -1,5 +1,4 @@
 import os
-import time
 from datetime import datetime
 from twilio.rest import Client
 from app.models import OTP, get_otp
@@ -25,22 +24,24 @@ main = Blueprint("main", __name__)
 # Index ---------------------------------------------
 @main.route("/")
 def index():
-    return render_template("index.html")
+    return render_template("main/index.html")
 
 # User Account -----------------------------------------
 @main.route("/profile")
 @login_required
 def profile():
     settings = True if request.args.get("settings") else False
-    return render_template("profile.html", settings=settings)
+    return render_template("main/profile.html", settings=settings)
 
-# OTP and Verification ---------------------------------
+# OTP AND VERIFICATION ---------------------------------
+# Verify OTP page
 @main.route("/verify")
 @login_required
 def add_number():
-    return render_template("add-number.html")
+    return render_template("auth/add-number.html")
 
 
+# Send OTP
 @main.route("/send-otp", methods=["POST"])
 @login_required
 def send_otp():
@@ -61,7 +62,7 @@ def send_otp():
 
     return jsonify({"otp": otp.otp})
 
-
+# Resend OTP
 @main.route("/resend-otp", methods=["POST"])
 @login_required
 def resend_otp():
@@ -76,7 +77,7 @@ def resend_otp():
 
         return jsonify({"otp": check_otp.otp})
 
-
+# Veriry OTP
 @main.route("/verify-otp", methods=["POST"])
 @login_required
 def verify_otp():
@@ -100,9 +101,3 @@ def verify_otp():
     flash("Phone number updated successfully", "success")
     return redirect(url_for("main.profile"))
 
-# Checkout --------------------------------------
-# TODO: Make seperate blueprint to improve security
-@main.route("/checkout")
-def checkout():
-    return render_template("checkout.html")
-    

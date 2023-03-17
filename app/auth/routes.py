@@ -9,7 +9,7 @@ def login():
     if request.method == "GET":
         if current_user.is_authenticated:
             return redirect(url_for("main.profile"))
-        return render_template("auth.html", title="Login", login=True)
+        return render_template("auth/auth.html", title="Login", login=True)
     else:
         email = request.form.get("email")
         password = request.form.get("password")
@@ -34,7 +34,7 @@ def register():
     if request.method == "GET":
         if current_user.is_authenticated:
             return redirect(url_for("main.profile"))
-        return render_template("auth.html", title="Sign up")
+        return render_template("auth/auth.html", title="Sign up")
 
     else:
         first_name = request.form.get("firstname")

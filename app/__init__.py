@@ -20,9 +20,11 @@ def create_app(config=Config):
     from app.main.routes import main
     from app.auth.routes import auth
     from app.errors.handlers import errors
+    from app.payment.routes import payment
 
     app.register_blueprint(main)
     app.register_blueprint(auth)
     app.register_blueprint(errors)
+    app.register_blueprint(payment)
 
     return app
