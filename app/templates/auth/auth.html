@@ -30,9 +30,21 @@
         <input
           type="password"
           name="password"
+          id="password"
           placeholder="Password"
           required=""
         />
+        <div class="errors">
+          <small id="number" style="display: none" class="form-text"
+            >Password must contain at least 1 number.</small
+          >
+          <small id="too_short" style="display: none" class="form-text"
+            >Password must be 8-32 characters long.</small
+          >
+          <small id="special" style="display: none" class="form-text"
+            >Password must contain at least 1 special character.</small
+          >
+        </div>
         <button id="sign-up-button">Sign up</button>
       </form>
     </div>

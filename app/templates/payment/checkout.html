@@ -79,14 +79,15 @@
               <input id="tx_ref" type="hidden" name="tx_ref" value="{{ package }}-{{ current_user.uid }}" />
               <input id="tx_amount" type="hidden" name="amount" value="3400" />
               <input type="hidden" name="currency" value="NGN" />
+              <input type="hidden" id="payment_plan" name="payment_plan" value="34260" />
               <input
                 type="hidden"
                 name="redirect_url"
                 value="https://braintext.io/verify-payment"
               />
-              <input id="user_id" type="text" value="{{ current_user.uid }}" hidden>
+              <input name="user_id" id="user_id" type="text" value="{{ current_user.uid }}" hidden>
               <div class="text-center">
-                <button type="submit" class="btn btn-primary">Submit</button>
+                <button type="submit" id="flw-form-btn" class="btn btn-primary">Submit</button>
               </div>
             </form>
             <!-- Vertical Form -->

@@ -18,6 +18,9 @@ if (phoneInputField) {
 const numberForm = document.getElementById("number-form");
 numberForm.onsubmit = (e) => {
   e.preventDefault();
+  const submitBtn = document.getElementById("verify-otp-submit-btn");
+  submitBtn.classList.toggle("running");
+  submitBtn.disabled = true;
   phoneNumber = phoneInput.getNumber();
   dialCode = phoneInput.s.dialCode;
   // Send OTP
@@ -26,12 +29,34 @@ numberForm.onsubmit = (e) => {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        "X-CSRFToken": csrfToken,
       },
       body: JSON.stringify({ phone_no: phoneNumber }),
     });
-    let data = await response.json();
-    console.log(data["otp"]);
-    pin = parseInt(data["otp"]);
+    if (response.ok) {
+      submitBtn.classList.toggle("running");
+      submitBtn.disabled = false;
+      let data = await response.json();
+      if (data.error) {
+        // show a different toast
+        let toastItem = document.querySelector("#error-toast");
+        toastItem.hidden = false;
+        toastItem.classList.add("toast");
+        toastItem.parentElement.classList.add("toast-container");
+        let toast = new bootstrap.Toast(toastItem);
+        toast.show();
+      } else {
+        console.log(data.otp);
+        pin = parseInt(data.otp);
+        // Show toast
+        let toastItem = document.querySelector("#resent-toast");
+        toastItem.hidden = false;
+        toastItem.classList.add("toast");
+        toastItem.parentElement.classList.add("toast-container");
+        let toast = new bootstrap.Toast(toastItem);
+        toast.show();
+      }
+    }
   })();
 
   // Hide digits of number
@@ -86,6 +111,8 @@ const expired = document.getElementById("expired");
 // Resend OTP
 if (resendOTP) {
   resendOTP.addEventListener("click", () => {
+    resendOTP.parentElement.classList.toggle("running");
+    resendOTP.style.cursor = "default";
     invalid.hidden = true;
     expired.hidden = true;
     const numbers = document.querySelectorAll(".ap-otp-input");
@@ -98,18 +125,23 @@ if (resendOTP) {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "X-CSRFToken": csrfToken,
         },
         body: JSON.stringify({ phone_no: phoneNumber }),
       });
-      let data = await response.json();
-      console.log(data["otp"]);
-      pin = parseInt(data["otp"]);
-      // Show toast
-      var toastItem = document.querySelector("#resent-toast");
-      toastItem.classList.add("toast");
-      toastItem.parentElement.classList.add("toast-container");
-      var toast = new bootstrap.Toast(toastItem);
-      toast.show();
+      if (response.ok) {
+        resendOTP.parentElement.classList.toggle("running");
+        resendOTP.style.cursor = "pointer";
+        let data = await response.json();
+        console.log(data["otp"]);
+        pin = parseInt(data["otp"]);
+        // Show toast
+        var toastItem = document.querySelector("#resent-toast");
+        toastItem.classList.add("toast");
+        toastItem.parentElement.classList.add("toast-container");
+        var toast = new bootstrap.Toast(toastItem);
+        toast.show();
+      }
     })();
   });
 }
@@ -124,6 +156,9 @@ changeNumber.addEventListener("click", () => {
 // Get & verify OTP submitted
 const verifyForm = document.getElementById("verify-otp-form");
 verifyForm.onsubmit = async (e) => {
+  const submitBtn = document.getElementById("verify-otp-submit-btn");
+  submitBtn.classList.toggle("running");
+  submitBtn.disabled = true;
   e.preventDefault();
   const numbers = document.querySelectorAll(".ap-otp-input");
   let getOtp = "";
@@ -137,6 +172,7 @@ verifyForm.onsubmit = async (e) => {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        "X-CSRFToken": csrfToken,
       },
       body: JSON.stringify({ phone_no: phoneNumber }),
     });
@@ -146,7 +182,12 @@ verifyForm.onsubmit = async (e) => {
       let data = await response.json();
       if (data.expired) {
         expired.hidden = false;
+        submitBtn.classList.toggle("running");
+        submitBtn.disabled = false;
       }
     }
+  } else {
+    submitBtn.classList.toggle("running");
+    submitBtn.disabled = false;
   }
 };

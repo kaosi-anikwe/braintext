@@ -117,6 +117,7 @@ class OTP(db.Model, TimestampMixin, DatabaseHelperMixin):
     def __init__(self, phone_no) -> None:
         self.otp = get_otp()
         self.phone_no = phone_no
+        self.verified = False
 
 
 # Subscription Types
@@ -176,6 +177,7 @@ class StandardSubscription(db.Model, TimestampMixin, DatabaseHelperMixin):
 
     id = db.Column(db.Integer, primary_key=True)
     tx_ref = db.Column(db.String(100), nullable=False)
+    tx_id = db.Column(db.String(100))
     flw_ref = db.Column(db.String(100))
     payment_status = db.Column(db.String(20))
     sub_status = db.Column(db.String(20))
@@ -209,6 +211,7 @@ class PremiumSubscription(db.Model, TimestampMixin, DatabaseHelperMixin):
 
     id = db.Column(db.Integer, primary_key=True)
     tx_ref = db.Column(db.String(100), nullable=False)
+    tx_id = db.Column(db.String(100))
     flw_ref = db.Column(db.String(100))
     payment_status = db.Column(db.String(20))
     sub_status = db.Column(db.String(20))

@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from flask import Blueprint, request, render_template, redirect, url_for, jsonify, flash
 from flask_login import login_required, current_user
-from app.models import StandardSubscription, PremiumSubscription
+from app.models import StandardSubscription, PremiumSubscription, Users
 
 payment = Blueprint("payment", __name__)
 
@@ -36,7 +36,7 @@ def checkout(package):
     elif check_standard:
         tx_id = check_standard.tx_ref.replace("stnrd-", "")
     elif check_premium:
-        tx_id = check_standard.tx_ref.replace("prmum-", "")
+        tx_id = check_premium.tx_ref.replace("prmum-", "")
     return render_template("payment/checkout.html", package=package, tx_id=tx_id)
 
 
@@ -117,6 +117,7 @@ def payment_callback():
                     subscription.flw_ref = flw_ref
                     subscription.payment_status = "completed"
                     subscription.sub_status = "active"
+                    subscription.tx_id = transaction_id
                     # expiry date is the current day of the next month
                     subscription.expire_date = (
                         datetime.utcnow().replace(day=1) + timedelta(days=32)
@@ -168,25 +169,32 @@ def payment_webhook():
         standard = False
         premium = False
         payload = request.get_json()
+        
+        import json
+        with open(f"logs/webhooks/{str(datetime.utcnow().strftime('%Y-%m-%d_%H:%M:%S'))}.json", "w") as file:
+            json.dump(payload, file)
+
+        # get transaction/user details from payload
         tx_ref = payload["data"]["tx_ref"]
         status = payload["data"]["status"]
         transaction_id = int(payload["data"]["id"])
+        user_uid = str(tx_ref).split("-")[1]
+        user = Users.query.filter(Users.uid == user_uid).one()
+
         # get transaction details from database
         if str(tx_ref).startswith("stnrd"):
             subscription = StandardSubscription.query.filter(
                 StandardSubscription.tx_ref == tx_ref,
-                StandardSubscription.payment_status == "pending",
-                StandardSubscription.user_id == current_user.id,
+                StandardSubscription.user_id == user.id,
             ).one_or_none()
             standard = True if subscription else False
         elif str(tx_ref).startswith("prmum"):
             subscription = PremiumSubscription.query.filter(
                 PremiumSubscription.tx_ref == tx_ref,
-                PremiumSubscription.payment_status == "pending",
-                PremiumSubscription.user_id == current_user.id,
+                PremiumSubscription.user_id == user.id,
             ).one_or_none()
             premium = True if subscription else False
-        if standard or premium: # there's a pending transaction
+        if standard or premium: # transaction found
             # get transaction status
             if status == "successful":
                 verify_url = f"https://api.flutterwave.com/v3/transactions/{int(transaction_id)}/verify"
@@ -203,37 +211,47 @@ def payment_webhook():
                         data = response.json()
                         if data["status"] == "success":
                             # update record as successful
-                            flw_ref = data["data"]["flw_ref"]
-                            subscription.flw_ref = flw_ref
-                            subscription.payment_status = "completed"
-                            subscription.sub_status = "active"
-                            # expiry date is the current day of the next month
-                            subscription.expire_date = (
-                                datetime.utcnow().replace(day=1) + timedelta(days=32)
-                            ).replace(day=datetime.utcnow().day)
-                            subscription.update()
+                            if subscription.payment_status != "completed": # transaction was pending
+                                flw_ref = data["data"]["flw_ref"]
+                                subscription.flw_ref = flw_ref
+                                subscription.tx_id = transaction_id
+                                subscription.payment_status = "completed"
+                                subscription.sub_status = "active"
+                                # expiry date is the current day of the next month
+                                subscription.expire_date = (
+                                    datetime.utcnow().replace(day=1) + timedelta(days=32)
+                                ).replace(day=datetime.utcnow().day)
+                                subscription.update()
+                                # TODO: send thank you email
+                            elif subscription.payment_status == "completed" and subscription.tx_id != transaction_id: # subcription renewal
+                                # expiry date is the current day of the next month
+                                subscription.expire_date = (
+                                    datetime.utcnow().replace(day=1) + timedelta(days=32)
+                                ).replace(day=datetime.utcnow().day)
+                                subscription.update()   
+                                # TODO: send thank you email                  
 
                             # check for existing subscriptions and update user account
                             if standard:
                                 old_sub = PremiumSubscription.query.filter(
                                     PremiumSubscription.sub_status == "active",
-                                    PremiumSubscription.user_id == current_user.id,
+                                    PremiumSubscription.user_id == user.id,
                                 ).one_or_none()
                                 if old_sub:
                                     if not old_sub.expired():
                                         old_sub.upgrade()
-                                current_user.account_type = "Standard"
-                                current_user.update()
+                                user.account_type = "Standard"
+                                user.update()
                             if premium:
                                 old_sub = StandardSubscription.query.filter(
                                     StandardSubscription.sub_status == "active",
-                                    StandardSubscription.user_id == current_user.id,
+                                    StandardSubscription.user_id == user.id,
                                 ).one_or_none()
                                 if old_sub:
                                     if not old_sub.expired():
                                         old_sub.upgrade()
-                                current_user.account_type = "Premium"
-                                current_user.update()
+                                user.account_type = "Premium"
+                                user.update()
 
                             return jsonify({"success": True}), 200
                     else:

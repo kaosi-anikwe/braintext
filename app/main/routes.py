@@ -6,9 +6,9 @@ from flask_login import login_required, current_user
 from flask import Blueprint, render_template, request, flash, jsonify, redirect, url_for
 
 
-def send_otp_message(otp: int, phone_no: str) -> str:
+def send_otp_message(otp: int, name: str, phone_no: str) -> str:
     message = client.messages.create(
-        body=f"Here is your OTP for verifying your number on BrainText. {otp} \nIt will expire in 3 minutes.",
+        body=f"Hi {name}! Here's your One Time Password to verify your number at Braintext. \n{otp} \nThe OTP will expire in 3 minutes.",
         from_="whatsapp:+15076094633",
         to=f"whatsapp:{phone_no}",
     )
@@ -42,6 +42,9 @@ def profile():
 @main.route("/verify")
 @login_required
 def add_number():
+    if current_user.phone_no:
+        flash("Your WhatsApp number is already verified.")
+        return redirect(url_for("main.profile"))
     return render_template("auth/add-number.html")
 
 
@@ -54,17 +57,21 @@ def send_otp():
 
     check_otp = OTP.query.filter(OTP.phone_no == phone_no).one_or_none()
     if check_otp:
-        check_otp.otp = get_otp()
-        send_otp_message(check_otp.otp, phone_no)
-        check_otp.update()
+        if check_otp.verified:
+            # number already used by another user
+            return jsonify({"error": True})
+        else:
+            check_otp.otp = get_otp()
+            send_otp_message(otp=check_otp.otp, name=current_user.first_name, phone_no=phone_no)
+            check_otp.update()
 
-        return jsonify({"otp": check_otp.otp})
+            return jsonify({"otp": check_otp.otp})
+    else:
+        otp = OTP(phone_no)
+        send_otp_message(otp=otp.otp, name=current_user.first_name, phone_no=phone_no)
+        otp.insert()
 
-    otp = OTP(phone_no)
-    send_otp_message(otp.otp, phone_no)
-    otp.insert()
-
-    return jsonify({"otp": otp.otp})
+        return jsonify({"otp": otp.otp})
 
 
 # Resend OTP
@@ -77,7 +84,7 @@ def resend_otp():
     check_otp = OTP.query.filter(OTP.phone_no == phone_no).one_or_none()
     if check_otp:
         check_otp.otp = get_otp()
-        send_otp_message(check_otp.otp, phone_no)
+        send_otp_message(otp=check_otp.otp, name=current_user.first_name, phone_no=phone_no)
         check_otp.update()
 
         return jsonify({"otp": check_otp.otp})
@@ -93,14 +100,15 @@ def verify_otp():
     check_otp = OTP.query.filter(
         OTP.phone_no == phone_no, OTP.verified == False
     ).one_or_none()
-    if check_otp.updated_at:
-        if int((datetime.utcnow() - check_otp.updated_at).total_seconds()) >= 180:
+    if check_otp:
+        if check_otp.updated_at:
+            if int((datetime.utcnow() - check_otp.updated_at).total_seconds()) >= 180:
 
-            return jsonify({"expired": True})
-    elif check_otp.created_at:
-        if int((datetime.utcnow() - check_otp.created_at).total_seconds()) >= 180:
+                return jsonify({"expired": True})
+        elif check_otp.created_at:
+            if int((datetime.utcnow() - check_otp.created_at).total_seconds()) >= 180:
 
-            return jsonify({"expired": True})
+                return jsonify({"expired": True})
 
     current_user.phone_no = phone_no
     current_user.update()
