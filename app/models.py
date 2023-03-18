@@ -4,9 +4,9 @@ import uuid
 import math
 import random
 from app import db, login_manager
-from datetime import datetime
+from datetime import datetime, timedelta
 from flask import current_app
-from flask_login import UserMixin
+from flask_login import UserMixin, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 
 
@@ -36,12 +36,26 @@ class TimestampMixin(object):
             pass
 
 
+# db helper functions
+class DatabaseHelperMixin(object):
+    def update(self):
+        db.session.commit()
+
+    def insert(self):
+        db.session.add(self)
+        db.session.commit()
+
+    def delete(self):
+        db.session.delete(self)
+        db.session.commit()
+
+
 @login_manager.user_loader
 def load_user(id):
     return Users.query.get(int(id))
 
 
-class Users(db.Model, TimestampMixin, UserMixin):
+class Users(db.Model, TimestampMixin, UserMixin, DatabaseHelperMixin):
     __tablename__ = "user"
 
     id = db.Column(db.Integer, primary_key=True)
@@ -52,14 +66,14 @@ class Users(db.Model, TimestampMixin, UserMixin):
     account_type = db.Column(db.String(20), default="Basic")
     phone_no = db.Column(db.String(20))
     password_hash = db.Column(db.String(128), nullable=False)
-    
+
     # generate user password i.e. hashing
     def get_password_hash(self, password):
         return generate_password_hash(password)
 
     # check user password is correct
     def check_password(self, password):
-        return check_password_hash(self.password_hash, password) 
+        return check_password_hash(self.password_hash, password)
 
     # for reseting a user password
     def get_reset_password_token(self, expires_in=600):
@@ -91,19 +105,8 @@ class Users(db.Model, TimestampMixin, UserMixin):
         self.password_hash = self.get_password_hash(password)
         self.uid = uuid.uuid4().hex
 
-    def update(self):
-        db.session.commit()
 
-    def insert(self):
-        db.session.add(self)
-        db.session.commit()
-
-    def delete(self):
-        db.session.delete(self)
-        db.session.commit()
-
-
-class OTP(db.Model, TimestampMixin):
+class OTP(db.Model, TimestampMixin, DatabaseHelperMixin):
     __tablename__ = "otp"
 
     id = db.Column(db.Integer, primary_key=True)
@@ -115,13 +118,119 @@ class OTP(db.Model, TimestampMixin):
         self.otp = get_otp()
         self.phone_no = phone_no
 
-    def update(self):
-        db.session.commit()
 
-    def insert(self):
-        db.session.add(self)
-        db.session.commit()
+# Subscription Types
+class BasicSubscription(db.Model, TimestampMixin, DatabaseHelperMixin):
+    __tablename__ = "basic_account"
 
-    def delete(self):
-        db.session.delete(self)
-        db.session.commit()
+    id = db.Column(db.Integer, primary_key=True)
+    expire_date = db.Column(db.DateTime)
+    sub_status = db.Column(db.String(20))
+    prompts = db.Column(db.Integer)
+    user_id = db.Column(db.ForeignKey("user.id"), nullable=False)
+
+    def __init__(self, user_id) -> None:
+        self.prompts = 0
+        self.expire_date = datetime.utcnow() + timedelta(days=7)
+        self.sub_status = "active"
+        self.user_id = user_id
+
+    # helper functions
+    def upgrade(self) -> None:
+        if self.sub_status != "upgraded":
+            self.sub_status = "upgraded"
+            self.update()
+
+    def expired(self) -> bool:
+        if datetime.utcnow() > self.expire_date:
+            return True
+        else:
+            return False
+
+    def renew(self) -> bool:
+        if self.expired():
+            try:
+                while self.expire_date < datetime.utcnow():
+                    self.expire_date = self.expire_date + timedelta(days=7)
+                self.prompts = 0
+                self.update()
+                return True
+            except Exception as e:
+                print(e)
+                return False
+        else:
+            return False
+
+    def respond(self) -> bool:
+        self.renew()
+        if self.prompts < 10:
+            self.prompts += 1
+            self.update()
+            return True
+        else:
+            return False
+
+
+class StandardSubscription(db.Model, TimestampMixin, DatabaseHelperMixin):
+    __tablename__ = "standard_subscription"
+
+    id = db.Column(db.Integer, primary_key=True)
+    tx_ref = db.Column(db.String(100), nullable=False)
+    flw_ref = db.Column(db.String(100))
+    payment_status = db.Column(db.String(20))
+    sub_status = db.Column(db.String(20))
+    expire_date = db.Column(db.DateTime)
+    user_id = db.Column(db.ForeignKey("user.id"), nullable=False)
+
+    def __init__(self, tx_ref, user_id) -> None:
+        self.tx_ref = tx_ref
+        self.payment_status = "pending"
+        self.user_id = user_id
+
+    # helper functions
+    def upgrade(self) -> None:
+        if self.sub_status != "upgraded":
+            self.sub_status = "upgraded"
+            self.update()
+
+    def expired(self) -> bool:
+        # expiration_date = (self.expire_date.replace(day=1) + timedelta(days=32)).replace(day=self.expire_date.day)
+        if datetime.utcnow() > self.expire_date:
+            if self.sub_status != "expired":
+                self.sub_status = "expired"
+                self.update()
+            return True
+        else:
+            return False
+
+
+class PremiumSubscription(db.Model, TimestampMixin, DatabaseHelperMixin):
+    __tablename__ = "premium_subscription"
+
+    id = db.Column(db.Integer, primary_key=True)
+    tx_ref = db.Column(db.String(100), nullable=False)
+    flw_ref = db.Column(db.String(100))
+    payment_status = db.Column(db.String(20))
+    sub_status = db.Column(db.String(20))
+    expire_date = db.Column(db.DateTime)
+    user_id = db.Column(db.ForeignKey("user.id"), nullable=False)
+
+    def __init__(self, tx_ref, user_id) -> None:
+        self.tx_ref = tx_ref
+        self.payment_status = "pending"
+        self.user_id = user_id
+
+    # helper functions
+    def upgrade(self) -> None:
+        if self.sub_status != "upgraded":
+            self.sub_status = "upgraded"
+            self.update()
+
+    def expired(self) -> bool:
+        if datetime.utcnow() > self.expire_date:
+            if self.sub_status != "expired":
+                self.sub_status = "expired"
+                self.update()
+            return True
+        else:
+            return False

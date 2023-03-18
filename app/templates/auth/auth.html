@@ -12,6 +12,7 @@
 
     <div class="signup">
       <form method="post" action="{{ url_for('auth.register') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
         <label id="signup-button" for="chk" aria-hidden="true">Sign up</label>
         <input
           type="text"
@@ -37,7 +38,8 @@
     </div>
 
     <div class="login">
-      <form method="post" action="{{ url_for('auth.login') }}">
+      <form method="post" action="{{ url_for('auth.login') }}?next={{ next }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
         <label id="login-button" for="chk" aria-hidden="true">Login</label>
         <input type="email" name="email" placeholder="Email" required="" />
         <input

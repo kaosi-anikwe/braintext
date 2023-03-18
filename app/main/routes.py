@@ -8,14 +8,16 @@ from flask import Blueprint, render_template, request, flash, jsonify, redirect,
 
 def send_otp_message(otp: int, phone_no: str) -> str:
     message = client.messages.create(
-        body=f'Here is your OTP for verifying your number on BrainText. {otp} \nIt will expire in 3 minutes.', 
-        from_='whatsapp:+15076094633', to=f'whatsapp:{phone_no}'
+        body=f"Here is your OTP for verifying your number on BrainText. {otp} \nIt will expire in 3 minutes.",
+        from_="whatsapp:+15076094633",
+        to=f"whatsapp:{phone_no}",
     )
-    print(message.sid)
+    print(f"{message.sid} -- {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')}")
     return message.sid
 
-account_sid = os.environ['TWILIO_ACCOUNT_SID']
-auth_token = os.environ['TWILIO_AUTH_TOKEN']
+
+account_sid = os.environ["TWILIO_ACCOUNT_SID"]
+auth_token = os.environ["TWILIO_AUTH_TOKEN"]
 client = Client(account_sid, auth_token)
 
 
@@ -26,12 +28,14 @@ main = Blueprint("main", __name__)
 def index():
     return render_template("main/index.html")
 
+
 # User Account -----------------------------------------
 @main.route("/profile")
 @login_required
 def profile():
     settings = True if request.args.get("settings") else False
     return render_template("main/profile.html", settings=settings)
+
 
 # OTP AND VERIFICATION ---------------------------------
 # Verify OTP page
@@ -62,6 +66,7 @@ def send_otp():
 
     return jsonify({"otp": otp.otp})
 
+
 # Resend OTP
 @main.route("/resend-otp", methods=["POST"])
 @login_required
@@ -77,6 +82,7 @@ def resend_otp():
 
         return jsonify({"otp": check_otp.otp})
 
+
 # Veriry OTP
 @main.route("/verify-otp", methods=["POST"])
 @login_required
@@ -84,7 +90,9 @@ def verify_otp():
     data = request.get_json()
     phone_no = data["phone_no"]
 
-    check_otp = OTP.query.filter(OTP.phone_no == phone_no, OTP.verified == False).one_or_none()
+    check_otp = OTP.query.filter(
+        OTP.phone_no == phone_no, OTP.verified == False
+    ).one_or_none()
     if check_otp.updated_at:
         if int((datetime.utcnow() - check_otp.updated_at).total_seconds()) >= 180:
 
@@ -100,4 +108,3 @@ def verify_otp():
     check_otp.update()
     flash("Phone number updated successfully", "success")
     return redirect(url_for("main.profile"))
-

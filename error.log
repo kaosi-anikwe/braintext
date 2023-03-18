@@ -50,3 +50,20 @@ twilio.base.exceptions.TwilioRestException: HTTP 401 error: Unable to create rec
 [2023-03-11 08:32:43 +0000] [162658] [INFO] Booting worker with pid: 162658
 SM053156c14b53d2023f5c4fa30415d9f1
 SM1c09574990507f5e4f42862106e69086
+[2023-03-11 08:43:36 +0000] [162656] [INFO] Handling signal: hup
+[2023-03-11 08:43:36 +0000] [162656] [INFO] Hang up: Master
+[2023-03-11 08:43:36 +0000] [162656] [WARNING] Worker with pid 162658 was terminated due to signal 1
+[2023-03-11 08:43:36 +0000] [163288] [INFO] Booting worker with pid: 163288
+SMab20090db763eb7eb34593614ea7b90e
+SM3023b67cd9cf34f735cd386a8669912e
+SMa7e14668dfbde2ef6525484ec098d33a
+SM40e835bc31c9d8e5ef349fe93f13fc52
+SM4951906eeefb4be82e0700028a6d2844
+SM25a157fd8b8229ebb764d5bc23f1b817
+SM6549f3de17e3bf1000305ad008c297de
+SM8ad48113ff7230b6eb4b5e074f799d00
+SM767612bae55d3b837fc1cfd94f07a266
+SM51b1a79c27a51deb3bf7ae4149dc9a52
+[2023-03-17 11:00:58 +0000] [162656] [INFO] Handling signal: term
+[2023-03-17 11:00:58 +0000] [163288] [INFO] Worker exiting (pid: 163288)
+[2023-03-17 11:00:58 +0000] [162656] [INFO] Shutting down: Master

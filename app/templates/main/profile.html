@@ -75,7 +75,32 @@
                 <div class="row">
                   <div class="col-lg-3 col-md-4 label">Account Type</div>
                   <div class="col-lg-9 col-md-8">
-                    {{ current_user.account_type }}
+                    {{ current_user.account_type }} {% if
+                    current_user.account_type == "Standard" %}
+                    <a
+                      href="{{ url_for('payment.checkout', package='prmum') }}"
+                    >
+                      <button
+                        style="font-size: small; height: 2rem"
+                        type="button"
+                        class="btn btn-outline-primary"
+                      >
+                        Upgrade Account
+                      </button>
+                    </a>
+                    {% endif %} {% if current_user.account_type == "Basic" %}
+                    <a
+                      href="{{ url_for('payment.checkout', package='stnrd') }}"
+                    >
+                      <button
+                        style="font-size: small; height: 2rem"
+                        type="button"
+                        class="btn btn-outline-primary"
+                      >
+                        Upgrade Account
+                      </button>
+                    </a>
+                    {% endif %}
                   </div>
                 </div>
 
@@ -84,7 +109,11 @@
                   <div class="col-lg-9 col-md-8">
                     {% if not current_user.phone_no %}
                     <a href="{{ url_for('main.add_number') }}">
-                      <button type="submit" class="btn btn-primary">
+                      <button
+                        style="font-size: small; height: 2rem"
+                        type="submit"
+                        class="btn btn-outline-primary"
+                      >
                         Add WhatsApp number
                       </button>
                     </a>
