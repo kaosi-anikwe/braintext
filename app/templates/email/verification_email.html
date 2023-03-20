@@ -1,0 +1,30 @@
+{% extends "email_base.html" %} {% block email_content %}
+<main id="main">
+  <section id="about" class="about">
+    <div class="container" data-aos="fade-up">
+      <div class="section-title">
+        <h2>Welcome {{ user.display_name() }}!</h2>
+        <p>
+          Magnam dolores commodi suscipit. Necessitatibus eius consequatur ex
+          aliquid fuga eum quide
+        </p>
+      </div>
+
+      <div class="row content">
+        <div class="col-lg-6 pt-4 pt-lg-0">
+          <p>Thank you for registering with BrainText.</p>
+          <p>Your unique user ID is: {{ user.uid }}</p>
+          <p>Please verify your email by clicking the button below.</p>
+          <a
+            href="{{ confirm_url }}"
+            title="Verify email address"
+            class="btn-learn-more"
+            >Verify Email</a
+          >
+          <p>The link will expire in 1 hour.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+{% endblock %}

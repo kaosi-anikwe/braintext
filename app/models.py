@@ -65,6 +65,9 @@ class Users(db.Model, TimestampMixin, UserMixin, DatabaseHelperMixin):
     email = db.Column(db.String(100), nullable=False)
     account_type = db.Column(db.String(20), default="Basic")
     phone_no = db.Column(db.String(20))
+    phone_verified = db.Column(db.Boolean, default=False)
+    email_verified = db.Column(db.Boolean, default=False)
+    edited = db.Column(db.Boolean, default=False)
     password_hash = db.Column(db.String(128), nullable=False)
 
     # generate user password i.e. hashing
@@ -106,6 +109,24 @@ class Users(db.Model, TimestampMixin, UserMixin, DatabaseHelperMixin):
         self.uid = uuid.uuid4().hex
 
 
+class UserSettings(db.Model, TimestampMixin, DatabaseHelperMixin):
+    __tablename__ = "user_setting"
+
+    id = db.Column(db.Integer, primary_key=True)
+    notify_on_profile_change = db.Column(db.Boolean, default=False)
+    product_updates = db.Column(db.Boolean, default=False)
+    subscription_expiry = db.Column(db.Boolean, default=True)
+    ai_voice_type = db.Column(db.String(50))
+    user_id = db.Column(db.ForeignKey("user.id"))
+
+    def __init__(self, user_id) -> None:
+        self.notify_on_profile_change = False
+        self.product_updates = False
+        self.subscription_expiry = True
+        self.ai_voice_type = "default"
+        self.user_id = user_id
+
+
 class OTP(db.Model, TimestampMixin, DatabaseHelperMixin):
     __tablename__ = "otp"
 
@@ -122,7 +143,7 @@ class OTP(db.Model, TimestampMixin, DatabaseHelperMixin):
 
 # Subscription Types
 class BasicSubscription(db.Model, TimestampMixin, DatabaseHelperMixin):
-    __tablename__ = "basic_account"
+    __tablename__ = "basic_subscription"
 
     id = db.Column(db.Integer, primary_key=True)
     expire_date = db.Column(db.DateTime)

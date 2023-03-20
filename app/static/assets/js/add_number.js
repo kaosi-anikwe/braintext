@@ -16,12 +16,14 @@ if (phoneInputField) {
 }
 
 const numberForm = document.getElementById("number-form");
-numberForm.onsubmit = (e) => {
+
+numberForm.addEventListener("submit", (e) => {
   e.preventDefault();
-  const submitBtn = document.getElementById("verify-otp-submit-btn");
-  submitBtn.classList.toggle("running");
-  submitBtn.disabled = true;
+  const sendOTP = document.getElementById("verify-number");
+  sendOTP.classList.toggle("running");
+  sendOTP.disabled = true;
   phoneNumber = phoneInput.getNumber();
+  console.log(phoneNumber);
   dialCode = phoneInput.s.dialCode;
   // Send OTP
   (async () => {
@@ -34,8 +36,8 @@ numberForm.onsubmit = (e) => {
       body: JSON.stringify({ phone_no: phoneNumber }),
     });
     if (response.ok) {
-      submitBtn.classList.toggle("running");
-      submitBtn.disabled = false;
+      sendOTP.classList.toggle("running");
+      sendOTP.disabled = false;
       let data = await response.json();
       if (data.error) {
         // show a different toast
@@ -46,6 +48,18 @@ numberForm.onsubmit = (e) => {
         let toast = new bootstrap.Toast(toastItem);
         toast.show();
       } else {
+        // Hide digits of number
+        let hiddenNumber = phoneNumber.replace("+", "");
+        let newNumber = "+";
+        for (let i = 0; i < hiddenNumber.length; i++) {
+          if (i >= dialCode.length && i < phoneNumber.length - 3) {
+            newNumber += "x";
+          } else newNumber += hiddenNumber[i];
+        }
+        cardHeader.innerHTML = `Enter the 6-digit PIN sent to ${newNumber} on WhatsApp.`;
+        numberRow.hidden = !numberRow.hidden;
+        otpRow.hidden = !otpRow.hidden;
+
         console.log(data.otp);
         pin = parseInt(data.otp);
         // Show toast
@@ -58,19 +72,7 @@ numberForm.onsubmit = (e) => {
       }
     }
   })();
-
-  // Hide digits of number
-  let hiddenNumber = phoneNumber.replace("+", "");
-  let newNumber = "+";
-  for (let i = 0; i < hiddenNumber.length; i++) {
-    if (i >= dialCode.length && i < phoneNumber.length - 3) {
-      newNumber += "x";
-    } else newNumber += hiddenNumber[i];
-  }
-  cardHeader.innerHTML = `Enter the 6-digit PIN sent to ${newNumber} on WhatsApp.`;
-  numberRow.hidden = !numberRow.hidden;
-  otpRow.hidden = !otpRow.hidden;
-};
+});
 
 const $inp = $(".ap-otp-input");
 $inp.on({
@@ -103,7 +105,6 @@ const resendOTP = document.getElementById("resend-btn");
 const cardHeader = document.getElementById("enter-code");
 const numberRow = document.getElementById("add-number-row");
 const otpRow = document.getElementById("verify-otp-row");
-const sendOTP = document.getElementById("verify-number");
 const changeNumber = document.getElementById("change-number");
 const invalid = document.getElementById("invalid");
 const expired = document.getElementById("expired");

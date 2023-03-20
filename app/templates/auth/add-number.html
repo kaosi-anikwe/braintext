@@ -51,9 +51,10 @@
                   <button
                     type="submit"
                     id="verify-number"
-                    class="btn btn-primary"
+                    class="btn btn-primary ld-ext-right"
                   >
                     Submit
+                    <div class="ld ld-ring ld-spin"></div>
                   </button>
                 </div>
               </form>
@@ -221,6 +222,24 @@
 <script>
   var csrfToken = "{{ csrf_token() }}";
 </script>
+{% if reverify %}
+<script>
+  const numberInput = document.getElementById("whatsapp-phone");
+  numberInput.value = "{{ current_user.phone_no }}";
+</script>
+{% endif %}
 <script src="{{ url_for('static', filename='assets/js/add_number.js') }}"></script>
-
-{% endblock %}
+{% if reverify %}
+<script>
+  const submitBtn = document.getElementById("verify-number");
+  const sleep = (milliseconds) => {
+    return new Promise((resolve) => setTimeout(resolve, milliseconds));
+  };
+  const send = async () => {
+    await sleep(650);
+    numberInput.value = phoneInput.getNumber();
+    submitBtn.click();
+  };
+  send();
+</script>
+{% endif %} {% endblock %}

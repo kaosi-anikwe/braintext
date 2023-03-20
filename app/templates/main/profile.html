@@ -47,16 +47,6 @@
                   Settings
                 </button>
               </li>
-
-              <li class="nav-item">
-                <button
-                  class="nav-link"
-                  data-bs-toggle="tab"
-                  data-bs-target="#profile-change-password"
-                >
-                  Change Password
-                </button>
-              </li>
             </ul>
             <div class="tab-content pt-2">
               <div
@@ -75,8 +65,8 @@
                 <div class="row">
                   <div class="col-lg-3 col-md-4 label">Account Type</div>
                   <div class="col-lg-9 col-md-8">
-                    {{ current_user.account_type }} {% if
-                    current_user.account_type == "Standard" %}
+                    <p style="margin: 5px 0">{{ current_user.account_type }}</p>
+                    {% if current_user.account_type == "Standard" %}
                     <a
                       href="{{ url_for('payment.checkout', package='prmum') }}"
                     >
@@ -111,19 +101,46 @@
                     <a href="{{ url_for('main.add_number') }}">
                       <button
                         style="font-size: small; height: 2rem"
-                        type="submit"
+                        type="button"
                         class="btn btn-outline-primary"
                       >
                         Add WhatsApp number
                       </button>
                     </a>
-                    {% else %} {{ current_user.phone_no }} {% endif %}
+                    {% elif current_user.phone_no and
+                    current_user.phone_verified %} {{ current_user.phone_no }}
+                    {% elif current_user.phone_no and not
+                    current_user.phone_verified %}
+                    <p style="margin: 5px 0">{{ current_user.phone_no }}</p>
+                    <a href="{{ url_for('main.add_number') }}?reverify=True">
+                      <button
+                        style="font-size: small; height: 2rem"
+                        type="submit"
+                        class="btn btn-outline-primary"
+                      >
+                        Verify Number
+                      </button>
+                    </a>
+                    {% endif %}
                   </div>
                 </div>
 
                 <div class="row">
                   <div class="col-lg-3 col-md-4 label">Email</div>
-                  <div class="col-lg-9 col-md-8">{{ current_user.email }}</div>
+                  <div class="col-lg-9 col-md-8">
+                    {% if not current_user.email_verified %}
+                    <p style="margin: 5px 0">{{ current_user.email }}</p>
+                    <button
+                      id="send-verification-email"
+                      style="font-size: small; height: 2rem"
+                      type="button"
+                      class="btn btn-outline-primary ld-ext-right"
+                    >
+                      Verify Email
+                      <div class="ld ld-ring ld-spin"></div>
+                    </button>
+                    {% else %} {{ current_user.email }} {% endif %}
+                  </div>
                 </div>
                 <div class="row">
                   <div class="col-lg-3 col-md-4 label">User ID</div>
@@ -133,39 +150,46 @@
 
               <div class="tab-pane fade profile-edit pt-3" id="profile-edit">
                 <!-- Profile Edit Form -->
-                <form>
+                <form method="post" action="{{ url_for('auth.edit_profile') }}">
+                  <input
+                    type="hidden"
+                    name="csrf_token"
+                    value="{{ csrf_token() }}"
+                  />
                   <div class="row mb-3">
                     <label
-                      for="fullName"
+                      for="first_name"
                       class="col-md-4 col-lg-3 col-form-label"
-                      >Full Name</label
+                      >First Name</label
                     >
                     <div class="col-md-8 col-lg-9">
                       <input
-                        name="fullName"
+                        name="first_name"
                         type="text"
                         class="form-control"
-                        id="fullName"
-                        value="Kevin Anderson"
+                        id="first_name"
+                        value="{{ current_user.first_name }}"
+                        style="font-size: 15px"
                       />
                     </div>
                   </div>
-
-                  <!-- <div class="row mb-3">
-                    <label for="about" class="col-md-4 col-lg-3 col-form-label"
-                      >About</label
+                  <div class="row mb-3">
+                    <label
+                      for="last_name"
+                      class="col-md-4 col-lg-3 col-form-label"
+                      >Last Name</label
                     >
                     <div class="col-md-8 col-lg-9">
-                      <textarea
-                        name="about"
+                      <input
+                        name="last_name"
+                        type="text"
                         class="form-control"
-                        id="about"
-                        style="height: 100px"
-                      >
-Sunt est soluta temporibus accusantium neque nam maiores cumque temporibus. Tempora libero non est unde veniam est qui dolor. Ut sunt iure rerum quae quisquam autem eveniet perspiciatis odit. Fuga sequi sed ea saepe at unde.</textarea
-                      >
+                        id="last_name"
+                        value="{{ current_user.last_name }}"
+                        style="font-size: 15px"
+                      />
                     </div>
-                  </div> -->
+                  </div>
 
                   <div class="row mb-3">
                     <label
@@ -175,77 +199,44 @@ Sunt est soluta temporibus accusantium neque nam maiores cumque temporibus. Temp
                     >
                     <div class="col-md-8 col-lg-9">
                       <input
-                        name="company"
+                        name="account_type"
                         type="text"
                         readonly
+                        disabled
                         class="form-control"
-                        id="company"
-                        value="Lueilwitz, Wisoky and Leuschke"
+                        id="account_type"
+                        value="{{ current_user.account_type }}"
+                        style="font-size: 15px"
                       />
                     </div>
                   </div>
-
-                  <!-- <div class="row mb-3">
-                    <label for="Job" class="col-md-4 col-lg-3 col-form-label"
-                      >Job</label
-                    >
-                    <div class="col-md-8 col-lg-9">
-                      <input
-                        name="job"
-                        type="text"
-                        class="form-control"
-                        id="Job"
-                        value="Web Designer"
-                      />
-                    </div>
-                  </div> -->
-
-                  <!-- <div class="row mb-3">
-                    <label
-                      for="Country"
-                      class="col-md-4 col-lg-3 col-form-label"
-                      >Country</label
-                    >
-                    <div class="col-md-8 col-lg-9">
-                      <input
-                        name="country"
-                        type="text"
-                        class="form-control"
-                        id="Country"
-                        value="USA"
-                      />
-                    </div>
-                  </div> -->
-
-                  <!-- <div class="row mb-3">
-                    <label
-                      for="Address"
-                      class="col-md-4 col-lg-3 col-form-label"
-                      >Address</label
-                    >
-                    <div class="col-md-8 col-lg-9">
-                      <input
-                        name="address"
-                        type="text"
-                        class="form-control"
-                        id="Address"
-                        value="A108 Adam Street, New York, NY 535022"
-                      />
-                    </div>
-                  </div> -->
 
                   <div class="row mb-3">
                     <label for="Phone" class="col-md-4 col-lg-3 col-form-label"
                       >Phone</label
                     >
                     <div class="col-md-8 col-lg-9">
+                      {% if not current_user.phone_no %}
+                      <a href="{{ url_for('main.add_number') }}">
+                        <button
+                          style="font-size: small; height: 2rem"
+                          type="button"
+                          class="btn btn-outline-primary"
+                        >
+                          Add WhatsApp number
+                        </button>
+                      </a>
+                      {% else %}
+
                       <input
-                        name="phone"
+                        name="phone_no"
                         type="text"
                         class="form-control"
-                        id="Phone"
-                        value="(436) 486-3538 x29071"
+                        id="phone_no"
+                        value="{{ current_user.phone_no }}"
+                        style="font-size: 15px"
                       />
+                      {% endif %}
                     </div>
                   </div>
 
@@ -256,84 +247,29 @@ Sunt est soluta temporibus accusantium neque nam maiores cumque temporibus. Temp
                     <div class="col-md-8 col-lg-9">
                       <input
                         name="email"
+                        {%
+                        if
+                        current_user.email_verified
+                        %}
+                        disabled
+                        {%
+                        endif
+                        %}
                         type="email"
                         class="form-control"
-                        id="Email"
-                        value="k.anderson@example.com"
+                        id="email"
+                        value="{{ current_user.email }}"
+                        style="font-size: 15px"
                       />
                     </div>
                   </div>
-
-                  <!-- <div class="row mb-3">
-                    <label
-                      for="Twitter"
-                      class="col-md-4 col-lg-3 col-form-label"
-                      >Twitter Profile</label
-                    >
-                    <div class="col-md-8 col-lg-9">
-                      <input
-                        name="twitter"
-                        type="text"
-                        class="form-control"
-                        id="Twitter"
-                        value="https://twitter.com/#"
-                      />
-                    </div>
-                  </div>
-
-                  <div class="row mb-3">
-                    <label
-                      for="Facebook"
-                      class="col-md-4 col-lg-3 col-form-label"
-                      >Facebook Profile</label
-                    >
-                    <div class="col-md-8 col-lg-9">
-                      <input
-                        name="facebook"
-                        type="text"
-                        class="form-control"
-                        id="Facebook"
-                        value="https://facebook.com/#"
-                      />
-                    </div>
-                  </div>
-
-                  <div class="row mb-3">
-                    <label
-                      for="Instagram"
-                      class="col-md-4 col-lg-3 col-form-label"
-                      >Instagram Profile</label
-                    >
-                    <div class="col-md-8 col-lg-9">
-                      <input
-                        name="instagram"
-                        type="text"
-                        class="form-control"
-                        id="Instagram"
-                        value="https://instagram.com/#"
-                      />
-                    </div>
-                  </div>
-
-                  <div class="row mb-3">
-                    <label
-                      for="Linkedin"
-                      class="col-md-4 col-lg-3 col-form-label"
-                      >Linkedin Profile</label
-                    >
-                    <div class="col-md-8 col-lg-9">
-                      <input
-                        name="linkedin"
-                        type="text"
-                        class="form-control"
-                        id="Linkedin"
-                        value="https://linkedin.com/#"
-                      />
-                    </div>
-                  </div> -->
 
                   <div class="text-center">
-                    <button type="submit" class="btn btn-primary">
+                    <button
+                      id="edit-submit-btn"
+                      type="submit"
+                      class="btn btn-primary"
+                    >
                       Save Changes
                     </button>
                   </div>
@@ -341,9 +277,20 @@ Sunt est soluta temporibus accusantium neque nam maiores cumque temporibus. Temp
                 <!-- End Profile Edit Form -->
               </div>
 
-              <div class="tab-pane fade pt-3" id="profile-settings">
+              <div
+                class="tab-pane fade profile-edit pt-3"
+                id="profile-settings"
+              >
                 <!-- Settings Form -->
-                <form>
+                <form
+                  method="post"
+                  action="{{ url_for('auth.edit_settings') }}"
+                >
+                  <input
+                    type="hidden"
+                    name="csrf_token"
+                    value="{{ csrf_token() }}"
+                  />
                   <div class="row mb-3">
                     <label
                       for="changesMade"
@@ -356,9 +303,26 @@ Sunt est soluta temporibus accusantium neque nam maiores cumque temporibus. Temp
                           class="form-check-input"
                           type="checkbox"
                           id="changesMade"
+                          value="y"
+                          name="notify_on_profile_change"
+                          {%
+                          if
+                          current_user.notify_on_profile_change
+                          %}
                           checked
+                          {%
+                          endif
+                          %}
                         />
-                        <label class="form-check-label" for="changesMade">
+                        <label
+                          class="form-check-label"
+                          for="changesMade"
+                          style="
+                            font-size: 15px;
+                            font-weight: normal;
+                            color: var(--bs-card-color);
+                          "
+                        >
                           Changes made to your account
                         </label>
                       </div>
@@ -367,9 +331,26 @@ Sunt est soluta temporibus accusantium neque nam maiores cumque temporibus. Temp
                           class="form-check-input"
                           type="checkbox"
                           id="newProducts"
+                          value="y"
+                          name="product_updates"
+                          {%
+                          if
+                          current_user.product_updates
+                          %}
                           checked
+                          {%
+                          endif
+                          %}
                         />
-                        <label class="form-check-label" for="newProducts">
+                        <label
+                          class="form-check-label"
+                          for="newProducts"
+                          style="
+                            font-size: 15px;
+                            font-weight: normal;
+                            color: var(--bs-card-color);
+                          "
+                        >
                           Information on new products and services
                         </label>
                       </div>
@@ -377,24 +358,30 @@ Sunt est soluta temporibus accusantium neque nam maiores cumque temporibus. Temp
                         <input
                           class="form-check-input"
                           type="checkbox"
-                          id="proOffers"
+                          id="subExpiry"
+                          value="y"
+                          name="subscription_expiry"
+                          {%
+                          if
+                          current_user.subscription_expiry
+                          %}
+                          checked
+                          {%
+                          endif
+                          %}
                         />
-                        <label class="form-check-label" for="proOffers">
+                        <label
+                          class="form-check-label"
+                          for="subExpiry"
+                          style="
+                            font-size: 15px;
+                            font-weight: normal;
+                            color: var(--bs-card-color);
+                          "
+                        >
                           Upcoming subscription expiration
                         </label>
                       </div>
-                      <!-- <div class="form-check">
-                        <input
-                          class="form-check-input"
-                          type="checkbox"
-                          id="securityNotify"
-                          checked
-                          disabled
-                        />
-                        <label class="form-check-label" for="securityNotify">
-                          Security alerts
-                        </label>
-                      </div> -->
                     </div>
                   </div>
 
@@ -402,10 +389,13 @@ Sunt est soluta temporibus accusantium neque nam maiores cumque temporibus. Temp
                     <label class="col-md-4 col-lg-3 col-form-label"
                       >Select preferred AI voice type</label
                     >
+                    {% if current_user.account_type == "Premium" %}
                     <div class="col-md-8 col-lg-9">
                       <select
                         class="form-select"
                         aria-label="Default select example"
+                        id="aiVoice"
+                        name="ai_voice_type"
                       >
                         <option selected>Open this select menu</option>
                         <option value="1">One</option>
@@ -413,74 +403,33 @@ Sunt est soluta temporibus accusantium neque nam maiores cumque temporibus. Temp
                         <option value="3">Three</option>
                       </select>
                     </div>
+                    {% else %}
+                    <div class="col-lg-9 col-md-8">
+                      <a
+                        href="{{ url_for('payment.checkout', package='prmum') }}"
+                      >
+                        <button
+                          style="font-size: small; height: 2rem"
+                          type="button"
+                          class="btn btn-outline-primary"
+                        >
+                          Upgrade Account
+                        </button>
+                      </a>
+                    </div>
+                    {% endif %}
                   </div>
                   <div class="text-center">
-                    <button type="submit" class="btn btn-primary">
+                    <button
+                      id="edit-profile-btn"
+                      type="submit"
+                      class="btn btn-primary"
+                    >
                       Save Changes
                     </button>
                   </div>
                 </form>
                 <!-- End settings Form -->
-              </div>
-
-              <div class="tab-pane fade pt-3" id="profile-change-password">
-                <!-- Change Password Form -->
-                <form>
-                  <div class="row mb-3">
-                    <label
-                      for="currentPassword"
-                      class="col-md-4 col-lg-3 col-form-label"
-                      >Current Password</label
-                    >
-                    <div class="col-md-8 col-lg-9">
-                      <input
-                        name="password"
-                        type="password"
-                        class="form-control"
-                        id="currentPassword"
-                      />
-                    </div>
-                  </div>
-
-                  <div class="row mb-3">
-                    <label
-                      for="newPassword"
-                      class="col-md-4 col-lg-3 col-form-label"
-                      >New Password</label
-                    >
-                    <div class="col-md-8 col-lg-9">
-                      <input
-                        name="newpassword"
-                        type="password"
-                        class="form-control"
-                        id="newPassword"
-                      />
-                    </div>
-                  </div>
-
-                  <div class="row mb-3">
-                    <label
-                      for="renewPassword"
-                      class="col-md-4 col-lg-3 col-form-label"
-                      >Re-enter New Password</label
-                    >
-                    <div class="col-md-8 col-lg-9">
-                      <input
-                        name="renewpassword"
-                        type="password"
-                        class="form-control"
-                        id="renewPassword"
-                      />
-                    </div>
-                  </div>
-
-                  <div class="text-center">
-                    <button type="submit" class="btn btn-primary">
-                      Change Password
-                    </button>
-                  </div>
-                </form>
-                <!-- End Change Password Form -->
               </div>
             </div>
             <!-- End Bordered Tabs -->
@@ -498,5 +447,7 @@ Sunt est soluta temporibus accusantium neque nam maiores cumque temporibus. Temp
   };
 </script>
 {% endif %}
+<script src="{{ url_for('static', filename= 'assets/js/profile.js') }}"></script>
+
 <!-- End #main -->
 {% endblock %}

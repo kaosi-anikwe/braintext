@@ -5,15 +5,28 @@
   href="https://fonts.googleapis.com/css2?family=Jost:wght@500&display=swap"
   rel="stylesheet"
 />
+<style>
+  @media only screen and (max-width: 420px) {
+    label {
+      margin: 60px 20px;
+    }
+  }
+</style>
 
-<div class="auth_container">
+<div class="auth_container" id="auth-form">
   <div class="main">
     <input type="checkbox" id="chk" aria-hidden="true" />
 
     <div class="signup">
       <form method="post" action="{{ url_for('auth.register') }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-        <label id="signup-button" for="chk" aria-hidden="true">Sign up</label>
+        <label
+          id="signup-button"
+          style="margin-bottom: 40px"
+          for="chk"
+          aria-hidden="true"
+          >Sign up</label
+        >
         <input
           type="text"
           name="firstname"
@@ -34,6 +47,13 @@
           placeholder="Password"
           required=""
         />
+        <input
+          type="password"
+          name="confirm-password"
+          id="confirm-password"
+          placeholder="Confirm Password"
+          required
+        />
         <div class="errors">
           <small id="number" style="display: none" class="form-text"
             >Password must contain at least 1 number.</small
@@ -45,7 +65,7 @@
             >Password must contain at least 1 special character.</small
           >
         </div>
-        <button id="sign-up-button">Sign up</button>
+        <button type="submit" id="sign-up-button">Sign up</button>
       </form>
     </div>
 
@@ -60,7 +80,61 @@
           placeholder="Password"
           required=""
         />
-        <button>Login</button>
+        <div>
+          <a href="#">
+            <p
+              id="forgot-password"
+              style="
+                width: 70%;
+                height: 40px;
+                font-size: 0.8rem;
+                margin: 20px auto;
+                text-align: left;
+                color: #124265;
+              "
+            >
+              Forgot password?
+            </p>
+          </a>
+        </div>
+        <button type="submit">Login</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="auth_container" hidden id="forgot-password-form">
+  <div class="main">
+    <input type="checkbox" id="chk" aria-hidden="true" />
+
+    <div class="signup">
+      <form method="post" action="{{ url_for('auth.login') }}?next={{ next }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <label id="login-button" for="chk" aria-hidden="true">Login</label>
+        <input type="email" name="email" placeholder="Email" required="" />
+        <input
+          type="password"
+          name="password"
+          placeholder="Password"
+          required=""
+        />
+
+        <button type="submit">Login</button>
+      </form>
+    </div>
+
+    <div class="login">
+      <form method="post" action="{{ url_for('auth.forgot_password') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <label
+          id="forgot-button"
+          style="margin-bottom: 80px; padding-top: 20px"
+          for="chk"
+          aria-hidden="true"
+          >Forgot Password</label
+        >
+        <input type="email" name="email" placeholder="Email" required="" />
+        <button type="submit" id="sign-up-button">Submit</button>
       </form>
     </div>
   </div>
