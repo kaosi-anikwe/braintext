@@ -28,7 +28,6 @@ def login():
         login_user(user)
         next_page = request.args.get("next")
         if next_page != "None":
-            print(next_page)
             flash("You are now signed in!", "success")
             return redirect(next_page)
         else:
@@ -150,6 +149,8 @@ def confirm_email(token):
                 user.email_verified = True
                 user.update()
                 return render_template("thanks/verify-email.html", success=True)
+        else:
+            return render_template("thanks/verify-email.html", success=False)
     except Exception as e:
         print(e)
         return render_template("thanks/verify-email.html", success=False)
@@ -163,6 +164,7 @@ def verification_email():
         return jsonify({"success": True}), 200
     else:
         return jsonify({"success": False}), 500
+
 
 # Change password
 @auth.route("/change-password/<token>")

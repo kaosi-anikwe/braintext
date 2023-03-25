@@ -65,6 +65,7 @@ class Users(db.Model, TimestampMixin, UserMixin, DatabaseHelperMixin):
     email = db.Column(db.String(100), nullable=False)
     account_type = db.Column(db.String(20), default="Basic")
     phone_no = db.Column(db.String(20))
+    ai_voice = db.Column(db.String(20), default="Joanna")
     phone_verified = db.Column(db.Boolean, default=False)
     email_verified = db.Column(db.Boolean, default=False)
     edited = db.Column(db.Boolean, default=False)

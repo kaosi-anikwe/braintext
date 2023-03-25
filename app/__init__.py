@@ -28,12 +28,15 @@ def create_app(config=Config):
     from app.auth.routes import auth
     from app.errors.handlers import errors
     from app.payment.routes import payment
+    from app.chatbot.chatbot import chatbot
 
     app.register_blueprint(main)
     app.register_blueprint(auth)
     app.register_blueprint(errors)
     app.register_blueprint(payment)
+    app.register_blueprint(chatbot)
 
     csrf.exempt(payment)
+    csrf.exempt(chatbot)
 
     return app
