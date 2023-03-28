@@ -41,20 +41,22 @@ const aiVoiceEl = document.getElementById("aiVoice");
 const subExpiryEl = document.getElementById("subExpiry");
 const changesMadeEl = document.getElementById("changesMade");
 const newProductsEl = document.getElementById("newProducts");
+const voiceResponseEl = document.getElementById("voice_response");
 
 const subExpiry = subExpiryEl.checked;
 const changesMade = changesMadeEl.checked;
 const newProducts = newProductsEl.checked;
 let aiVoice;
-if (aiVoiceEl) {
-  aiVoice = aiVoiceEl.value;
-}
+if (aiVoiceEl) aiVoice = aiVoiceEl.value;
+let voiceResponse;
+if (voiceResponseEl) voiceResponse = voiceResponseEl.checked;
 
 const checkEdit = () => {
   const editProfileBtn = document.getElementById("edit-profile-btn");
   let subExpiryEdit = false;
   let changesMadeEdit = false;
   let newProductsEdit = false;
+  let voiceResponseEdit = false;
   let aiVoiceEdit = false;
   if (subExpiryEl.checked === subExpiry) subExpiryEdit = false;
   else subExpiryEdit = true;
@@ -66,7 +68,17 @@ const checkEdit = () => {
   else changesMadeEdit = true;
   if (newProductsEl.checked === newProducts) newProductsEdit = false;
   else newProductsEdit = true;
-  if (subExpiryEdit || changesMadeEdit || newProductsEdit || aiVoiceEdit)
+  if (voiceResponseEl) {
+    if (voiceResponseEl.checked === voiceResponse) voiceResponseEdit = false;
+    else voiceResponseEdit = true;
+  }
+  if (
+    subExpiryEdit ||
+    changesMadeEdit ||
+    newProductsEdit ||
+    aiVoiceEdit ||
+    voiceResponseEdit
+  )
     editProfileBtn.disabled = false;
   else editProfileBtn.disabled = true;
 };

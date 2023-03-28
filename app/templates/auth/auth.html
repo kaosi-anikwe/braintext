@@ -54,6 +54,7 @@
           placeholder="Confirm Password"
           required
         />
+        <input type="hidden" name="time" id="timezone" />
         <div class="errors">
           <small id="number" style="display: none" class="form-text"
             >Password must contain at least 1 number.</small
@@ -70,7 +71,10 @@
     </div>
 
     <div class="login">
-      <form method="post" action="{{ url_for('auth.login') }}?next={{ next }}">
+      <form
+        method="post"
+        action="{% if next %} {{ url_for('auth.login') }}?next={{ next }} {% else %} {{ url_for('auth.login') }} {% endif %}"
+      >
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
         <label id="login-button" for="chk" aria-hidden="true">Login</label>
         <input type="email" name="email" placeholder="Email" required="" />
@@ -139,6 +143,11 @@
     </div>
   </div>
 </div>
+
+<script>
+  let time = new Date();
+  document.getElementById("timezone").value = time;
+</script>
 
 {% if login %}
 <script>

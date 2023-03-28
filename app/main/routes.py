@@ -1,7 +1,7 @@
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from twilio.rest import Client
-from app.models import OTP, get_otp, Users, UserSettings
+from app.models import OTP, get_otp, Users, UserSettings, StandardSubscription, PremiumSubscription, BasicSubscription
 from flask_login import login_required, current_user
 from flask import Blueprint, render_template, request, flash, jsonify, redirect, url_for
 
@@ -26,6 +26,16 @@ main = Blueprint("main", __name__)
 # Index ---------------------------------------------
 @main.route("/")
 def index():
+    # subs = PremiumSubscription.query.all()
+    # for sub in subs:
+    #     if sub.expire_date:
+    #         sub.expire_date = sub.expire_date.replace(tzinfo=current_user.get_timezone())
+    #         sub.update()
+    # stand_subs = StandardSubscription.query.all()
+    # for sub in stand_subs:
+    #     if sub.expire_date:
+    #         sub.expire_date = sub.expire_date.replace(tzinfo=current_user.get_timezone())
+    #         sub.update()
     return render_template("main/index.html")
 
 
@@ -47,7 +57,41 @@ def profile():
     current_user.product_updates = user_settings.product_updates
     current_user.subscription_expiry = user_settings.subscription_expiry
     current_user.ai_voice_type = user_settings.ai_voice_type
+    current_user.voice_response = user_settings.voice_response
 
+    # check account expiry
+    subscription = None
+    if current_user.account_type == "Standard":
+        subscriptions = StandardSubscription.query.filter(StandardSubscription.user_id == current_user.id).all()
+        for sub in subscriptions:
+            if not sub.expired() and sub.sub_status == "active":
+                subscription = sub
+    elif current_user.account_type == "Premium":
+        subscriptions = PremiumSubscription.query.filter(PremiumSubscription.user_id == current_user.id).all()
+        for sub in subscriptions:
+            if not sub.expired() and sub.sub_status == "active":
+                subscription = sub
+
+    if not subscription: # all subscriptions have expired
+        current_user.account_type = "Basic"
+        current_user.update()
+
+    if subscription:
+        # calculate expiry date
+        days_left = (subscription.get_expire_date() - current_user.timenow()).days
+        if days_left < 1:
+            hours_left = (subscription.get_expire_date() - current_user.timenow()).total_seconds() / 3600
+            expire_time = current_user.timenow() + timedelta(hours=hours_left)
+            if expire_time.day > current_user.timenow().day:
+                # next day
+                days_left = f"tomorrow at {expire_time.strftime('%I:%M %p')}"
+            else:
+                days_left = f"expires today at {expire_time.strftime('%I:%M %p')}"
+        else:
+            days_left = f"{days_left} days left" if days_left > 1 else f"{days_left} day left"
+
+        current_user.days_left = days_left
+    
     return render_template("main/profile.html", settings=settings)
 
 
@@ -140,3 +184,23 @@ def verify_otp():
     check_otp.update()
     flash("Phone number updated successfully", "success")
     return redirect(url_for("main.profile"))
+
+@main.route("/getTime", methods=['GET'])
+def getTime():
+    from datetime import timezone
+
+
+    get_server_time = request.args.get("time").split()[:6]
+    server_time = ""
+    for i in get_server_time:
+        server_time += f"{i} "
+
+    browser_time = datetime.strptime(server_time.strip(), "%a %b %d %Y %H:%M:%S %Z")
+
+    tz = timezone(browser_time - datetime.now())
+    user_time = datetime.now(tz=tz)
+
+    
+    print("UTC time: ", datetime.utcnow())
+    print("user time : ", user_time);
+    return "Done"

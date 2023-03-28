@@ -1,22 +1,25 @@
 import os
 import subprocess
 import openai
-from datetime import datetime
+from datetime import datetime, timedelta
 from dotenv import load_dotenv
-from flask import Blueprint, request, url_for, send_file
+from flask import Blueprint, request, url_for, send_file, abort
 from twilio.twiml.messaging_response import MessagingResponse
 from app.models import (
     Users,
     BasicSubscription,
     StandardSubscription,
     PremiumSubscription,
+    UserSettings
 )
-
+import traceback
 from boto3 import Session
 from botocore.exceptions import BotoCoreError, ClientError
 from contextlib import closing
 import os
 import subprocess
+import multiprocessing as mp
+from twilio.rest import Client
 
 
 load_dotenv()
@@ -36,6 +39,20 @@ if not os.path.exists("/home/braintext/website/tmp"):
 log_dir = "logs/chatbot"
 tmp_folder = "/home/braintext/website/tmp"
 
+task_queue = []
+
+account_sid = os.environ["TWILIO_ACCOUNT_SID"]
+auth_token = os.environ["TWILIO_AUTH_TOKEN"]
+client = Client(account_sid, auth_token)
+
+def send_whatspp_message(message: str, phone_no: str) -> str:
+    message = client.messages.create(
+        body=message,
+        from_="whatsapp:+15076094633",
+        to=f"whatsapp:{phone_no}",
+    )
+    print(f"{message.sid} -- {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')}")
+    return message.sid
 
 def synthesize_speech(text: str, voice: str) -> str:
     # Create a client using the credentials and region defined in the [adminuser]
@@ -121,7 +138,49 @@ def respond_media(image_url: str) -> str:
     return str(response)
 
 
-def text_response(message: str, number: str) -> tuple:
+
+def chatgpt_response(message: str, number: str) -> tuple:
+    completion = openai.Completion.create(
+        model="text-davinci-003",
+        prompt=message,
+        max_tokens=2000,
+        temperature=0.2,
+        user=f"{str(number)}",
+    )
+    text = completion.choices[0].text
+    tokens = int(completion.usage.total_tokens)
+
+    # check if response is too long
+    if len(text) > 3200:
+        # too long even if halved
+        text = "Your response is too long. Please rephrase your question."
+        return text, tokens
+    elif len(text) > 1600:
+        # split message into 2. Send first half and return second half
+        sentences = text.split(". ")
+        sentence_count = len(sentences)
+        first = int(sentence_count / 2)
+        second = sentence_count - first
+        first_part = ""
+        second_part = ""
+        for index, sentence in enumerate(sentences):
+            if index <= first:
+                first_part += sentence
+            elif index >= second:
+                second_part += sentence
+        
+        # send message
+        send_whatspp_message(message=first_part, phone_no=number)
+
+        text = second_part
+        return text, tokens
+    else:
+        return text, tokens
+
+
+def chatgpt_audio_response(message: str, number: str) -> tuple:
+    # get response from ChatpGPT for audio responses.
+    # length of response doesn't matter
     completion = openai.Completion.create(
         model="text-davinci-003",
         prompt=message,
@@ -134,6 +193,33 @@ def text_response(message: str, number: str) -> tuple:
 
     return text, tokens
 
+def chatgpt_timeout():
+    # To be called when timeout reached
+    text = "Sorry, your response is taking too long. Try rephrasing your question or breaking it into sections."
+    return respond_text(text=text)
+
+
+def text_response(message: str, number: str) -> tuple:
+    # Time the response from ChatGPT, if longer than 15 secs,
+    # return abritrary response
+
+    # create a new process for communication between process
+    queue = mp.Queue()
+
+    # create a new process and call the function
+    process = mp.Process(target=lambda q, arg1, arg2: q.put(chatgpt_response(message=arg1, number=arg2)), args=(queue, message, number))
+    process.start()
+    process.join(14)
+
+    if process.is_alive():
+        process.terminate()
+        return chatgpt_timeout()
+    
+    completion = queue.get()
+    text = completion[0]
+    tokens = completion[1]
+
+    return text, tokens
 
 def image_response(prompt: str) -> str:
     image_response = openai.Image.create(prompt=prompt, n=1, size="1024x1024")
@@ -162,7 +248,6 @@ def send_voice_note():
 @chatbot.post("/braintext-chatbot")
 def bot():
     number = request.values.get("From").replace("whatsapp:", "")
-
     user = Users.query.filter(Users.phone_no == number).one_or_none()
 
     if user:  # user account exists
@@ -174,9 +259,18 @@ def bot():
                         BasicSubscription.user_id == user.id
                     ).one_or_none()
                     if subscription:
+                        incoming_msg = request.values.get("Body", "")
+                        name = request.values.get("ProfileName")
+                        # Image generation
+                        if "dalle" in incoming_msg.lower():
+                            text = "You don't have access to this service. Please upgrade your account to decrease limits. \nhttps://braintext.io/profile"
+                            return respond_text(text=text)
+                        elif request.values.get("MediaContentType0"):
+                            # audio response
+                            text = "You don't have access to this service. Please upgrade your account to decrease limits. \nhttps://braintext.io/profile"
+                            return respond_text(text=text)
                         if subscription.respond():
-                            incoming_msg = request.values.get("Body", "")
-                            name = request.values.get("ProfileName")
+                            # Chat response
                             try:
                                 completion = text_response(incoming_msg, number)
                                 text = completion[0]
@@ -191,11 +285,11 @@ def bot():
                                 return respond_text(text)
 
                             except Exception as e:
-                                print(e)
+                                print(traceback.format_exc())
                                 text = "Sorry, I cannot respond to that at the moment, please try again later."
                                 return respond_text(text)
                         else:
-                            text = f"You have exceed your limit for the week.\nYour prompts will be renewed on {subscription.expire_date.strftime('%A, %d/%m/%Y')} at {subscription.expire_date.strftime('%I:%M %p')}.\nUpgrade your account to decrease limits.\nhttps://braintext.io/profile"
+                            text = f"You have exceed your limit for the week.\nYour prompts will be renewed on {subscription.get_expire_date().strftime('%A, %d/%m/%Y')} at {subscription.get_expire_date().strftime('%I:%M %p')}.\nUpgrade your account to decrease limits.\nhttps://braintext.io/profile"
                             return respond_text(text)
                     else:
                         text = "There's a problem, I can't respond at this time.\nCheck your settings in your profle. https://braintext.io/profile"
@@ -212,22 +306,23 @@ def bot():
                         if not sub.expired():
                             subscription = sub
                     if subscription:
-
                         incoming_msg = request.values.get("Body", "")
                         name = request.values.get("ProfileName")
-                        # Image generation
                         if "dalle" in incoming_msg.lower():
+                            # Image generation
                             prompt = incoming_msg.lower().replace("dalle", "")
                             try:
                                 image_url = image_response(prompt)
                                 log_response(name=name, number=number, message=prompt)
                                 return respond_media(image_url)
                             except Exception as e:
-                                print(e)
-                                text = (
-                                    text
-                                ) = "Sorry, I cannot respond to that at the moment, please try again later."
+                                print(traceback.format_exc())
+                                text  = "Sorry, I cannot respond to that at the moment, please try again later."
                                 return respond_text(text)
+                        elif request.values.get("MediaContentType0"):
+                            # audio response
+                            text = "You don't have access to this service. Please upgrade your account to decrease limits. \nhttps://braintext.io/profile"
+                            return respond_text(text=text)
                         else:
                             # Chat response
                             try:
@@ -243,7 +338,7 @@ def bot():
                                 )
                                 return respond_text(text)
                             except Exception as e:
-                                print(e)
+                                print(traceback.format_exc())
                                 text = "Sorry, I cannot respond to that at the moment, please try again later."
                                 return respond_text(text)
                     else:
@@ -294,39 +389,9 @@ def bot():
                                 os.remove(f"{tmp_file}.mp3")
 
                             prompt = transcript.text
-                            try:
-                                completion = text_response(prompt, number)
-                                text = completion[0]
-                                tokens = completion[1]
+                            task_queue.append(prompt)
 
-                                log_response(
-                                    name=name,
-                                    number=number,
-                                    message=prompt,
-                                    tokens=tokens,
-                                )
-
-                                audio_filename = synthesize_speech(text=text, voice=user.ai_voice)
-
-                                # convert to ogg with ffmpeg
-                                subprocess.Popen(
-                                    f"ffmpeg -i '{audio_filename}' -c:a libopus '{audio_filename.split('.')[0]}.opus'",
-                                    shell=True,
-                                    stdout=subprocess.DEVNULL,
-                                    stderr=subprocess.STDOUT,
-                                ).wait()
-
-                                # remove tts audio
-                                if os.path.exists(audio_filename):
-                                    os.remove(audio_filename)
-
-                                media_url = f"{url_for('chatbot.send_voice_note', _external=True)}?filename={audio_filename.split('.')[0]}.opus"
-
-                                return respond_media(media_url)
-                            except Exception as e:
-                                print(e)
-                                text = "Sorry, I cannot respond to that at the moment, please try again later."
-                                return respond_text(text)
+                            abort(500) # abort to continue with fallback function
 
                         # Image generation
                         if "dalle" in incoming_msg.lower():
@@ -336,10 +401,8 @@ def bot():
                                 log_response(name=name, number=number, message=prompt)
                                 return respond_media(image_url)
                             except Exception as e:
-                                print(e)
-                                text = (
-                                    text
-                                ) = "Sorry, I cannot respond to that at the moment, please try again later."
+                                print(traceback.format_exc())
+                                text = "Sorry, I cannot respond to that at the moment, please try again later."
                                 return respond_text(text)
                         else:
                             # Chat response
@@ -356,7 +419,7 @@ def bot():
                                 )
                                 return respond_text(text)
                             except Exception as e:
-                                print(e)
+                                print(traceback.format_exc())
                                 text = "Sorry, I cannot respond to that at the moment, please try again later."
                                 return respond_text(text)
                             # TODO: add whisper
@@ -373,9 +436,63 @@ def bot():
     else:  # no account found
         text = "To use BrainText, please sign up for an account at https://braintext.io"
         return respond_text(text)
+    print(traceback.format_exc())
+    text = "Sorry, I cannot respond to that at the moment, please try again later."
+    return respond_text(text)
 
 
 @chatbot.post("/braintext-chatbot-fallback")
 def fallback():
-    print("Timed out")
-    return bot()
+    try:
+        number = request.values.get("From").replace("whatsapp:", "")
+
+        user = Users.query.filter(Users.phone_no == number).one_or_none()
+        name = request.values.get("ProfileName")
+        content_type = request.values.get("MediaContentType0")
+
+        if content_type == "audio/ogg":
+            prompt = task_queue[0]
+            try:
+                completion = chatgpt_audio_response(message=prompt, number=number)
+                text = completion[0]
+                tokens = completion[1]
+
+                log_response(
+                    name=name,
+                    number=number,
+                    message=prompt,
+                    tokens=tokens,
+                )
+                user_settings = UserSettings.query.filter(UserSettings.user_id == user.id).one()
+
+                if user_settings.voice_response:
+                    audio_filename = synthesize_speech(text=text, voice=user_settings.ai_voice_type)
+
+                    # convert to ogg with ffmpeg
+                    subprocess.Popen(
+                        f"ffmpeg -i '{audio_filename}' -c:a libopus '{audio_filename.split('.')[0]}.opus'",
+                        shell=True,
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.STDOUT,
+                    ).wait()
+
+                    # remove tts audio
+                    if os.path.exists(audio_filename):
+                        os.remove(audio_filename)
+
+                    media_url = f"{url_for('chatbot.send_voice_note', _external=True)}?filename={audio_filename.split('.')[0]}.opus"
+                    
+                    task_queue.clear()
+                    return respond_media(media_url)
+                else:
+                    return respond_text(text=text)
+            except Exception as e:
+                print(traceback.format_exc())
+                text = "Sorry, I cannot respond to that at the moment, please try again later."
+                return respond_text(text)
+        else:
+            return bot()
+    except:
+        print(traceback.format_exc())
+        text = "Sorry, I cannot respond to that at the moment, please try again later."
+        return respond_text(text)   

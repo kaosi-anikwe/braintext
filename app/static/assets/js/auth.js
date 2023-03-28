@@ -2,11 +2,11 @@ const loginLabel = document.getElementById("login-button");
 const signupLabel = document.getElementById("signup-button");
 
 loginLabel.addEventListener("click", () => {
-  document.title = "Braintext - Login";
+  document.title = "BrainText - Login";
 });
 
 signupLabel.addEventListener("click", () => {
-  document.title = "Braintext - Sign up";
+  document.title = "BrainText - Sign up";
 });
 
 const password = document.getElementById("password");

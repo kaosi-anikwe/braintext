@@ -4,9 +4,9 @@ import uuid
 import math
 import random
 from app import db, login_manager
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from flask import current_app
-from flask_login import UserMixin, current_user
+from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 
 
@@ -64,8 +64,8 @@ class Users(db.Model, TimestampMixin, UserMixin, DatabaseHelperMixin):
     last_name = db.Column(db.String(50), nullable=False)
     email = db.Column(db.String(100), nullable=False)
     account_type = db.Column(db.String(20), default="Basic")
+    timezone_offset = db.Column(db.Integer)
     phone_no = db.Column(db.String(20))
-    ai_voice = db.Column(db.String(20), default="Joanna")
     phone_verified = db.Column(db.Boolean, default=False)
     email_verified = db.Column(db.Boolean, default=False)
     edited = db.Column(db.Boolean, default=False)
@@ -90,6 +90,14 @@ class Users(db.Model, TimestampMixin, UserMixin, DatabaseHelperMixin):
     # return concatenated name
     def display_name(self):
         return f"{self.first_name} {self.last_name}"
+    
+    # get local timezone
+    def get_timezone(self):
+        return timezone(offset=timedelta(seconds=self.timezone_offset))
+    
+    # get local time with timezone
+    def timenow(self):
+        return datetime.now(tz=self.get_timezone())
 
     # verify token generated for resetting password
     @staticmethod
@@ -102,12 +110,13 @@ class Users(db.Model, TimestampMixin, UserMixin, DatabaseHelperMixin):
             return None
         return Users.query.get(id)
 
-    def __init__(self, first_name, last_name, email, password) -> None:
+    def __init__(self, first_name, last_name, email, password, timezone_offset) -> None:
         self.first_name = first_name
         self.last_name = last_name
         self.email = email
         self.password_hash = self.get_password_hash(password)
         self.uid = uuid.uuid4().hex
+        self.timezone_offset = timezone_offset
 
 
 class UserSettings(db.Model, TimestampMixin, DatabaseHelperMixin):
@@ -118,13 +127,14 @@ class UserSettings(db.Model, TimestampMixin, DatabaseHelperMixin):
     product_updates = db.Column(db.Boolean, default=False)
     subscription_expiry = db.Column(db.Boolean, default=True)
     ai_voice_type = db.Column(db.String(50))
+    voice_response = db.Column(db.Boolean, default=True)
     user_id = db.Column(db.ForeignKey("user.id"))
 
     def __init__(self, user_id) -> None:
         self.notify_on_profile_change = False
         self.product_updates = False
         self.subscription_expiry = True
-        self.ai_voice_type = "default"
+        self.ai_voice_type = "Joanna"
         self.user_id = user_id
 
 
@@ -147,7 +157,8 @@ class BasicSubscription(db.Model, TimestampMixin, DatabaseHelperMixin):
     __tablename__ = "basic_subscription"
 
     id = db.Column(db.Integer, primary_key=True)
-    expire_date = db.Column(db.DateTime)
+    expire_date = db.Column(db.DateTime(timezone=True))
+    time
     sub_status = db.Column(db.String(20))
     prompts = db.Column(db.Integer)
     user_id = db.Column(db.ForeignKey("user.id"), nullable=False)
@@ -164,29 +175,35 @@ class BasicSubscription(db.Model, TimestampMixin, DatabaseHelperMixin):
             self.sub_status = "upgraded"
             self.update()
 
+    # get localized expire_date
+    def get_expire_date(self):
+        user = Users.query.get(self.user_id)
+        return self.expire_date.replace(tzinfo=user.get_timezone())
+
     def expired(self) -> bool:
-        if datetime.utcnow() > self.expire_date:
+        user = Users.query.get(self.user_id)
+        if user.timenow() > self.get_expire_date():
             return True
         else:
             return False
 
     def renew(self) -> bool:
-        if self.expired():
-            try:
-                while self.expire_date < datetime.utcnow():
-                    self.expire_date = self.expire_date + timedelta(days=7)
-                self.prompts = 0
-                self.update()
-                return True
-            except Exception as e:
-                print(e)
-                return False
-        else:
+        try:
+            user = Users.query.get(self.user_id)
+            while self.get_expire_date() < user.timenow():
+                self.expire_date = self.expire_date + timedelta(days=7)
+            self.prompts = 0
+            self.update()
+            return True
+        except Exception as e:
+            print(e)
             return False
 
+
     def respond(self) -> bool:
-        self.renew()
-        if self.prompts < 10:
+        if self.expired():
+            self.renew()
+        if self.prompts < 3:
             self.prompts += 1
             self.update()
             return True
@@ -203,7 +220,7 @@ class StandardSubscription(db.Model, TimestampMixin, DatabaseHelperMixin):
     flw_ref = db.Column(db.String(100))
     payment_status = db.Column(db.String(20))
     sub_status = db.Column(db.String(20))
-    expire_date = db.Column(db.DateTime)
+    expire_date = db.Column(db.DateTime(timezone=True))
     user_id = db.Column(db.ForeignKey("user.id"), nullable=False)
 
     def __init__(self, tx_ref, user_id) -> None:
@@ -217,9 +234,15 @@ class StandardSubscription(db.Model, TimestampMixin, DatabaseHelperMixin):
             self.sub_status = "upgraded"
             self.update()
 
+    # get localized expire_date
+    def get_expire_date(self):
+        user = Users.query.get(self.user_id)
+        return self.expire_date.replace(tzinfo=user.get_timezone())
+
     def expired(self) -> bool:
-        # expiration_date = (self.expire_date.replace(day=1) + timedelta(days=32)).replace(day=self.expire_date.day)
-        if datetime.utcnow() > self.expire_date:
+        # return False
+        user = Users.query.get(self.user_id)
+        if user.timenow() > self.get_expire_date():
             if self.sub_status != "expired":
                 self.sub_status = "expired"
                 self.update()
@@ -237,7 +260,7 @@ class PremiumSubscription(db.Model, TimestampMixin, DatabaseHelperMixin):
     flw_ref = db.Column(db.String(100))
     payment_status = db.Column(db.String(20))
     sub_status = db.Column(db.String(20))
-    expire_date = db.Column(db.DateTime)
+    expire_date = db.Column(db.DateTime(timezone=True))
     user_id = db.Column(db.ForeignKey("user.id"), nullable=False)
 
     def __init__(self, tx_ref, user_id) -> None:
@@ -251,8 +274,14 @@ class PremiumSubscription(db.Model, TimestampMixin, DatabaseHelperMixin):
             self.sub_status = "upgraded"
             self.update()
 
+    # get localized expire_date
+    def get_expire_date(self):
+        user = Users.query.get(self.user_id)
+        return self.expire_date.replace(tzinfo=user.get_timezone())
+
     def expired(self) -> bool:
-        if datetime.utcnow() > self.expire_date:
+        user = Users.query.get(self.user_id)
+        if user.timenow() > self.get_expire_date():
             if self.sub_status != "expired":
                 self.sub_status = "expired"
                 self.update()

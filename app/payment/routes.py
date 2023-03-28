@@ -7,6 +7,8 @@ from dotenv import load_dotenv
 from flask import Blueprint, request, render_template, redirect, url_for, jsonify, flash
 from flask_login import login_required, current_user
 from app.models import StandardSubscription, PremiumSubscription, Users
+from app.chatbot.chatbot import send_whatspp_message
+
 
 payment = Blueprint("payment", __name__)
 
@@ -122,8 +124,10 @@ def payment_callback():
                     subscription.tx_id = transaction_id
                     # expiry date is the current day of the next month
                     subscription.expire_date = (
-                        datetime.utcnow().replace(day=1) + timedelta(days=32)
+                        current_user.timenow().replace(day=1) + timedelta(days=32)
                     ).replace(day=datetime.utcnow().day)
+                    # localize time
+                    subscription.expire_date = subscription.expire_date.replace(tzinfo=current_user.get_timezone())
                     subscription.update()
 
                     # check for existing subscriptions and update user account
@@ -137,6 +141,9 @@ def payment_callback():
                                 old_sub.upgrade()
                         current_user.account_type = "Standard"
                         current_user.update()
+                        # send thank you message
+                        message = "*Thank you for upgrading your account!*\nYour Standard account has been activated.\nCheck your account settings to adjust preferences.\nhttps://braintext.io/profile?settings=True"
+                        send_whatspp_message(message=message, phone_no=current_user.phone_no)
                     if premium:
                         old_sub = StandardSubscription.query.filter(
                             StandardSubscription.sub_status == "active",
@@ -147,12 +154,14 @@ def payment_callback():
                                 old_sub.upgrade()
                         current_user.account_type = "Premium"
                         current_user.update()
+                        # send thank you message 
+                        message = "*Thank you for upgrading your account!*\nYour account has been fully activated.\nCheck your account settings to adjust preferences.\nhttps://braintext.io/profile?settings=True"
+                        send_whatspp_message(message=message, phone_no=current_user.phone_no)
 
                     print(
                         f"Payment successful - {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')}"
                     )
-                    # TODO: redirect to thank you page
-                    return redirect(url_for("main.profile"))
+                    return render_template("thanks/thanks.html", premium=premium)
             else:
                 # update record as failed
                 subscription.payment_status = "failed"
@@ -235,7 +244,7 @@ def payment_webhook():
                                     subscription.sub_status = "active"
                                     # expiry date is the current day of the next month
                                     subscription.expire_date = (
-                                        datetime.utcnow().replace(day=1)
+                                        user.timenow().replace(day=1)
                                         + timedelta(days=32)
                                     ).replace(day=datetime.utcnow().day)
                                     subscription.update()
@@ -249,6 +258,7 @@ def payment_webhook():
                                         datetime.utcnow().replace(day=1)
                                         + timedelta(days=32)
                                     ).replace(day=datetime.utcnow().day)
+                                    subscription.expire_date.replace(tzinfo=user.timezone)
                                     subscription.update()
                                     # TODO: send thank you email
 

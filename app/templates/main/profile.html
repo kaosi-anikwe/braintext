@@ -65,7 +65,7 @@
                 <div class="row">
                   <div class="col-lg-3 col-md-4 label">Account Type</div>
                   <div class="col-lg-9 col-md-8">
-                    <p style="margin: 5px 0">{{ current_user.account_type }}</p>
+                    <p style="margin: 5px 0">{{ current_user.account_type }} {% if current_user.days_left %} <small style="font-size: 0.675rem;">({{ current_user.days_left }})</small> {% endif %} </p>
                     {% if current_user.account_type == "Standard" %}
                     <a
                       href="{{ url_for('payment.checkout', package='prmum') }}"
@@ -397,10 +397,12 @@
                         id="aiVoice"
                         name="ai_voice_type"
                       >
-                        <option selected>Open this select menu</option>
-                        <option value="1">One</option>
-                        <option value="2">Two</option>
-                        <option value="3">Three</option>
+                        <option value="Joanna" {% if current_user.ai_voice_type == 'Joanna' %} selected {% endif %} >Joanna (Female)</option>
+                        <option value="Ivy" {% if current_user.ai_voice_type == 'Ivy' %} selected {% endif %} >Ivy (Female child)</option>
+                        <option value="Joey" {% if current_user.ai_voice_type == 'Joey' %} selected {% endif %} >Joey (Male)</option>
+                        <option value="Kevin" {% if current_user.ai_voice_type == 'Kevin' %} selected {% endif %} >Kevin (Male child)</option>
+                        <option value="Matthew" {% if current_user.ai_voice_type == 'Matthew' %} selected {% endif %} >Matthew (Male)</option>
+                        <option value="Stephen" {% if current_user.ai_voice_type == 'Stephen' %} selected {% endif %} >Stephen (Male)</option>
                       </select>
                     </div>
                     {% else %}
@@ -419,6 +421,38 @@
                     </div>
                     {% endif %}
                   </div>
+                  {% if current_user.account_type == "Premium" %}
+
+                  <div class="row mb-3">
+                    <label class="col-md-4 col-lg-3 col-form-label"
+                      >Audio response to Voice Notes</label
+                    >
+                    <div class="col-md-8 col-lg-9">
+                      <div class="form-check" style="padding-top: 0.5rem;">
+                        <input 
+                          class="form-check-input"
+                          type="checkbox" 
+                          name="voice_response"
+                          {% if current_user.voice_response %}
+                          checked
+                          {% endif %}
+                          id="voice_response" 
+                          value="checked">
+                          <label
+                          class="form-check-label"
+                          for="subExpiry"
+                          style="
+                            font-size: 15px;
+                            font-weight: normal;
+                            color: var(--bs-card-color);
+                          "
+                        >
+                          Respond with synthesized speech
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                  {% endif %}
                   <div class="text-center">
                     <button
                       id="edit-profile-btn"
