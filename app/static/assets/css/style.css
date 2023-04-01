@@ -35,7 +35,7 @@ h6 {
 
 /* Centralize div */
 .centralize {
-  display: flex;
+  /* display: flex; */
   justify-content: space-around;
 }
 

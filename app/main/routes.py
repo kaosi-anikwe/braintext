@@ -1,7 +1,17 @@
 import os
+import traceback
 from datetime import datetime, timedelta
 from twilio.rest import Client
-from app.models import OTP, get_otp, Users, UserSettings, StandardSubscription, PremiumSubscription, BasicSubscription
+from app.models import (
+    OTP,
+    get_otp,
+    Users,
+    UserSettings,
+    StandardSubscription,
+    PremiumSubscription,
+    BasicSubscription,
+)
+from app.email_utility import send_email
 from flask_login import login_required, current_user
 from flask import Blueprint, render_template, request, flash, jsonify, redirect, url_for
 
@@ -62,17 +72,21 @@ def profile():
     # check account expiry
     subscription = None
     if current_user.account_type == "Standard":
-        subscriptions = StandardSubscription.query.filter(StandardSubscription.user_id == current_user.id).all()
+        subscriptions = StandardSubscription.query.filter(
+            StandardSubscription.user_id == current_user.id
+        ).all()
         for sub in subscriptions:
             if not sub.expired() and sub.sub_status == "active":
                 subscription = sub
     elif current_user.account_type == "Premium":
-        subscriptions = PremiumSubscription.query.filter(PremiumSubscription.user_id == current_user.id).all()
+        subscriptions = PremiumSubscription.query.filter(
+            PremiumSubscription.user_id == current_user.id
+        ).all()
         for sub in subscriptions:
             if not sub.expired() and sub.sub_status == "active":
                 subscription = sub
 
-    if not subscription: # all subscriptions have expired
+    if not subscription:  # all subscriptions have expired
         current_user.account_type = "Basic"
         current_user.update()
 
@@ -80,7 +94,9 @@ def profile():
         # calculate expiry date
         days_left = (subscription.get_expire_date() - current_user.timenow()).days
         if days_left < 1:
-            hours_left = (subscription.get_expire_date() - current_user.timenow()).total_seconds() / 3600
+            hours_left = (
+                subscription.get_expire_date() - current_user.timenow()
+            ).total_seconds() / 3600
             expire_time = current_user.timenow() + timedelta(hours=hours_left)
             if expire_time.day > current_user.timenow().day:
                 # next day
@@ -88,10 +104,12 @@ def profile():
             else:
                 days_left = f"expires today at {expire_time.strftime('%I:%M %p')}"
         else:
-            days_left = f"{days_left} days left" if days_left > 1 else f"{days_left} day left"
+            days_left = (
+                f"{days_left} days left" if days_left > 1 else f"{days_left} day left"
+            )
 
         current_user.days_left = days_left
-    
+
     return render_template("main/profile.html", settings=settings)
 
 
@@ -185,22 +203,31 @@ def verify_otp():
     flash("Phone number updated successfully", "success")
     return redirect(url_for("main.profile"))
 
-@main.route("/getTime", methods=['GET'])
-def getTime():
-    from datetime import timezone
 
+@main.post("/send-email")
+def send_contact_email():
+    data = request.get_json()
 
-    get_server_time = request.args.get("time").split()[:6]
-    server_time = ""
-    for i in get_server_time:
-        server_time += f"{i} "
+    name = data["name"]
+    email = data["email"]
+    subject = data["subject"]
+    body = data["body"]
 
-    browser_time = datetime.strptime(server_time.strip(), "%a %b %d %Y %H:%M:%S %Z")
+    user = Users.query.filter(Users.email == email).one_or_none()
+    if user:
+        body = f"Name: {name} \nEmail: {email} \nUser ID: {user.uid} \n\n{body}"
+    else:
+        body = f"Name: {name} \nEmail: {email} \n\n{body}"
 
-    tz = timezone(browser_time - datetime.now())
-    user_time = datetime.now(tz=tz)
+    try:
 
-    
-    print("UTC time: ", datetime.utcnow())
-    print("user time : ", user_time);
-    return "Done"
+        if send_email(
+            receiver_email="support@braintext.io",
+            subject=subject,
+            plaintext=body,
+            sender_email=email,
+        ):
+            return jsonify({"success": True}), 200
+    except:
+        print(traceback.format_exc())
+        return jsonify({"success": False}), 400

@@ -90,11 +90,11 @@ class Users(db.Model, TimestampMixin, UserMixin, DatabaseHelperMixin):
     # return concatenated name
     def display_name(self):
         return f"{self.first_name} {self.last_name}"
-    
+
     # get local timezone
     def get_timezone(self):
         return timezone(offset=timedelta(seconds=self.timezone_offset))
-    
+
     # get local time with timezone
     def timenow(self):
         return datetime.now(tz=self.get_timezone())
@@ -198,7 +198,6 @@ class BasicSubscription(db.Model, TimestampMixin, DatabaseHelperMixin):
         except Exception as e:
             print(e)
             return False
-
 
     def respond(self) -> bool:
         if self.expired():

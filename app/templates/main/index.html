@@ -1,4 +1,9 @@
 {% extends "base.html" %} {% block app_content %}
+<link
+  rel="stylesheet"
+  type="text/css"
+  href="//cdn.jsdelivr.net/gh/loadingio/ldbutton@v1.0.1/dist/ldbtn.min.css"
+/>
 <!-- ======= Hero Section ======= -->
 <section id="hero" class="d-flex align-items-center">
   <div
@@ -45,8 +50,8 @@
           <div class="icon"><i class="ri-lightbulb-line"></i></div>
           <h4 class="title"><a href="">Conversational AI</a></h4>
           <p class="description">
-            Duis aute irure dolor in reprehenderit in voluptate velit esse
-            cillum dolore
+            Our AI powered tool helps you explore new avenues of creativity,
+            offering visual and audio suggestions that engage and inspire
           </p>
         </div>
       </div>
@@ -60,8 +65,9 @@
           <div class="icon"><i class="ri-image-line"></i></div>
           <h4 class="title"><a href="">Creativity</a></h4>
           <p class="description">
-            Our AI powered tool helps you explore new avenues of creativity,
-            offering visual and audio suggestions that engage and inspire.
+            From keywords to topics, our AI-powered tool helps you explore new
+            avenues of creativity, offering visual and audio suggestions that
+            engage and inspire
           </p>
         </div>
       </div>
@@ -75,8 +81,8 @@
           <div class="icon"><i class="ri-user-voice-line"></i></div>
           <h4 class="title"><a href="">Ease of Access</a></h4>
           <p class="description">
-            At vero eos et accusamus et iusto odio dignissimos ducimus qui
-            blanditiis
+            Engage in natural, human-like conversations with our intelligent
+            chatbot and experience a new level of personalized assistance.
           </p>
         </div>
       </div>
@@ -91,40 +97,40 @@
     <div class="container" data-aos="fade-up">
       <div class="section-title">
         <h2>About Us</h2>
-        <p>
+        <!-- <p>
           Magnam dolores commodi suscipit. Necessitatibus eius consequatur ex
           aliquid fuga eum quidem.
-        </p>
+        </p> -->
       </div>
 
       <div class="row content">
         <div class="col-lg-6">
           <p>
-            Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
-            eiusmod tempor incididunt ut labore et dolore magna aliqua.
+            Our mission is to make AI accessible, user-friendly, and useful for
+            everyone, regardless of their technical background or expertise.
           </p>
           <ul>
             <li>
-              <i class="ri-check-double-line"></i> Ullamco laboris nisi ut
-              aliquip ex ea commodo consequat
+              <i class="ri-check-double-line"></i>Unparalleled accessibility,
+              making us the perfect choice.
             </li>
             <li>
-              <i class="ri-check-double-line"></i> Duis aute irure dolor in
-              reprehenderit in voluptate velit
+              <i class="ri-check-double-line"></i>Unlock your creativity, our
+              services offer the best way to express yourself and learn.
             </li>
             <li>
-              <i class="ri-check-double-line"></i> Ullamco laboris nisi ut
-              aliquip ex ea commodo consequat
+              <i class="ri-check-double-line"></i>We offer ease of access,
+              making us an ideal option for your requirements.
             </li>
           </ul>
         </div>
         <div class="col-lg-6 pt-4 pt-lg-0">
           <p>
-            Ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute
-            irure dolor in reprehenderit in voluptate velit esse cillum dolore
-            eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non
-            proident, sunt in culpa qui officia deserunt mollit anim id est
-            laborum.
+            We believe that AI has the power to revolutionize the way we live,
+            work, and interact with the world around us. Our team of experts
+            works tirelessly to develop cutting-edge AI solutions that are
+            designed to enhance productivity, creativity, and overall quality of
+            life.
           </p>
           <a href="#services" class="btn-learn-more">Learn More</a>
         </div>
@@ -148,10 +154,18 @@
             alt=""
           />
           <a
-            href="https://www.youtube.com/watch?v=jDDaplaOz7Q"
+            href="#about_video"
             class="glightbox play-btn mb-4"
             data-vbtype="video"
             data-autoplay="true"
+            ><iframe
+              id="about_video"
+              src="/static/assets/img/braintext_homepage.mp4"
+              width="1080px"
+              height="1920px"
+              data-vbtype="video"
+              frameborder="0"
+            ></iframe
           ></a>
         </div>
 
@@ -161,12 +175,12 @@
           data-aos-delay="100"
         >
           <h3>
-            Voluptatem dignissimos provident quasi corporis voluptates sit
-            assumenda.
+            Here's a demonstration to better understand the nature of our
+            services.
           </h3>
           <p class="fst-italic">
-            Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
-            eiusmod tempor incididunt ut labore et dolore magna aliqua.
+            The video provides a simplifed overview and doesn't cover the
+            details. To better understand, please go through our FAQs.
           </p>
           <ul>
             <li>
@@ -332,7 +346,7 @@
   <section id="services" class="services section-bg">
     <div class="container" data-aos="fade-up">
       <div class="section-title">
-        <h2>Sevices</h2>
+        <h2>Services</h2>
         <p>
           Magnam dolores commodi suscipit. Necessitatibus eius consequatur ex
           aliquid fuga eum quidem. Sit sint consectetur velit. Quisquam quos
@@ -364,7 +378,7 @@
               </svg>
               <i class="bx bxl-dribbble"></i>
             </div>
-            <h4><a href="">Lorem Ipsum</a></h4>
+            <h4><a href="">AI Conversation</a></h4>
             <p>
               Voluptatum deleniti atque corrupti quos dolores et quas molestias
               excepturi
@@ -392,9 +406,10 @@
                   d="M300,582.0697525312426C382.5290701553225,586.8405444964366,449.9789794690241,525.3245884688669,502.5850820975895,461.55621195738473C556.606425686781,396.0723002908107,615.8543463187945,314.28637112970534,586.6730223649479,234.56875336149918C558.9533121215079,158.8439757836574,454.9685369536778,164.00468322053177,381.49747125262974,130.76875717737553C312.15926192815925,99.40240125094834,248.97055460311594,18.661163978235184,179.8680185752513,50.54337015887873C110.5421016452524,82.52863877960104,119.82277516462835,180.83849132639028,109.12597500060166,256.43424936330496C100.08760227029461,320.3096726198365,92.17705696193138,384.0621239912766,124.79988738764834,439.7174275375508C164.83382741302287,508.01625554203684,220.96474134820875,577.5009287672846,300,582.0697525312426"
                 ></path>
               </svg>
-              <i class="bx bx-file"></i>
+              <i class="bx bx-message-alt-minus"></i>
+              <!-- <i class="bx bx-file"></i> -->
             </div>
-            <h4><a href="">Sed Perspiciatis</a></h4>
+            <h4><a href="">Image Generation</a></h4>
             <p>
               Duis aute irure dolor in reprehenderit in voluptate velit esse
               cillum dolore
@@ -424,7 +439,7 @@
               </svg>
               <i class="bx bx-tachometer"></i>
             </div>
-            <h4><a href="">Magni Dolores</a></h4>
+            <h4><a href="">Text to Speech</a></h4>
             <p>
               Excepteur sint occaecat cupidatat non proident, sunt in culpa qui
               officia
@@ -436,6 +451,7 @@
           class="col-lg-4 col-md-6 d-flex align-items-stretch mt-4"
           data-aos="zoom-in"
           data-aos-delay="100"
+          style="margin: 0 auto"
         >
           <div class="icon-box iconbox-yellow">
             <div class="icon">
@@ -454,70 +470,10 @@
               </svg>
               <i class="bx bx-layer"></i>
             </div>
-            <h4><a href="">Nemo Enim</a></h4>
+            <h4><a href="">Speech to Speech</a></h4>
             <p>
               At vero eos et accusamus et iusto odio dignissimos ducimus qui
               blanditiis
-            </p>
-          </div>
-        </div>
-
-        <div
-          class="col-lg-4 col-md-6 d-flex align-items-stretch mt-4"
-          data-aos="zoom-in"
-          data-aos-delay="200"
-        >
-          <div class="icon-box iconbox-red">
-            <div class="icon">
-              <svg
-                width="100"
-                height="100"
-                viewBox="0 0 600 600"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  stroke="none"
-                  stroke-width="0"
-                  fill="#f5f5f5"
-                  d="M300,532.3542879108572C369.38199826031484,532.3153073249985,429.10787420159085,491.63046689027357,474.5244479745417,439.17860296908856C522.8885846962883,383.3225815378663,569.1668002868075,314.3205725914397,550.7432151929288,242.7694973846089C532.6665558377875,172.5657663291529,456.2379748765914,142.6223662098291,390.3689995646985,112.34683881706744C326.66090330228417,83.06452184765237,258.84405631176094,53.51806209861945,193.32584062364296,78.48882559362697C121.61183558270385,105.82097193414197,62.805066853699245,167.19869350419734,48.57481801355237,242.6138429142374C34.843463184063346,315.3850353017275,76.69343916112496,383.4422959591041,125.22947124332185,439.3748458443577C170.7312796277747,491.8107796887764,230.57421082200815,532.3932930995766,300,532.3542879108572"
-                ></path>
-              </svg>
-              <i class="bx bx-slideshow"></i>
-            </div>
-            <h4><a href="">Dele Cardo</a></h4>
-            <p>
-              Quis consequatur saepe eligendi voluptatem consequatur dolor
-              consequuntur
-            </p>
-          </div>
-        </div>
-
-        <div
-          class="col-lg-4 col-md-6 d-flex align-items-stretch mt-4"
-          data-aos="zoom-in"
-          data-aos-delay="300"
-        >
-          <div class="icon-box iconbox-teal">
-            <div class="icon">
-              <svg
-                width="100"
-                height="100"
-                viewBox="0 0 600 600"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  stroke="none"
-                  stroke-width="0"
-                  fill="#f5f5f5"
-                  d="M300,566.797414625762C385.7384707136149,576.1784315230908,478.7894351017131,552.8928747891023,531.9192734346935,484.94944893311C584.6109503024035,417.5663521118492,582.489472248146,322.67544863468447,553.9536738515405,242.03673114598146C529.1557734026468,171.96086150256528,465.24506316201064,127.66468636344209,395.9583748389544,100.7403814666027C334.2173773831606,76.7482773500951,269.4350130405921,84.62216499799875,207.1952322260088,107.2889140133804C132.92018162631612,134.33871894543012,41.79353780512637,160.00259165414826,22.644507872594943,236.69541883565114C3.319112789854554,314.0945973066697,72.72355303640163,379.243833228382,124.04198916343866,440.3218312028393C172.9286146004772,498.5055451809895,224.45579914871206,558.5317968840102,300,566.797414625762"
-                ></path>
-              </svg>
-              <i class="bx bx-arch"></i>
-            </div>
-            <h4><a href="">Divera Don</a></h4>
-            <p>
-              Modi nostrum vel laborum. Porro fugit error sit minus sapiente sit
-              aspernatur
             </p>
           </div>
         </div>
@@ -1104,44 +1060,52 @@
       </div>
 
       <div>
-        <iframe
+        <!-- <iframe
           style="border: 0; width: 100%; height: 270px"
           src="https://www.google.com/maps/embed?pb=!1m14!1m8!1m3!1d12097.433213460943!2d-74.0062269!3d40.7101282!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0xb89d1fe6bc499443!2sDowntown+Conference+Center!5e0!3m2!1smk!2sbg!4v1539943755621"
           frameborder="0"
           allowfullscreen
+        ></iframe> -->
+        <iframe
+          src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d30127.16812248548!2d7.406428666798354!3d6.875767559993466!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x1044e7defeff9725%3A0xffb8a28c30660e7d!2sUniversity%20of%20Nigeria%2C%20UNN%20Nsukka!5e0!3m2!1sen!2sng!4v1680025647447!5m2!1sen!2sng"
+          style="border: 0; width: 100%; height: 270px"
+          allowfullscreen
+          loading="lazy"
+          frameborder="0"
         ></iframe>
       </div>
 
       <div class="row mt-5">
         <div class="col-lg-4">
-          <div class="info">
+          <div class="info" style="padding: 1rem">
             <div class="address">
               <i class="bi bi-geo-alt"></i>
               <h4>Location:</h4>
-              <p>A108 Adam Street, New York, NY 535022</p>
+              <p>University of Nigeria, Nsukka</p>
             </div>
 
             <div class="email">
               <i class="bi bi-envelope"></i>
               <h4>Email:</h4>
-              <p>info@example.com</p>
+              <p>support@braintext.io</p>
             </div>
 
             <div class="phone">
               <i class="bi bi-phone"></i>
-              <h4>Call:</h4>
-              <p>+1 5589 55488 55s</p>
+              <h4>WhatsApp:</h4>
+              <p>+1 (507) 609-4633</p>
             </div>
           </div>
         </div>
 
         <div class="col-lg-8 mt-5 mt-lg-0">
           <form
-            action="forms/contact.php"
-            method="post"
             role="form"
+            id="contact-form"
             class="php-email-form"
+            style="padding: 1rem"
           >
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
             <div class="row gy-2 gx-md-3">
               <div class="col-md-6 form-group">
                 <input
@@ -1178,6 +1142,7 @@
                   class="form-control"
                   name="message"
                   rows="5"
+                  id="contact-body"
                   placeholder="Message"
                   required
                 ></textarea>
@@ -1185,12 +1150,15 @@
               <div class="my-3 col-12">
                 <div class="loading">Loading</div>
                 <div class="error-message"></div>
-                <div class="sent-message">
+                <div class="sent-message" id="sent-message">
                   Your message has been sent. Thank you!
                 </div>
               </div>
               <div class="text-center col-12">
-                <button type="submit">Send Message</button>
+                <button type="submit" id="contact-submit" class="ld-ext-right">
+                  Send Message
+                  <div class="ld ld-ring ld-spin"></div>
+                </button>
               </div>
             </div>
           </form>
@@ -1200,5 +1168,10 @@
   </section>
   <!-- End Contact Section -->
 </main>
+<script>
+  var csrfToken = "{{ csrf_token() }}";
+</script>
+<script src="https://smtpjs.com/v3/smtp.js"></script>
+<script src="{{ url_for('static', filename='/assets/js/index.js') }}"></script>
 <!-- End #main -->
 {% endblock %}

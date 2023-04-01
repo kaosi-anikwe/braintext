@@ -7,11 +7,18 @@ from email.mime.multipart import MIMEMultipart
 from app.verification import generate_confirmation_token
 
 # Common email sending function
-def send_email(receiver_email, subject, plaintext, html):
+def send_email(
+    receiver_email,
+    subject,
+    plaintext,
+    html=None,
+    sender_email=os.environ.get("SMTP_SERVER"),
+):
     # Connection configuration
     SMTP_SERVER = os.environ.get("SMTP_SERVER")
     PORT = 587  # For starttls
-    SENDER_EMAIL = os.environ.get("SENDER_EMAIL")
+    USERNAME = os.environ.get("SENDER_EMAIL")
+    SENDER_EMAIL = sender_email
     PASSWORD = os.environ.get("PASSWORD")
 
     # Message setup
@@ -22,12 +29,14 @@ def send_email(receiver_email, subject, plaintext, html):
 
     # Turn text into plain or HTML MIMEText objects
     part1 = MIMEText(plaintext, "plain")
-    part2 = MIMEText(html, "html")
+    if html:
+        part2 = MIMEText(html, "html")
 
     # Add HTML/plain-text parts to MIMEMultipart message
     # The email client will try to render the last part first
     message.attach(part1)
-    message.attach(part2)
+    if html:
+        message.attach(part2)
 
     # Create a secure SSL context
     context = ssl.create_default_context()
@@ -38,7 +47,7 @@ def send_email(receiver_email, subject, plaintext, html):
         server.ehlo()
         server.starttls(context=context)  # Secure the connection
         server.ehlo()
-        server.login(SENDER_EMAIL, PASSWORD)
+        server.login(USERNAME, PASSWORD)
         server.send_message(message)
     except Exception as e:
         # Print error messages to stdout

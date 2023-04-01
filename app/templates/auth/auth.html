@@ -18,7 +18,11 @@
     <input type="checkbox" id="chk" aria-hidden="true" />
 
     <div class="signup">
-      <form method="post" action="{{ url_for('auth.register') }}">
+      <form
+        method="post"
+        action="{{ url_for('auth.register') }}"
+        onsubmit="getDate()"
+      >
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
         <label
           id="signup-button"
@@ -145,8 +149,9 @@
 </div>
 
 <script>
-  let time = new Date();
-  document.getElementById("timezone").value = time;
+  function getDate() {
+    document.getElementById("timezone").value = new Date();
+  }
 </script>
 
 {% if login %}

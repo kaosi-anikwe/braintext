@@ -1,15 +1,44 @@
 {% extends "base.html" %} {% block app_content %}
-<link href="../static/niceadmin/css/style.css" rel="stylesheet" />
-
-<main id="main" class="main">
+<main id="main" class="main" data-aos="fade-up" style="padding-top: 5rem; padding-bottom: 5rem;">
   <!-- End Page Title -->
   <!-- Add Number section -->
   <div class="row">
-    <div class="centralize">
-      <div class="col-lg-6">
+     <div
+          class="col-lg-4 col-md-6 mt-4 mt-md-0"
+          data-aos="zoom-in"
+          data-aos-delay="100"
+          style="margin: 0 auto"
+        >
+        <div class="pricing" style="padding-top: 3rem;">
+          <div class="box featured">
+            <h3>Business</h3>
+            <h4><sup>$</sup>19<span> / month</span></h4>
+            <ul>
+              <li>Aida dere</li>
+              <li>Nec feugiat nisl</li>
+              <li>Nulla at volutpat dola</li>
+              <li>Pharetra massa</li>
+              <li class="na">Massa ultricies mi</li>
+            </ul>
+            <div class="btn-wrap">
+              <a
+                href="{{ url_for('payment.checkout', package='stnrd') }}"
+                class="btn-buy"
+                >Buy Now</a
+              >
+            </div>
+          </div>
+        </div>
+        </div>
+      <div class="col-lg-6 col-md-6 mt-4 mt-md-0" style="margin: 0 auto;">
         <div class="center-title" style="padding: 1.5rem 0">
           <div class="pagetitle">
-            <h1>Checkout</h1>
+            <h1
+             style="margin-bottom: 0;
+                    font-weight: 600;
+                    color: #012970;
+                    text-align: center;"  
+            >Checkout</h1>
           </div>
         </div>
         <div class="card">
@@ -94,7 +123,7 @@
           </div>
         </div>
       </div>
-    </div>
+      
   </div>
 </main>
 <script>

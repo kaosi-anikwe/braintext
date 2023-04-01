@@ -15,7 +15,10 @@ def login():
         if current_user.is_authenticated:
             return redirect(url_for("main.profile"))
         return render_template(
-            "auth/auth.html", title="Login", login=True, next=request.args.get("next") or None
+            "auth/auth.html",
+            title="Login",
+            login=True,
+            next=request.args.get("next") or None,
         )
     else:
         email = request.form.get("email")
@@ -48,8 +51,8 @@ def register():
         last_name = request.form.get("lastname")
         email = request.form.get("email")
         password = request.form.get("password")
-        get_browser_time = request.args.get("time").split()[:6]
-        
+        get_browser_time = request.form.get("time").split()[:5]
+
         check = Users.query.filter(Users.email == email).first()
         if check:
             flash(
@@ -57,12 +60,12 @@ def register():
                 "danger",
             )
             return redirect(url_for("auth.register"))
-        
+
         # get user local time
         browser_time = ""
         for i in get_browser_time:
             browser_time += f"{i} "
-        browser_time = datetime.strptime(browser_time.strip(), "%a %b %d %Y %H:%M:%S %Z")
+        browser_time = datetime.strptime(browser_time.strip(), "%a %b %d %Y %H:%M:%S")
         timezone_offset = (browser_time - datetime.utcnow()).seconds
 
         # create user class instance / database record
@@ -71,7 +74,9 @@ def register():
         # create basic sub instance / database record
         basic_sub = BasicSubscription(new_user.id)
         # localize time
-        basic_sub.expire_date = basic_sub.expire_date.replace(tzinfo=new_user.get_timezone())
+        basic_sub.expire_date = basic_sub.expire_date.replace(
+            tzinfo=new_user.get_timezone()
+        )
         basic_sub.insert()
         # create user setting instance / database record
         user_settings = UserSettings(new_user.id)

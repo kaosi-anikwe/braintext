@@ -10,7 +10,7 @@ from app.models import (
     BasicSubscription,
     StandardSubscription,
     PremiumSubscription,
-    UserSettings
+    UserSettings,
 )
 import traceback
 from boto3 import Session
@@ -45,6 +45,7 @@ account_sid = os.environ["TWILIO_ACCOUNT_SID"]
 auth_token = os.environ["TWILIO_AUTH_TOKEN"]
 client = Client(account_sid, auth_token)
 
+
 def send_whatspp_message(message: str, phone_no: str) -> str:
     message = client.messages.create(
         body=message,
@@ -53,6 +54,7 @@ def send_whatspp_message(message: str, phone_no: str) -> str:
     )
     print(f"{message.sid} -- {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')}")
     return message.sid
+
 
 def synthesize_speech(text: str, voice: str) -> str:
     # Create a client using the credentials and region defined in the [adminuser]
@@ -138,7 +140,6 @@ def respond_media(image_url: str) -> str:
     return str(response)
 
 
-
 def chatgpt_response(message: str, number: str) -> tuple:
     completion = openai.Completion.create(
         model="text-davinci-003",
@@ -168,7 +169,7 @@ def chatgpt_response(message: str, number: str) -> tuple:
                 first_part += sentence
             elif index >= second:
                 second_part += sentence
-        
+
         # send message
         send_whatspp_message(message=first_part, phone_no=number)
 
@@ -185,13 +186,14 @@ def chatgpt_audio_response(message: str, number: str) -> tuple:
         model="text-davinci-003",
         prompt=message,
         max_tokens=2000,
-        temperature=0.2,
+        temperature=0.7,
         user=f"{str(number)}",
     )
     text = completion.choices[0].text
     tokens = int(completion.usage.total_tokens)
 
     return text, tokens
+
 
 def chatgpt_timeout():
     # To be called when timeout reached
@@ -207,19 +209,23 @@ def text_response(message: str, number: str) -> tuple:
     queue = mp.Queue()
 
     # create a new process and call the function
-    process = mp.Process(target=lambda q, arg1, arg2: q.put(chatgpt_response(message=arg1, number=arg2)), args=(queue, message, number))
+    process = mp.Process(
+        target=lambda q, arg1, arg2: q.put(chatgpt_response(message=arg1, number=arg2)),
+        args=(queue, message, number),
+    )
     process.start()
     process.join(14)
 
     if process.is_alive():
         process.terminate()
         return chatgpt_timeout()
-    
+
     completion = queue.get()
     text = completion[0]
     tokens = completion[1]
 
     return text, tokens
+
 
 def image_response(prompt: str) -> str:
     image_response = openai.Image.create(prompt=prompt, n=1, size="1024x1024")
@@ -317,7 +323,7 @@ def bot():
                                 return respond_media(image_url)
                             except Exception as e:
                                 print(traceback.format_exc())
-                                text  = "Sorry, I cannot respond to that at the moment, please try again later."
+                                text = "Sorry, I cannot respond to that at the moment, please try again later."
                                 return respond_text(text)
                         elif request.values.get("MediaContentType0"):
                             # audio response
@@ -391,7 +397,7 @@ def bot():
                             prompt = transcript.text
                             task_queue.append(prompt)
 
-                            abort(500) # abort to continue with fallback function
+                            abort(500)  # abort to continue with fallback function
 
                         # Image generation
                         if "dalle" in incoming_msg.lower():
@@ -463,10 +469,14 @@ def fallback():
                     message=prompt,
                     tokens=tokens,
                 )
-                user_settings = UserSettings.query.filter(UserSettings.user_id == user.id).one()
+                user_settings = UserSettings.query.filter(
+                    UserSettings.user_id == user.id
+                ).one()
 
                 if user_settings.voice_response:
-                    audio_filename = synthesize_speech(text=text, voice=user_settings.ai_voice_type)
+                    audio_filename = synthesize_speech(
+                        text=text, voice=user_settings.ai_voice_type
+                    )
 
                     # convert to ogg with ffmpeg
                     subprocess.Popen(
@@ -481,7 +491,7 @@ def fallback():
                         os.remove(audio_filename)
 
                     media_url = f"{url_for('chatbot.send_voice_note', _external=True)}?filename={audio_filename.split('.')[0]}.opus"
-                    
+
                     task_queue.clear()
                     return respond_media(media_url)
                 else:
@@ -495,4 +505,4 @@ def fallback():
     except:
         print(traceback.format_exc())
         text = "Sorry, I cannot respond to that at the moment, please try again later."
-        return respond_text(text)   
+        return respond_text(text)
