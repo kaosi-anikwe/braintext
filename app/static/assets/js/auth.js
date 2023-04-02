@@ -14,6 +14,7 @@ const specialCharErr = document.getElementById("special");
 const tooShortErr = document.getElementById("too_short");
 const number = document.getElementById("number");
 const registerBtn = document.getElementById("sign-up-button");
+const tosCheckBox = document.getElementById("tos-agree");
 
 addEventListener("load", () => {
   registerBtn.disabled = true;
@@ -22,18 +23,31 @@ addEventListener("load", () => {
 let specialChar = true;
 let tooShort = true;
 let numberErr = true;
+let agreed = false;
 
 function checkError() {
-  if (!specialChar && !tooShort && !numberErr) {
+  if (!specialChar && !tooShort && !numberErr && agreed) {
     // no errors
     registerBtn.disabled = false;
+    registerBtn.style.background = "#2487ce";
     registerBtn.style.cursor = "";
-  } else if (specialChar || tooShort || numberErr) {
+  } else if (specialChar || tooShort || numberErr || !agreed) {
     // error(s)
     registerBtn.disabled = true;
+    registerBtn.style.background = "#509dd4";
     registerBtn.style.cursor = "default";
   }
 }
+
+tosCheckBox.addEventListener("change", () => {
+  if (tosCheckBox.checked) {
+    agreed = true;
+    checkError();
+  } else {
+    agreed = false;
+    checkError();
+  }
+});
 
 const validate = (e) => {
   let pass = e.target.value;
@@ -80,16 +94,14 @@ const confirmPassword = (e) => {
 
 const match = (el) => {
   el.style.border = "none";
-  registerBtn.disabled = false;
-  registerBtn.style.cursor = "";
+  checkError();
 };
 
 const notMatch = (el) => {
   el.style.borderColor = "red";
   el.style.borderWidth = "1px";
   el.style.borderStyle = "solid";
-  registerBtn.disabled = true;
-  registerBtn.style.cursor = "default";
+  checkError();
 };
 
 document

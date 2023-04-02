@@ -16,6 +16,46 @@
   type="text/css"
   href="//cdn.jsdelivr.net/gh/loadingio/ldbutton@v1.0.1/dist/ldbtn.min.css"
 />
+<div class="position-absolute top-0 end-0" style="padding-top: 5rem">
+  <div
+    class="align-items-center text-white bg-success border-0"
+    id="resent-toast"
+    role="alert"
+    aria-live="assertive"
+    aria-atomic="true"
+    hidden
+  >
+    <div class="d-flex">
+      <div class="toast-body">OTP Resent. Check your inbox.</div>
+      <button
+        type="button"
+        class="btn-close btn-close-white me-2 m-auto"
+        data-bs-dismiss="toast"
+        aria-label="Close"
+      ></button>
+    </div>
+  </div>
+  <div
+    class="align-items-center text-white bg-danger border-0"
+    id="error-toast"
+    role="alert"
+    aria-live="assertive"
+    aria-atomic="true"
+    hidden
+  >
+    <div class="d-flex">
+      <div class="toast-body">
+        This number has already been used to verify another account.
+      </div>
+      <button
+        type="button"
+        class="btn-close btn-close-white me-2 m-auto"
+        data-bs-dismiss="toast"
+        aria-label="Close"
+      ></button>
+    </div>
+  </div>
+</div>
 
 <main id="main" class="main">
   <div class="center-title">
@@ -27,7 +67,7 @@
   <section class="section">
     <!-- Add Number section -->
     <div class="row" id="add-number-row">
-      <div class="centralize">
+      <div class="centralize" style="display: flex">
         <div class="col-lg-6">
           <div class="card">
             <div class="card-body">
@@ -66,7 +106,7 @@
     </div>
     <!-- Verify Number section -->
     <div class="row" id="verify-otp-row" hidden>
-      <div class="centralize">
+      <div class="centralize" style="display: flex">
         <div class="col-lg-6">
           <div class="card">
             <div class="card-body">
@@ -136,6 +176,7 @@
                   <div
                     class="centralize"
                     style="
+                      display: flex;
                       justify-content: space-between;
                       text-align: center;
                       font-size: smaller;
@@ -144,13 +185,27 @@
                     "
                   >
                     <div class="ld-ext-right">
-                      <a id="resend-btn" style="cursor: pointer">
+                      <a
+                        id="resend-btn"
+                        style="
+                          cursor: pointer;
+                          font-size: 0.75rem;
+                          text-decoration: underline;
+                        "
+                      >
                         Resend OTP
                       </a>
                       <div class="ld ld-ring ld-spin"></div>
                     </div>
 
-                    <a id="change-number" style="cursor: pointer">
+                    <a
+                      id="change-number"
+                      style="
+                        cursor: pointer;
+                        font-size: 0.75rem;
+                        text-decoration: underline;
+                      "
+                    >
                       Not your number? Change number
                     </a>
                   </div>
@@ -175,46 +230,6 @@
     </div>
   </section>
 </main>
-<div class="position-absolute top-0 end-0 p-3">
-  <div
-    class="align-items-center text-white bg-success border-0"
-    id="resent-toast"
-    role="alert"
-    aria-live="assertive"
-    aria-atomic="true"
-    hidden
-  >
-    <div class="d-flex">
-      <div class="toast-body">OTP Resent. Check your inbox.</div>
-      <button
-        type="button"
-        class="btn-close btn-close-white me-2 m-auto"
-        data-bs-dismiss="toast"
-        aria-label="Close"
-      ></button>
-    </div>
-  </div>
-  <div
-    class="align-items-center text-white bg-danger border-0"
-    id="error-toast"
-    role="alert"
-    aria-live="assertive"
-    aria-atomic="true"
-    hidden
-  >
-    <div class="d-flex">
-      <div class="toast-body">
-        This number has already been used to verify another account.
-      </div>
-      <button
-        type="button"
-        class="btn-close btn-close-white me-2 m-auto"
-        data-bs-dismiss="toast"
-        aria-label="Close"
-      ></button>
-    </div>
-  </div>
-</div>
 
 <!-- End #main -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.8/js/intlTelInput.min.js"></script>

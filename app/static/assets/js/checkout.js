@@ -7,9 +7,9 @@ const updatePaymentPlan = () => {
   const paymentPlan = document.getElementById("payment_plan");
   if (makeRecurring.checked) {
     if (accountType.value == "stnrd") {
-      paymentPlan.value = "34260"; // Update to real value
+      paymentPlan.value = "94271"; // Update to real value
     } else if (accountType.value == "prmum") {
-      paymentPlan.value = "34261"; // Upadte to real value
+      paymentPlan.value = "94272"; // Upadte to real value
     }
   } else {
     paymentPlan.value = "";
@@ -19,16 +19,24 @@ const updatePaymentPlan = () => {
 const updateTx = () => {
   const txAmount = document.getElementById("tx_amount");
   let submitBtn = document.getElementById("flw-form-btn");
+  let stnrdPrice = document.getElementById("standard-pricing");
+  let prmumPrice = document.getElementById("premium-pricing");
   let upgradeAccount = accountType.value;
   if (upgradeAccount === "stnrd") {
     txRef.value = `stnrd-${txID}`;
-    txAmount.value = 750;
+    txAmount.value = 1000;
+    stnrdPrice.hidden = false;
+    prmumPrice.hidden = true;
     submitBtn.disabled = false;
   } else if (upgradeAccount === "prmum") {
     txRef.value = `prmum-${txID}`;
-    txAmount.value = 1000;
+    txAmount.value = 1200;
     submitBtn.disabled = false;
+    stnrdPrice.hidden = true;
+    prmumPrice.hidden = false;
   } else {
+    stnrdPrice.hidden = true;
+    prmumPrice.hidden = true;
     submitBtn.disabled = true;
   }
   updatePaymentPlan();

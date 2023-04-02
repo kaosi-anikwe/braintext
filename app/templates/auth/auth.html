@@ -26,7 +26,7 @@
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
         <label
           id="signup-button"
-          style="margin-bottom: 40px"
+          style="margin-bottom: 25px"
           for="chk"
           aria-hidden="true"
           >Sign up</label
@@ -59,6 +59,43 @@
           required
         />
         <input type="hidden" name="time" id="timezone" />
+
+        <div style="width: 70%; margin: 0 auto">
+          <input
+            type="checkbox"
+            id="tos-agree"
+            style="
+              height: auto;
+              display: inline-block;
+              margin: 0;
+              padding: 0;
+              width: auto;
+              border: none;
+              outline: none;
+              border-radius: 5px;
+            "
+          />
+          <label
+            for="tos-agree"
+            style="
+              display: inline;
+              font-size: 0.8rem;
+              text-align: left;
+              margin: 0 auto;
+              color: #fff;
+              font-weight: normal;
+            "
+          >
+            I agree to the
+            <a
+              target="_blank"
+              href="{{ url_for('main.terms_of_service') }}"
+              style="color: #fff; text-decoration: underline"
+              >Terms of Service.</a
+            >
+          </label>
+        </div>
+
         <div class="errors">
           <small id="number" style="display: none" class="form-text"
             >Password must contain at least 1 number.</small

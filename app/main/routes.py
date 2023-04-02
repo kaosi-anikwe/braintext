@@ -110,7 +110,7 @@ def profile():
 
         current_user.days_left = days_left
 
-    return render_template("main/profile.html", settings=settings)
+    return render_template("main/profile.html", settings=settings, title="Profile")
 
 
 # OTP AND VERIFICATION ---------------------------------
@@ -125,7 +125,7 @@ def add_number():
         flash("Please verify your email to proceed.", "danger")
         return redirect(url_for("main.profile"))
     reverify = True if request.args.get("reverify") else False
-    return render_template("auth/add-number.html", reverify=reverify)
+    return render_template("auth/add-number.html", reverify=reverify, title="Verify Number")
 
 
 # Send OTP
@@ -220,7 +220,6 @@ def send_contact_email():
         body = f"Name: {name} \nEmail: {email} \n\n{body}"
 
     try:
-
         if send_email(
             receiver_email="support@braintext.io",
             subject=subject,
@@ -231,3 +230,11 @@ def send_contact_email():
     except:
         print(traceback.format_exc())
         return jsonify({"success": False}), 400
+
+@main.get("/terms-of-service")
+def terms_of_service():
+    return render_template("main/tos.html")
+
+@main.get("/privacy-policy")
+def privacy_policy():
+    return render_template("main/privacy.html")

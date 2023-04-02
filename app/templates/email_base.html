@@ -1,172 +1,416 @@
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+<body>
+  <!-- ======= Header ======= -->
+  <header
+    id="header"
+    style="
+      transition: all 0.5s;
+      background: #fff;
+      z-index: 997;
+      padding: 15px 0;
+      border-bottom: 1px solid #e6f2fb;
+    "
+  >
+    <div
+      style="
+        --bs-gutter-x: 1.5rem;
+        --bs-gutter-y: 0;
+        width: 100%;
+        padding-right: calc(var(--bs-gutter-x) * 0.5);
+        padding-left: calc(var(--bs-gutter-x) * 0.5);
+        margin-right: auto;
+        margin-left: auto;
+        align-items: center;
+        justify-content: space-between;
+        display: flex;
 
-    {% if title %}
-    <title>Braintext - {{ title }}</title>
-    {% else %}
-    <title>Braintext - Evolve with AI</title>
-    {% endif %}
-
-    <meta content="" name="description" />
-    <meta content="" name="keywords" />
-
-    <!-- Favicons -->
-    <link
-      href="{{ url_for('static', filename='assets/img/favicon-brain.png') }}"
-      rel="icon"
-    />
-    <link
-      href="{{ url_for('static', filename='assets/img/apple-touch-icon-brain.png') }}"
-      rel="apple-touch-icon"
-    />
-
-    <!-- Google Fonts -->
-    <link
-      href="https://fonts.googleapis.com/css?family=Open+Sans:300,300i,400,400i,600,600i,700,700i|Raleway:300,300i,400,400i,500,500i,600,600i,700,700i|Poppins:300,300i,400,400i,500,500i,600,600i,700,700i"
-      rel="stylesheet"
-    />
-
-    <!-- Vendor CSS Files -->
-    <link
-      href="{{ url_for('static', filename='assets/vendor/aos/aos.css') }}"
-      rel="stylesheet"
-    />
-    <link
-      href="{{ url_for('static', filename='assets/vendor/bootstrap/css/bootstrap.min.css') }}"
-      rel="stylesheet"
-    />
-    <link
-      href="{{ url_for('static', filename='assets/vendor/bootstrap-icons/bootstrap-icons.css') }}"
-      rel="stylesheet"
-    />
-    <link
-      href="{{ url_for('static', filename='assets/vendor/boxicons/css/boxicons.min.css') }}"
-      rel="stylesheet"
-    />
-    <link
-      href="{{ url_for('static', filename='assets/vendor/glightbox/css/glightbox.min.css') }}"
-      rel="stylesheet"
-    />
-    <link
-      href="{{ url_for('static', filename='assets/vendor/remixicon/remixicon.css') }}"
-      rel="stylesheet"
-    />
-    <link
-      href="{{ url_for('static', filename='assets/vendor/swiper/swiper-bundle.min.css') }}"
-      rel="stylesheet"
-    />
-
-    <!-- NiceAdmin files  -->
-
-    <!-- Template Main CSS File -->
-    <link
-      href="{{ url_for('static', filename='assets/css/style.css') }}"
-      rel="stylesheet"
-    />
-  </head>
-  <body>
-    <style>
-      @media only screen and (max-width: 420px) {
-        #header-side-image {
-          width: 150px;
-          height: auto;
+        @media (min-width: 576px) {
+          .container {
+            max-width: 540px;
+          }
         }
-      }
-    </style>
-    <!-- ======= Header ======= -->
-    <header id="header" class="fixed-top">
-      <div class="container d-flex align-items-center justify-content-between">
-        <h1 class="logo">
-          <a href="{{ url_for('main.index') }}">
+        @media (min-width: 768px) {
+          .container {
+            max-width: 720px;
+          }
+        }
+        @media (min-width: 992px) {
+          .container {
+            max-width: 960px;
+          }
+        }
+        @media (min-width: 1200px) {
+          .container {
+            max-width: 1140px;
+          }
+        }
+        @media (min-width: 1400px) {
+          .container {
+            max-width: 1320px;
+          }
+        }
+      "
+    >
+      <h1
+        class="logo"
+        style="
+          font-size: 28px;
+          margin: 0;
+          padding: 0;
+          line-height: 1;
+          font-weight: 300;
+          letter-spacing: 0.5px;
+          font-family: 'Poppins', sans-serif;
+        "
+      >
+        <a
+          style="color: #16507b"
+          href="{{ url_for('main.index', _external=True) }}"
+        >
+          <img
+            src="{{ url_for('static', filename='assets/img/logo-header.png', _external=True) }}"
+            alt="BrainText"
+            style="max-height: 40px"
+          />
+        </a>
+      </h1>
+      <!-- Uncomment below if you prefer to use an image logo -->
+      <!-- <a href="index.html" class="logo"><img src="../static/assets/img/logo.png" alt="" class="img-fluid"></a>-->
+
+      <h2
+        class="logo"
+        style="
+          font-size: 28px;
+          margin: 0;
+          padding: 0;
+          line-height: 1;
+          font-weight: 300;
+          letter-spacing: 0.5px;
+          font-family: 'Poppins', sans-serif;
+        "
+      >
+        <a
+          style="color: #16507b"
+          href="{{ url_for('main.index', _external=True) }}"
+        >
+          <img
+            id="header-side-image"
+            src="{{ url_for('static', filename='assets/img/braintext_email_header.png', _external=True) }}"
+            alt="Learn through conversations"
+            style="
+              max-height: 40px;
+              @media only screen and (max-width: 420px) {
+                #header-side-image {
+                  width: 150px;
+                  height: auto;
+                }
+              }
+            "
+          />
+        </a>
+      </h2>
+    </div>
+  </header>
+  <!-- End Header -->
+
+  <div
+    style="
+      --bs-gutter-x: 1.5rem;
+      --bs-gutter-y: 0;
+      display: flex;
+      flex-wrap: wrap;
+      margin-top: calc(-1 * var(--bs-gutter-y));
+      margin-right: calc(-0.5 * var(--bs-gutter-x));
+      margin-left: calc(-0.5 * var(--bs-gutter-x));
+    "
+    class="row"
+  >
+    {% block email_content %} {% endblock %}
+  </div>
+
+  <!-- ======= Footer ======= -->
+  <footer
+    id="footer"
+    style="
+      color: #444444;
+      font-size: 14px;
+      background: #f8fbfe;
+      box-shadow: 0px 2px 15px rgba(18, 66, 101, 0.08);
+    "
+  >
+    <div
+      class="footer-top"
+      style="padding: 60px 0 30px 0; margin-bottom: 30px; background: #fff"
+    >
+      <div
+        class="container"
+        style="
+          --bs-gutter-x: 1.5rem;
+          --bs-gutter-y: 0;
+          width: 100%;
+          padding-right: calc(var(--bs-gutter-x) * 0.5);
+          padding-left: calc(var(--bs-gutter-x) * 0.5);
+          margin-right: auto;
+          margin-left: auto;
+
+          @media (min-width: 576px) {
+            .container {
+              max-width: 540px;
+            }
+          }
+          @media (min-width: 768px) {
+            .container {
+              max-width: 720px;
+            }
+          }
+          @media (min-width: 992px) {
+            .container {
+              max-width: 960px;
+            }
+          }
+          @media (min-width: 1200px) {
+            .container {
+              max-width: 1140px;
+            }
+          }
+          @media (min-width: 1400px) {
+            .container {
+              max-width: 1320px;
+            }
+          }
+        "
+      >
+        <div
+          class="row"
+          style="
+            --bs-gutter-x: 1.5rem;
+            --bs-gutter-y: 0;
+            display: flex;
+            flex-wrap: wrap;
+            margin-top: calc(-1 * var(--bs-gutter-y));
+            margin-right: calc(-0.5 * var(--bs-gutter-x));
+            margin-left: calc(-0.5 * var(--bs-gutter-x));
+          "
+        >
+          <div
+            class="col-lg-3 col-md-6 footer-contact"
+            style="
+              margin-bottom: 30px;
+              flex: 0 0 auto;
+              margin: 0 2rem;
+              width: 50%;
+            "
+          >
+            <!-- <h3>BrainText</h3> -->
             <img
-              src="{{ url_for('static', filename='assets/img/logo-header.png') }}"
+              style="object-fit: contain; width: 100%"
+              src="{{ url_for('static', filename='assets/img/logo-footer.png', _external=True) }}"
               alt="BrainText"
             />
-          </a>
-        </h1>
-        <!-- Uncomment below if you prefer to use an image logo -->
-        <!-- <a href="index.html" class="logo"><img src="../static/assets/img/logo.png" alt="" class="img-fluid"></a>-->
-
-        <h2 class="logo">
-          <a href="{{ url_for('main.index') }}">
-            <img
-              id="header-side-image"
-              src="{{ url_for('static', filename='assets/img/braintext_email_header.png') }}"
-              alt="Learn through conversations"
-            />
-          </a>
-        </h2>
-      </div>
-    </header>
-    <!-- End Header -->
-
-    <div class="row">{% block email_content %} {% endblock %}</div>
-
-    <!-- ======= Footer ======= -->
-    <footer id="footer">
-      <div class="footer-top">
-        <div class="container">
-          <div class="row">
-            <div class="col-lg-3 col-md-6 footer-contact">
-              <!-- <h3>BrainText</h3> -->
-              <img
-                style="object-fit: contain; width: 100%"
-                src="{{ url_for('static', filename='assets/img/logo-footer.png') }}"
-                alt="BrainText"
-              />
-              <p>
-                A108 Adam Street <br />
-                New York, NY 535022<br />
-                United States <br /><br />
-                <strong>WhatsApp:</strong> +1 (507) 609-4633<br />
-                <strong>Email:</strong> support@braintext.io<br />
-              </p>
-            </div>
-
-            <div
-              style="padding-top: 2.2rem"
-              class="col-lg-2 col-md-6 footer-links"
+            <p
+              style="
+                font-size: 14px;
+                line-height: 24px;
+                margin-bottom: 0;
+                font-family: 'Raleway', sans-serif;
+                color: #777777;
+              "
             >
-              <h4>Useful Links</h4>
-              <ul>
-                <li>
-                  <i class="bx bx-chevron-right"></i>
-                  <a href="{{ url_for('main.index') }}#">Home</a>
-                </li>
-                <li>
-                  <i class="bx bx-chevron-right"></i>
-                  <a href="{{ url_for('main.index') }}#about">About us</a>
-                </li>
-                <li>
-                  <i class="bx bx-chevron-right"></i>
-                  <a href="{{ url_for('main.index') }}#services">Services</a>
-                </li>
-                <li>
-                  <i class="bx bx-chevron-right"></i>
-                  <a href="#">Terms of service</a>
-                </li>
-                <li>
-                  <i class="bx bx-chevron-right"></i>
-                  <a href="#">Privacy policy</a>
-                </li>
-              </ul>
-            </div>
+              University of Nigeria <br />
+              Nsukka, Enugu State <br />
+              Nigeria <br /><br />
+              <strong>WhatsApp:</strong> +1 (507) 609-4633<br />
+              <strong>Email:</strong> support@braintext.io<br />
+            </p>
           </div>
-        </div>
-      </div>
 
-      <div class="container d-md-flex py-4">
-        <div class="me-md-auto text-center text-md-start">
-          <div class="copyright">
-            &copy; Copyright <strong><span>BrainText</span></strong
-            >. All Rights Reserved
+          <div
+            style="
+              padding-top: 2.2rem;
+              margin: 0 2rem;
+              flex: 0 0 auto;
+              width: 16.66666667%;
+              flex: 0 0 auto;
+              width: 50%;
+            "
+            class="col-lg-2 col-md-6 footer-links"
+          >
+            <h4
+              style="
+                font-size: 16px;
+                font-weight: bold;
+                color: #124265;
+                position: relative;
+                padding-bottom: 12px;
+              "
+            >
+              Useful Links
+            </h4>
+            <ul style="list-style: none; padding: 0; margin: 0">
+              <li
+                style="padding: 0 0 10px 0; display: flex; align-items: center"
+              >
+                <i
+                  class="bx bx-chevron-right"
+                  style="
+                    padding-right: 2px;
+                    color: #2487ce;
+                    font-size: 18px;
+                    line-height: 1;
+                  "
+                ></i>
+                <a
+                  style="
+                    color: #777777;
+                    transition: 0.3s;
+                    display: inline-block;
+                    line-height: 1;
+                  "
+                  href="{{ url_for('main.index', _external=True) }}#"
+                  >Home</a
+                >
+              </li>
+              <li style="padding: 10px 0; display: flex; align-items: center">
+                <i
+                  class="bx bx-chevron-right"
+                  style="
+                    padding-right: 2px;
+                    color: #2487ce;
+                    font-size: 18px;
+                    line-height: 1;
+                  "
+                ></i>
+                <a
+                  style="
+                    color: #777777;
+                    transition: 0.3s;
+                    display: inline-block;
+                    line-height: 1;
+                  "
+                  href="{{ url_for('main.index', _external=True) }}#about"
+                  >About us</a
+                >
+              </li>
+              <li style="padding: 10px 0; display: flex; align-items: center">
+                <i
+                  class="bx bx-chevron-right"
+                  style="
+                    padding-right: 2px;
+                    color: #2487ce;
+                    font-size: 18px;
+                    line-height: 1;
+                  "
+                ></i>
+                <a
+                  style="
+                    color: #777777;
+                    transition: 0.3s;
+                    display: inline-block;
+                    line-height: 1;
+                  "
+                  href="{{ url_for('main.index', _external=True) }}#services"
+                  >Services</a
+                >
+              </li>
+              <li style="padding: 10px 0; display: flex; align-items: center">
+                <i
+                  class="bx bx-chevron-right"
+                  style="
+                    padding-right: 2px;
+                    color: #2487ce;
+                    font-size: 18px;
+                    line-height: 1;
+                  "
+                ></i>
+                <a
+                  style="
+                    color: #777777;
+                    transition: 0.3s;
+                    display: inline-block;
+                    line-height: 1;
+                  "
+                  href="{{ url_for('main.terms_of_service', _external=True) }}"
+                  >Terms of service</a
+                >
+              </li>
+              <li style="padding: 10px 0; display: flex; align-items: center">
+                <i
+                  class="bx bx-chevron-right"
+                  style="
+                    padding-right: 2px;
+                    color: #2487ce;
+                    font-size: 18px;
+                    line-height: 1;
+                  "
+                ></i>
+                <a
+                  style="
+                    color: #777777;
+                    transition: 0.3s;
+                    display: inline-block;
+                    line-height: 1;
+                  "
+                  href="{{ url_for('main.privacy_policy', _external=True) }}"
+                  >Privacy policy</a
+                >
+              </li>
+            </ul>
           </div>
         </div>
       </div>
-    </footer>
-    <!-- End Footer -->
-  </body>
-</html>
+    </div>
+
+    <div
+      style="
+        --bs-gutter-x: 1.5rem;
+        --bs-gutter-y: 0;
+        width: 100%;
+        padding-right: calc(var(--bs-gutter-x) * 0.5);
+        padding-left: calc(var(--bs-gutter-x) * 0.5);
+        margin-right: auto;
+        margin-left: auto;
+
+        @media (min-width: 576px) {
+          .container {
+            max-width: 540px;
+          }
+        }
+        @media (min-width: 768px) {
+          .container {
+            max-width: 720px;
+          }
+        }
+        @media (min-width: 992px) {
+          .container {
+            max-width: 960px;
+          }
+        }
+        @media (min-width: 1200px) {
+          .container {
+            max-width: 1140px;
+          }
+        }
+        @media (min-width: 1400px) {
+          .container {
+            max-width: 1320px;
+          }
+        }
+      "
+      class="container d-md-flex py-4"
+    >
+      <div
+        class="me-md-auto text-center text-md-start"
+        style="
+          margin-right: auto !important;
+          text-align: center !important;
+          text-align: left !important;
+        "
+      >
+        <div class="copyright">
+          Copyright &copy; 2023 <strong><span>BrainText</span></strong
+          >. All Rights Reserved
+        </div>
+      </div>
+    </div>
+  </footer>
+  <!-- End Footer -->
+</body>

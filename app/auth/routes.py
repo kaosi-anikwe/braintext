@@ -190,9 +190,9 @@ def change_password(token):
     email = confirm_token(token)
     logout_user()
     if email:
-        return render_template("auth/update_password.html", email=email)
+        return render_template("auth/update_password.html", email=email, title="Change password")
     else:
-        return render_template("thanks/password_change.html", success=False)
+        return render_template("thanks/password_change.html", success=False, title="Change password")
 
 
 # Forgot password

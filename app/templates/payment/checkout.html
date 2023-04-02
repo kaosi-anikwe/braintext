@@ -9,24 +9,30 @@
           data-aos-delay="100"
           style="margin: 0 auto"
         >
-        <div class="pricing" style="padding-top: 3rem;">
-          <div class="box featured">
-            <h3>Business</h3>
-            <h4><sup>$</sup>19<span> / month</span></h4>
+        <div class="pricing" style="padding-top: 6rem;">
+          <!-- Standard Pricing -->
+          <div class="box featured" id="standard-pricing" hidden>
+            <h3>Standard</h3>
+            <h4><sup>₦</sup>1,000<span> / month</span></h4>
             <ul>
-              <li>Aida dere</li>
-              <li>Nec feugiat nisl</li>
-              <li>Nulla at volutpat dola</li>
-              <li>Pharetra massa</li>
-              <li class="na">Massa ultricies mi</li>
+              <li>Weekly AI prompts</li>
+              <li>Conversational AI access</li>
+              <li>Image Generation</li>
+              <li class="na">Text to Speech</li>
+              <li class="na">Speech to Speech</li>
             </ul>
-            <div class="btn-wrap">
-              <a
-                href="{{ url_for('payment.checkout', package='stnrd') }}"
-                class="btn-buy"
-                >Buy Now</a
-              >
-            </div>
+          </div>
+          <!-- Premium Pricing -->
+          <div class="box featured" id="premium-pricing" hidden>
+            <h3>Premium</h3>
+            <h4><sup>₦</sup>1,200<span> / month</span></h4>
+            <ul>
+              <li>Weekly AI prompts</li>
+              <li>Conversational AI access</li>
+              <li>Image Generation</li>
+              <li>Text to Speech</li>
+              <li>Speech to Speech</li>
+            </ul>
           </div>
         </div>
         </div>
@@ -79,7 +85,7 @@
               <div class="col-12">
                 <label for="account-type" class="form-label">Account Type</label>
                 <select name="account-type" id="account-type" class="form-select">
-                  <option value="None" selected >Select Account Type</option>
+                  <option value="None" selected disabled>Select Account Type</option>
 
                   <option 
                   value="stnrd" 
@@ -103,7 +109,7 @@
               <input
                 type="hidden"
                 name="public_key"
-                value="FLWPUBK_TEST-f0c7ce8c5b2d29f0a6dbf867b742102f-X"
+                value="FLWPUBK-72bc355ae6f6685e71b61c71807db127-X"
               />
               <input id="tx_ref" type="hidden" name="tx_ref" value="{{ package }}-{{ current_user.uid }}" />
               <input id="tx_amount" type="hidden" name="amount" value="3400" />

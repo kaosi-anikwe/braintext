@@ -145,9 +145,9 @@
                 alt="BrainText"
               />
               <p>
-                A108 Adam Street <br />
-                New York, NY 535022<br />
-                United States <br /><br />
+                University of Nigeria <br />
+                Nsukka, Enugu State <br />
+                Nigeria <br /><br />
                 <strong>WhatsApp:</strong> +1 (507) 609-4633<br />
                 <strong>Email:</strong> support@braintext.io<br />
               </p>
@@ -173,11 +173,15 @@
                 </li>
                 <li>
                   <i class="bx bx-chevron-right"></i>
-                  <a href="#">Terms of service</a>
+                  <a href="{{ url_for('main.terms_of_service') }}"
+                    >Terms of service</a
+                  >
                 </li>
                 <li>
                   <i class="bx bx-chevron-right"></i>
-                  <a href="#">Privacy policy</a>
+                  <a href="{{ url_for('maiin.privacy_policy') }}"
+                    >Privacy policy</a
+                  >
                 </li>
               </ul>
             </div>
@@ -189,22 +193,28 @@
               <h4>Our Services</h4>
               <ul>
                 <li>
-                  <i class="bx bx-chevron-right"></i> <a href="#">Web Design</a>
+                  <i class="bx bx-chevron-right"></i>
+                  <a href="{{ url_for('main.index') }}#services"
+                    >AI Conversation</a
+                  >
                 </li>
                 <li>
                   <i class="bx bx-chevron-right"></i>
-                  <a href="#">Web Development</a>
+                  <a href="{{ url_for('main.index') }}#services"
+                    >Image Generation</a
+                  >
                 </li>
                 <li>
                   <i class="bx bx-chevron-right"></i>
-                  <a href="#">Product Management</a>
-                </li>
-                <li>
-                  <i class="bx bx-chevron-right"></i> <a href="#">Marketing</a>
+                  <a href="{{ url_for('main.index') }}#services"
+                    >Text to Speech</a
+                  >
                 </li>
                 <li>
                   <i class="bx bx-chevron-right"></i>
-                  <a href="#">Graphic Design</a>
+                  <a href="{{ url_for('main.index') }}#services"
+                    >Speech to Speech</a
+                  >
                 </li>
               </ul>
             </div>
@@ -215,7 +225,7 @@
       <div class="container d-md-flex py-4">
         <div class="me-md-auto text-center text-md-start">
           <div class="copyright">
-            &copy; Copyright <strong><span>BrainText</span></strong
+            Copyright &copy; 2023 <strong><span>BrainText</span></strong
             >. All Rights Reserved
           </div>
         </div>

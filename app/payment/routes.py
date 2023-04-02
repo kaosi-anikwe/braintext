@@ -39,7 +39,7 @@ def checkout(package):
         tx_id = check_standard.tx_ref.replace("stnrd-", "")
     elif check_premium:
         tx_id = check_premium.tx_ref.replace("prmum-", "")
-    return render_template("payment/checkout.html", package=package, tx_id=tx_id)
+    return render_template("payment/checkout.html", package=package, tx_id=tx_id, title="Checkout")
 
 
 # Create Transaction
