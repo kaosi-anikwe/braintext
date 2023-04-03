@@ -10,9 +10,24 @@
     <title>BrainText - Evolve with AI</title>
     {% endif %}
 
-    <meta content="" name="description" />
-    <meta content="" name="keywords" />
+    <meta
+      content="AI optimized WhatsApp chatbot for convenience"
+      name="description"
+    />
+    <meta
+      content="Chat GPT, GPT-4, GPT-3.5, AI, chatbot, artifical intelligence, WhatsApp, WhatsApp chatbot, BrainText"
+      name="keywords"
+    />
+    <meta
+      property="og:title"
+      content="Learn through conversations, evolve with AI"
+    />
+    <meta
+      property="og:description"
+      content="AI optimized WhatsApp chatbot for convenience"
+    />
 
+    <link rel="canonical" href="https://www.braintext.io" />
     <!-- Favicons -->
     <link
       href="{{ url_for('static', filename='assets/img/favicon-brain.png') }}"
@@ -160,44 +175,46 @@
       </div>
     </header>
     <!-- End Header -->
+    <!-- ======= Main ======= -->
+    <main>
+      <div class="row">
+        {# application content needs to be provided in the app_content block #}
+        <!-- Alerts -->
+        {% block alert_content %} {% with messages =
+        get_flashed_messages(with_categories=true) %} {% if messages %}
 
-    <div class="row">
-      {# application content needs to be provided in the app_content block #}
-      <!-- Alerts -->
-      {% block alert_content %} {% with messages =
-      get_flashed_messages(with_categories=true) %} {% if messages %}
-
-      <!-- Position it: -->
-      <!-- - `.toast-container` for spacing between toasts -->
-      <!-- - `.position-absolute`, `top-0` & `end-0` to position the toasts in the upper right corner -->
-      <!-- - `.p-3` to prevent the toasts from sticking to the edge of the container  -->
-      <div class="toast-container position-absolute top-0 end-0 p-3">
-        {% for category, message in messages %}
-        <div
-          class="toast align-items-center text-white {% if category == 'message' %} bg-info {% else %} bg-{{ category }} {% endif %} border-0"
-          role="alert"
-          aria-live="assertive"
-          aria-atomic="true"
-        >
-          <div class="d-flex">
-            <div class="toast-body">{{ message }}</div>
-            <button
-              type="button"
-              class="btn-close btn-close-white me-2 m-auto"
-              data-bs-dismiss="toast"
-              aria-label="Close"
-            ></button>
+        <!-- Position it: -->
+        <!-- - `.toast-container` for spacing between toasts -->
+        <!-- - `.position-absolute`, `top-0` & `end-0` to position the toasts in the upper right corner -->
+        <!-- - `.p-3` to prevent the toasts from sticking to the edge of the container  -->
+        <div class="toast-container position-absolute top-0 end-0 p-3">
+          {% for category, message in messages %}
+          <div
+            class="toast align-items-center text-white {% if category == 'message' %} bg-info {% else %} bg-{{ category }} {% endif %} border-0"
+            role="alert"
+            aria-live="assertive"
+            aria-atomic="true"
+          >
+            <div class="d-flex">
+              <div class="toast-body">{{ message }}</div>
+              <button
+                type="button"
+                class="btn-close btn-close-white me-2 m-auto"
+                data-bs-dismiss="toast"
+                aria-label="Close"
+              ></button>
+            </div>
           </div>
+          {% endfor %}
         </div>
-        {% endfor %}
-      </div>
 
-      {% endif %} {% endwith %} {% endblock %}
-      <div class="container" data-aos="fade-up">
-        {% block app_content %} {% endblock %}
+        {% endif %} {% endwith %} {% endblock %}
+        <div class="container" data-aos="fade-up">
+          {% block app_content %} {% endblock %}
+        </div>
       </div>
-    </div>
-
+    </main>
+    <!-- End Main -->
     <!-- ======= Footer ======= -->
     <footer id="footer">
       <div class="footer-top">

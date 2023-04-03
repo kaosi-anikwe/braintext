@@ -36,16 +36,6 @@ main = Blueprint("main", __name__)
 # Index ---------------------------------------------
 @main.route("/")
 def index():
-    # subs = PremiumSubscription.query.all()
-    # for sub in subs:
-    #     if sub.expire_date:
-    #         sub.expire_date = sub.expire_date.replace(tzinfo=current_user.get_timezone())
-    #         sub.update()
-    # stand_subs = StandardSubscription.query.all()
-    # for sub in stand_subs:
-    #     if sub.expire_date:
-    #         sub.expire_date = sub.expire_date.replace(tzinfo=current_user.get_timezone())
-    #         sub.update()
     return render_template("main/index.html")
 
 
@@ -73,14 +63,16 @@ def profile():
     subscription = None
     if current_user.account_type == "Standard":
         subscriptions = StandardSubscription.query.filter(
-            StandardSubscription.user_id == current_user.id
+            StandardSubscription.user_id == current_user.id,
+            StandardSubscription.payment_status == "completed"
         ).all()
         for sub in subscriptions:
             if not sub.expired() and sub.sub_status == "active":
                 subscription = sub
     elif current_user.account_type == "Premium":
         subscriptions = PremiumSubscription.query.filter(
-            PremiumSubscription.user_id == current_user.id
+            PremiumSubscription.user_id == current_user.id,
+            PremiumSubscription.payment_status == "completed"
         ).all()
         for sub in subscriptions:
             if not sub.expired() and sub.sub_status == "active":
@@ -125,7 +117,9 @@ def add_number():
         flash("Please verify your email to proceed.", "danger")
         return redirect(url_for("main.profile"))
     reverify = True if request.args.get("reverify") else False
-    return render_template("auth/add-number.html", reverify=reverify, title="Verify Number")
+    return render_template(
+        "auth/add-number.html", reverify=reverify, title="Verify Number"
+    )
 
 
 # Send OTP
@@ -231,10 +225,12 @@ def send_contact_email():
         print(traceback.format_exc())
         return jsonify({"success": False}), 400
 
+
 @main.get("/terms-of-service")
 def terms_of_service():
-    return render_template("main/tos.html")
+    return render_template("main/tos.html", title="Terms of Service")
+
 
 @main.get("/privacy-policy")
 def privacy_policy():
-    return render_template("main/privacy.html")
+    return render_template("main/privacy.html", title="Pricacy Policy")

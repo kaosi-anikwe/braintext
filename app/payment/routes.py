@@ -39,7 +39,9 @@ def checkout(package):
         tx_id = check_standard.tx_ref.replace("stnrd-", "")
     elif check_premium:
         tx_id = check_premium.tx_ref.replace("prmum-", "")
-    return render_template("payment/checkout.html", package=package, tx_id=tx_id, title="Checkout")
+    return render_template(
+        "payment/checkout.html", package=package, tx_id=tx_id, title="Checkout"
+    )
 
 
 # Create Transaction
@@ -84,103 +86,106 @@ def payment_callback():
             StandardSubscription.payment_status == "pending",
             StandardSubscription.user_id == current_user.id,
         ).one_or_none()
-        standard = True
+        standard = True if subscription else False
     elif str(tx_ref).startswith("prmum"):
         subscription = PremiumSubscription.query.filter(
             PremiumSubscription.tx_ref == tx_ref,
             PremiumSubscription.payment_status == "pending",
             PremiumSubscription.user_id == current_user.id,
         ).one_or_none()
-        premium = True
+        premium = True if subscription else False
     # get transaction status
-    if request.args.get("status") == "cancelled":
-        # update record as cancelled
-        subscription.payment_status = "cancelled"
-        subscription.update()
-        print(f"Payment cancelled - {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')}")
-        return redirect(url_for("main.profile"))
-    elif request.args.get("status") == "successful":
-        transaction_id = request.args.get("transaction_id")
-        verify_url = (
-            f"https://api.flutterwave.com/v3/transactions/{int(transaction_id)}/verify"
-        )
-        try:
-            # verify transaction
-            response = requests.get(
-                verify_url,
-                headers={
-                    "Content-Type": "application/json",
-                    "Authorization": f"Bearer {flw_sec_key}",
-                },
-            )
-            if response.status_code == 200:
-                data = response.json()
-                if data["status"] == "success":
-                    # update record as successful
-                    flw_ref = data["data"]["flw_ref"]
-                    subscription.flw_ref = flw_ref
-                    subscription.payment_status = "completed"
-                    subscription.sub_status = "active"
-                    subscription.tx_id = transaction_id
-                    # expiry date is the current day of the next month
-                    subscription.expire_date = (
-                        current_user.timenow().replace(day=1) + timedelta(days=32)
-                    ).replace(day=datetime.utcnow().day)
-                    # localize time
-                    subscription.expire_date = subscription.expire_date.replace(
-                        tzinfo=current_user.get_timezone()
-                    )
-                    subscription.update()
-
-                    # check for existing subscriptions and update user account
-                    if standard:
-                        old_sub = PremiumSubscription.query.filter(
-                            PremiumSubscription.sub_status == "active",
-                            PremiumSubscription.user_id == current_user.id,
-                        ).one_or_none()
-                        if old_sub:
-                            if not old_sub.expired():
-                                old_sub.upgrade()
-                        current_user.account_type = "Standard"
-                        current_user.update()
-                        # send thank you message
-                        message = "*Thank you for upgrading your account!*\nYour Standard account has been activated.\nCheck your account settings to adjust preferences.\nhttps://braintext.io/profile?settings=True"
-                        send_whatspp_message(
-                            message=message, phone_no=current_user.phone_no
-                        )
-                    if premium:
-                        old_sub = StandardSubscription.query.filter(
-                            StandardSubscription.sub_status == "active",
-                            StandardSubscription.user_id == current_user.id,
-                        ).one_or_none()
-                        if old_sub:
-                            if not old_sub.expired():
-                                old_sub.upgrade()
-                        current_user.account_type = "Premium"
-                        current_user.update()
-                        # send thank you message
-                        message = "*Thank you for upgrading your account!*\nYour account has been fully activated.\nCheck your account settings to adjust preferences.\nhttps://braintext.io/profile?settings=True"
-                        send_whatspp_message(
-                            message=message, phone_no=current_user.phone_no
-                        )
-
-                    print(
-                        f"Payment successful - {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')}"
-                    )
-                    return render_template("thanks/thanks.html", premium=premium)
-            else:
-                # update record as failed
-                subscription.payment_status = "failed"
-                subscription.update()
-                return redirect(url_for("main.profile"))
-        except Exception as e:
-            traceback.format_exc()
-            # update record as error
-            subscription.payment_status = "error"
+    if standard or premium: # transaction found
+        if request.args.get("status") == "cancelled":
+            # update record as cancelled
+            subscription.payment_status = "cancelled"
             subscription.update()
-            print(f"Payment Failed - {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')}")
+            print(f"Payment cancelled - {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')}")
             return redirect(url_for("main.profile"))
+        elif request.args.get("status") != "cancelled":
+            transaction_id = request.args.get("transaction_id")
+            verify_url = (
+                f"https://api.flutterwave.com/v3/transactions/{int(transaction_id)}/verify"
+            )
+            try:
+                # verify transaction
+                response = requests.get(
+                    verify_url,
+                    headers={
+                        "Content-Type": "application/json",
+                        "Authorization": f"Bearer {flw_sec_key}",
+                    },
+                )
+                if response.status_code == 200:
+                    data = response.json()
+                    if data["status"] == "success":
+                        # update record as successful
+                        flw_ref = data["data"]["flw_ref"]
+                        subscription.flw_ref = flw_ref
+                        subscription.payment_status = "completed"
+                        subscription.sub_status = "active"
+                        subscription.tx_id = transaction_id
+                        # expiry date is the current day of the next month
+                        subscription.expire_date = (
+                            current_user.timenow().replace(day=1) + timedelta(days=32)
+                        ).replace(day=datetime.utcnow().day)
+                        # localize time
+                        subscription.expire_date = subscription.expire_date.replace(
+                            tzinfo=current_user.get_timezone()
+                        )
+                        subscription.update()
 
+                        # check for existing subscriptions and update user account
+                        if standard:
+                            old_sub = PremiumSubscription.query.filter(
+                                PremiumSubscription.sub_status == "active",
+                                PremiumSubscription.user_id == current_user.id,
+                            ).one_or_none()
+                            if old_sub:
+                                if not old_sub.expired():
+                                    old_sub.upgrade()
+                            current_user.account_type = "Standard"
+                            current_user.update()
+                            # send thank you message
+                            message = "*Thank you for upgrading your account!*\nYour Standard account has been activated.\nCheck your account settings to adjust preferences.\nhttps://braintext.io/profile?settings=True"
+                            send_whatspp_message(
+                                message=message, phone_no=current_user.phone_no
+                            )
+                        if premium:
+                            old_sub = StandardSubscription.query.filter(
+                                StandardSubscription.sub_status == "active",
+                                StandardSubscription.user_id == current_user.id,
+                            ).one_or_none()
+                            if old_sub:
+                                if not old_sub.expired():
+                                    old_sub.upgrade()
+                            current_user.account_type = "Premium"
+                            current_user.update()
+                            # send thank you message
+                            message = "*Thank you for upgrading your account!*\nYour account has been fully activated.\nCheck your account settings to adjust preferences.\nhttps://braintext.io/profile?settings=True"
+                            send_whatspp_message(
+                                message=message, phone_no=current_user.phone_no
+                            )
+
+                        print(
+                            f"Payment successful - {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')}"
+                        )
+                        return render_template("thanks/thanks.html", premium=premium)
+                else:
+                    # update record as failed
+                    subscription.payment_status = "failed"
+                    subscription.update()
+                    return redirect(url_for("main.profile"))
+            except Exception as e:
+                traceback.format_exc()
+                # update record as error
+                subscription.payment_status = "error"
+                subscription.update()
+                print(f"Payment Failed - {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')}")
+                return redirect(url_for("main.profile"))
+    else:
+        flash("No transaction found, or already confirmed.", "danger")
+        return redirect(url_for("main.profile"))
 
 # Payment webhook
 @payment.route("/verify-payment-webhook", methods=["GET", "POST"])
@@ -253,22 +258,29 @@ def payment_webhook():
                                         user.timenow().replace(day=1)
                                         + timedelta(days=32)
                                     ).replace(day=datetime.utcnow().day)
+                                    # localize time
+                                    subscription.expire_date = (
+                                        subscription.expire_date.replace(
+                                            tzinfo=user.get_timezone()
+                                        )
+                                    )
                                     subscription.update()
-                                    # TODO: send thank you email
                                 elif (
                                     subscription.payment_status == "completed"
                                     and subscription.tx_id != transaction_id
                                 ):  # subcription renewal
                                     # expiry date is the current day of the next month
                                     subscription.expire_date = (
-                                        datetime.utcnow().replace(day=1)
+                                        user.timenow().replace(day=1)
                                         + timedelta(days=32)
                                     ).replace(day=datetime.utcnow().day)
-                                    subscription.expire_date.replace(
-                                        tzinfo=user.timezone
+                                    # localize time
+                                    subscription.expire_date = (
+                                        subscription.expire_date.replace(
+                                            tzinfo=user.get_timezone()
+                                        )
                                     )
                                     subscription.update()
-                                    # TODO: send thank you email
 
                                 # check for existing subscriptions and update user account
                                 if standard:
