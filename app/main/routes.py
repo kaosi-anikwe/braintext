@@ -64,7 +64,7 @@ def profile():
     if current_user.account_type == "Standard":
         subscriptions = StandardSubscription.query.filter(
             StandardSubscription.user_id == current_user.id,
-            StandardSubscription.payment_status == "completed"
+            StandardSubscription.payment_status == "completed",
         ).all()
         for sub in subscriptions:
             if not sub.expired() and sub.sub_status == "active":
@@ -72,7 +72,7 @@ def profile():
     elif current_user.account_type == "Premium":
         subscriptions = PremiumSubscription.query.filter(
             PremiumSubscription.user_id == current_user.id,
-            PremiumSubscription.payment_status == "completed"
+            PremiumSubscription.payment_status == "completed",
         ).all()
         for sub in subscriptions:
             if not sub.expired() and sub.sub_status == "active":

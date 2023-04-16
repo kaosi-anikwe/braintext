@@ -19,10 +19,8 @@ from contextlib import closing
 import os
 import subprocess
 from twilio.rest import Client
-import time
-import signal
-import threading
 import timeout_decorator
+from queue import Queue
 
 
 load_dotenv()
@@ -42,7 +40,7 @@ if not os.path.exists("/home/braintext/website/tmp"):
 log_dir = "logs/chatbot"
 tmp_folder = "/home/braintext/website/tmp"
 
-task_queue = []
+task_queue = Queue()
 
 account_sid = os.environ["TWILIO_ACCOUNT_SID"]
 auth_token = os.environ["TWILIO_AUTH_TOKEN"]
@@ -148,22 +146,6 @@ def respond_media(image_url: str) -> str:
     return str(response)
 
 
-def chatgpt_audio_response(message: str, number: str) -> tuple:
-    # get response from ChatpGPT for audio responses.
-    # length of response doesn't matter
-    completion = openai.Completion.create(
-        model="text-davinci-003",
-        prompt=message,
-        max_tokens=2000,
-        temperature=0.7,
-        user=f"{str(number)}",
-    )
-    text = completion.choices[0].text
-    tokens = int(completion.usage.total_tokens)
-
-    return text, tokens
-
-
 def image_response(prompt: str) -> str:
     image_response = openai.Image.create(prompt=prompt, n=1, size="1024x1024")
     image_url = image_response.data[0].url
@@ -179,7 +161,7 @@ def log_response(name: str, number: str, message: str, tokens: int = 0) -> None:
         )
 
 
-@timeout_decorator.timeout(14, use_signals=False, timeout_exception=TimeoutError)
+@timeout_decorator.timeout(13.5, use_signals=False, timeout_exception=TimeoutError)
 def text_response(prompt: str, number: str) -> tuple:
     completion = openai.Completion.create(
         model="text-davinci-003",
@@ -346,7 +328,7 @@ def bot():
                     subscription = None
                     for sub in subscriptions:
                         # get the active subscription or assign None
-                        if not sub.expired():
+                        if not sub.expired() and sub.sub_status == "active":
                             subscription = sub
                     if subscription:
                         incoming_msg = request.values.get("Body", "")
@@ -480,7 +462,7 @@ def bot():
                     subscription = None
                     for sub in subscriptions:
                         # get the active subscription or assign None
-                        if not sub.expired():
+                        if not sub.expired() and sub.sub_status == "active":
                             subscription = sub
                     if subscription:
                         incoming_msg = request.values.get("Body", "")
@@ -499,15 +481,19 @@ def bot():
                                 stderr=subprocess.STDOUT,
                             ).wait()
                             # convert to mp3 with ffmpeg
-                            subprocess.Popen(
+                            print(subprocess.Popen(
                                 f"ffmpeg -i '{tmp_file}.ogg' '{tmp_file}.mp3'",
                                 shell=True,
                                 stdout=subprocess.DEVNULL,
                                 stderr=subprocess.STDOUT,
-                            ).wait()
-
-                            with open(f"{tmp_file}.mp3", "rb") as file:
-                                transcript = openai.Audio.transcribe("whisper-1", file)
+                            ).wait())
+                            print("Done converting")
+                            try:
+                                with open(f"{tmp_file}.mp3", "rb") as file:
+                                    transcript = openai.Audio.transcribe("whisper-1", file)
+                            except:
+                                print(traceback.format_exc())
+                                return respond_text("Error transcribing audio. Please try again later.")
 
                             # remove tmp files
                             if os.path.exists(f"{tmp_file}.ogg"):
@@ -516,8 +502,8 @@ def bot():
                                 os.remove(f"{tmp_file}.mp3")
 
                             prompt = transcript.text
-                            task_queue.append(prompt)
-
+                            task_queue.put(prompt)
+                            print(task_queue.queue)
                             abort(500)  # abort to continue with fallback function
 
                         # Image generation
@@ -662,11 +648,14 @@ def fallback():
         content_type = request.values.get("MediaContentType0")
 
         if content_type == "audio/ogg":
-            prompt = task_queue[0]
+            prompt = task_queue.get()
             try:
-                completion = chatgpt_audio_response(message=prompt, number=number)
-                text = completion[0]
-                tokens = completion[1]
+                # Chat response
+                try:
+                    text, tokens = text_response(prompt=prompt, number=number)
+                except TimeoutError:
+                    text = "Sorry, your response is taking too long. Try rephrasing your question or breaking it into sections."
+                    return respond_text(text)
 
                 log_response(
                     name=name,
@@ -679,28 +668,103 @@ def fallback():
                 ).one()
 
                 if user_settings.voice_response:
-                    audio_filename = synthesize_speech(
-                        text=text, voice=user_settings.ai_voice_type
-                    )
+                    try:
+                        audio_filename = synthesize_speech(
+                            text=text, voice=user_settings.ai_voice_type
+                        )
 
-                    # convert to ogg with ffmpeg
-                    subprocess.Popen(
-                        f"ffmpeg -i '{audio_filename}' -c:a libopus '{audio_filename.split('.')[0]}.opus'",
-                        shell=True,
-                        stdout=subprocess.DEVNULL,
-                        stderr=subprocess.STDOUT,
-                    ).wait()
+                        # convert to ogg with ffmpeg
+                        subprocess.Popen(
+                            f"ffmpeg -i '{audio_filename}' -c:a libopus '{audio_filename.split('.')[0]}.opus'",
+                            shell=True,
+                            stdout=subprocess.DEVNULL,
+                            stderr=subprocess.STDOUT,
+                        ).wait()
 
-                    # remove tts audio
-                    if os.path.exists(audio_filename):
-                        os.remove(audio_filename)
+                        # remove tts audio
+                        if os.path.exists(audio_filename):
+                            os.remove(audio_filename)
 
-                    media_url = f"{url_for('chatbot.send_voice_note', _external=True)}?filename={audio_filename.split('.')[0]}.opus"
+                        media_url = f"{url_for('chatbot.send_voice_note', _external=True)}?filename={audio_filename.split('.')[0]}.opus"
 
-                    task_queue.clear()
-                    return respond_media(media_url)
+                        return respond_media(media_url)
+                    except:
+                        print(traceback.format_exc())
+                        text = "Sorry, you're response was too long. Please rephrase the question or break it into segments."
+                        return respond_text(text)
                 else:
-                    return respond_text(text=text)
+                    # check if response is too long
+                    if len(text) >= 3200:
+                        # too long even if halved
+                        text = (
+                            "Your response is too long. Please rephrase your question."
+                        )
+                        return respond_text(text)
+                    elif len(text) >= 1600:
+                        # split message into 2. Send first half and return second half
+                        sentences = text.split(". ")
+                        sentence_count = len(sentences)
+                        first = int(sentence_count / 2)
+                        second = sentence_count - first
+                        first_part = ""
+                        second_part = ""
+                        for index, sentence in enumerate(sentences):
+                            if index <= first:
+                                if index == 0:
+                                    first_part += f"{sentence}"
+                                first_part += f". {sentence}"
+                            elif index >= second:
+                                if index == second:
+                                    second_part += f"{sentence}"
+                                second_part += f". {sentence}"
+
+                        if len(first_part) >= 1600:
+                            # further divide into 2 and send individually
+                            sentences = first_part.split(". ")
+                            sentence_count = len(sentences)
+                            first = int(sentence_count / 2)
+                            second = sentence_count - first
+                            part_one = ""
+                            part_two = ""
+                            for index, sentence in enumerate(sentences):
+                                if index <= first:
+                                    part_one += f". {sentence}"
+                                elif index >= second:
+                                    part_two += f". {sentence}"
+
+                            send_whatspp_message(message=part_one, phone_no=number)
+                            send_whatspp_message(message=part_two, phone_no=number)
+
+                            text = second_part
+                            return respond_text(text)
+
+                        elif len(second_part) >= 1600:
+                            # further divide into 2 and send first part
+                            sentences = first_part.split(". ")
+                            sentence_count = len(sentences)
+                            first = int(sentence_count / 2)
+                            second = sentence_count - first
+                            part_one = ""
+                            part_two = ""
+                            for index, sentence in enumerate(sentences):
+                                if index <= first:
+                                    part_one += f". {sentence}"
+                                elif index >= second:
+                                    part_two += f". {sentence}"
+
+                            send_whatspp_message(message=first_part, phone_no=number)
+                            send_whatspp_message(message=part_one, phone_no=number)
+
+                            text = part_two
+                            return respond_text(text)
+
+                        # send message
+                        send_whatspp_message(message=first_part, phone_no=number)
+
+                        text = second_part
+                        return respond_text(text)
+                    else:
+                        return respond_text(text)
             except:
                 print(traceback.format_exc())
                 text = "Sorry, I cannot respond to that at the moment, please try again later."

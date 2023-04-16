@@ -95,18 +95,18 @@ def payment_callback():
         ).one_or_none()
         premium = True if subscription else False
     # get transaction status
-    if standard or premium: # transaction found
+    if standard or premium:  # transaction found
         if request.args.get("status") == "cancelled":
             # update record as cancelled
             subscription.payment_status = "cancelled"
             subscription.update()
-            print(f"Payment cancelled - {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')}")
+            print(
+                f"Payment cancelled - {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')}"
+            )
             return redirect(url_for("main.profile"))
         elif request.args.get("status") != "cancelled":
             transaction_id = request.args.get("transaction_id")
-            verify_url = (
-                f"https://api.flutterwave.com/v3/transactions/{int(transaction_id)}/verify"
-            )
+            verify_url = f"https://api.flutterwave.com/v3/transactions/{int(transaction_id)}/verify"
             try:
                 # verify transaction
                 response = requests.get(
@@ -181,11 +181,14 @@ def payment_callback():
                 # update record as error
                 subscription.payment_status = "error"
                 subscription.update()
-                print(f"Payment Failed - {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')}")
+                print(
+                    f"Payment Failed - {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')}"
+                )
                 return redirect(url_for("main.profile"))
     else:
         flash("No transaction found, or already confirmed.", "danger")
         return redirect(url_for("main.profile"))
+
 
 # Payment webhook
 @payment.route("/verify-payment-webhook", methods=["GET", "POST"])
