@@ -138,6 +138,79 @@ def respond_text(text: str) -> str:
     return str(response)
 
 
+def check_and_respond_text(text: str, number: str) -> str:
+    # check if response is too long
+    if len(text) >= 3200:
+        # too long even if halved
+        text = "Your response is too long. Please rephrase your question."
+        return respond_text(text)
+    elif len(text) >= 1600:
+        # split message into 2. Send first half and return second half
+        sentences = text.split(". ")
+        sentence_count = len(sentences)
+        first = int(sentence_count / 2)
+        second = sentence_count - first
+        first_part = ""
+        second_part = ""
+        for index, sentence in enumerate(sentences):
+            if index <= first:
+                if index == 0:
+                    first_part += f"{sentence}"
+                first_part += f". {sentence}"
+            elif index >= second:
+                if index == second:
+                    second_part += f"{sentence}"
+                second_part += f". {sentence}"
+
+        if len(first_part) >= 1600:
+            # further divide into 2 and send individually
+            sentences = first_part.split(". ")
+            sentence_count = len(sentences)
+            first = int(sentence_count / 2)
+            second = sentence_count - first
+            part_one = ""
+            part_two = ""
+            for index, sentence in enumerate(sentences):
+                if index <= first:
+                    part_one += f". {sentence}"
+                elif index >= second:
+                    part_two += f". {sentence}"
+
+            send_whatspp_message(message=part_one, phone_no=number)
+            send_whatspp_message(message=part_two, phone_no=number)
+
+            text = second_part
+            return respond_text(text)
+
+        elif len(second_part) >= 1600:
+            # further divide into 2 and send first part
+            sentences = first_part.split(". ")
+            sentence_count = len(sentences)
+            first = int(sentence_count / 2)
+            second = sentence_count - first
+            part_one = ""
+            part_two = ""
+            for index, sentence in enumerate(sentences):
+                if index <= first:
+                    part_one += f". {sentence}"
+                elif index >= second:
+                    part_two += f". {sentence}"
+
+            send_whatspp_message(message=first_part, phone_no=number)
+            send_whatspp_message(message=part_one, phone_no=number)
+
+            text = part_two
+            return respond_text(text)
+
+        # send message
+        send_whatspp_message(message=first_part, phone_no=number)
+
+        text = second_part
+        return respond_text(text)
+    else:
+        return respond_text(text)
+
+
 def respond_media(image_url: str) -> str:
     response = MessagingResponse()
     message = response.message()
@@ -228,86 +301,7 @@ def bot():
                                     tokens=tokens,
                                 )
 
-                                # check if response is too long
-                                if len(text) >= 3200:
-                                    # too long even if halved
-                                    text = "Your response is too long. Please rephrase your question."
-                                    return respond_text(text)
-                                elif len(text) >= 1600:
-                                    # split message into 2. Send first half and return second half
-                                    sentences = text.split(". ")
-                                    sentence_count = len(sentences)
-                                    first = int(sentence_count / 2)
-                                    second = sentence_count - first
-                                    first_part = ""
-                                    second_part = ""
-                                    for index, sentence in enumerate(sentences):
-                                        if index <= first:
-                                            if index == 0:
-                                                first_part += f"{sentence}"
-                                            first_part += f". {sentence}"
-                                        elif index >= second:
-                                            if index == second:
-                                                second_part += f"{sentence}"
-                                            second_part += f". {sentence}"
-
-                                    if len(first_part) >= 1600:
-                                        # further divide into 2 and send individually
-                                        sentences = first_part.split(". ")
-                                        sentence_count = len(sentences)
-                                        first = int(sentence_count / 2)
-                                        second = sentence_count - first
-                                        part_one = ""
-                                        part_two = ""
-                                        for index, sentence in enumerate(sentences):
-                                            if index <= first:
-                                                part_one += f". {sentence}"
-                                            elif index >= second:
-                                                part_two += f". {sentence}"
-
-                                        send_whatspp_message(
-                                            message=part_one, phone_no=number
-                                        )
-                                        send_whatspp_message(
-                                            message=part_two, phone_no=number
-                                        )
-
-                                        text = second_part
-                                        return respond_text(text)
-
-                                    elif len(second_part) >= 1600:
-                                        # further divide into 2 and send first part
-                                        sentences = first_part.split(". ")
-                                        sentence_count = len(sentences)
-                                        first = int(sentence_count / 2)
-                                        second = sentence_count - first
-                                        part_one = ""
-                                        part_two = ""
-                                        for index, sentence in enumerate(sentences):
-                                            if index <= first:
-                                                part_one += f". {sentence}"
-                                            elif index >= second:
-                                                part_two += f". {sentence}"
-
-                                        send_whatspp_message(
-                                            message=first_part, phone_no=number
-                                        )
-                                        send_whatspp_message(
-                                            message=part_one, phone_no=number
-                                        )
-
-                                        text = part_two
-                                        return respond_text(text)
-
-                                    # send message
-                                    send_whatspp_message(
-                                        message=first_part, phone_no=number
-                                    )
-
-                                    text = second_part
-                                    return respond_text(text)
-                                else:
-                                    return respond_text(text)
+                                return check_and_respond_text(text, number)
                             except:
                                 print(traceback.format_exc())
                                 text = "Sorry, I cannot respond to that at the moment, please try again later."
@@ -321,15 +315,11 @@ def bot():
                         return respond_text(text)
 
                 if user.account_type == "Standard":
-                    # get all records for user
-                    subscriptions = StandardSubscription.query.filter(
-                        StandardSubscription.user_id == user.id
-                    ).all()
-                    subscription = None
-                    for sub in subscriptions:
-                        # get the active subscription or assign None
-                        if not sub.expired() and sub.sub_status == "active":
-                            subscription = sub
+                    subscription = StandardSubscription.query.filter(
+                        StandardSubscription.user_id == user.id,
+                        StandardSubscription.payment_status == "completed",
+                        StandardSubscription.sub_status == "active",
+                    ).one_or_none()
                     if subscription:
                         incoming_msg = request.values.get("Body", "")
                         name = request.values.get("ProfileName")
@@ -366,86 +356,7 @@ def bot():
                                     tokens=tokens,
                                 )
 
-                                # check if response is too long
-                                if len(text) >= 3200:
-                                    # too long even if halved
-                                    text = "Your response is too long. Please rephrase your question."
-                                    return respond_text(text)
-                                elif len(text) >= 1600:
-                                    # split message into 2. Send first half and return second half
-                                    sentences = text.split(". ")
-                                    sentence_count = len(sentences)
-                                    first = int(sentence_count / 2)
-                                    second = sentence_count - first
-                                    first_part = ""
-                                    second_part = ""
-                                    for index, sentence in enumerate(sentences):
-                                        if index <= first:
-                                            if index == 0:
-                                                first_part += f"{sentence}"
-                                            first_part += f". {sentence}"
-                                        elif index >= second:
-                                            if index == second:
-                                                second_part += f"{sentence}"
-                                            second_part += f". {sentence}"
-
-                                    if len(first_part) >= 1600:
-                                        # further divide into 2 and send individually
-                                        sentences = first_part.split(". ")
-                                        sentence_count = len(sentences)
-                                        first = int(sentence_count / 2)
-                                        second = sentence_count - first
-                                        part_one = ""
-                                        part_two = ""
-                                        for index, sentence in enumerate(sentences):
-                                            if index <= first:
-                                                part_one += f". {sentence}"
-                                            elif index >= second:
-                                                part_two += f". {sentence}"
-
-                                        send_whatspp_message(
-                                            message=part_one, phone_no=number
-                                        )
-                                        send_whatspp_message(
-                                            message=part_two, phone_no=number
-                                        )
-
-                                        text = second_part
-                                        return respond_text(text)
-
-                                    elif len(second_part) >= 1600:
-                                        # further divide into 2 and send first part
-                                        sentences = first_part.split(". ")
-                                        sentence_count = len(sentences)
-                                        first = int(sentence_count / 2)
-                                        second = sentence_count - first
-                                        part_one = ""
-                                        part_two = ""
-                                        for index, sentence in enumerate(sentences):
-                                            if index <= first:
-                                                part_one += f". {sentence}"
-                                            elif index >= second:
-                                                part_two += f". {sentence}"
-
-                                        send_whatspp_message(
-                                            message=first_part, phone_no=number
-                                        )
-                                        send_whatspp_message(
-                                            message=part_one, phone_no=number
-                                        )
-
-                                        text = part_two
-                                        return respond_text(text)
-
-                                    # send message
-                                    send_whatspp_message(
-                                        message=first_part, phone_no=number
-                                    )
-
-                                    text = second_part
-                                    return respond_text(text)
-                                else:
-                                    return respond_text(text)
+                                return check_and_respond_text(text, number)
                             except:
                                 print(traceback.format_exc())
                                 text = "Sorry, I cannot respond to that at the moment, please try again later."
@@ -455,15 +366,11 @@ def bot():
                         return respond_text(text)
 
                 if user.account_type == "Premium":
-                    # get all records for user
-                    subscriptions = PremiumSubscription.query.filter(
-                        PremiumSubscription.user_id == user.id
-                    ).all()
-                    subscription = None
-                    for sub in subscriptions:
-                        # get the active subscription or assign None
-                        if not sub.expired() and sub.sub_status == "active":
-                            subscription = sub
+                    subscription = PremiumSubscription.query.filter(
+                        PremiumSubscription.user_id == user.id,
+                        PremiumSubscription.payment_status == "completed",
+                        PremiumSubscription.sub_status == "active",
+                    ).one_or_none()
                     if subscription:
                         incoming_msg = request.values.get("Body", "")
                         name = request.values.get("ProfileName")
@@ -481,19 +388,25 @@ def bot():
                                 stderr=subprocess.STDOUT,
                             ).wait()
                             # convert to mp3 with ffmpeg
-                            print(subprocess.Popen(
-                                f"ffmpeg -i '{tmp_file}.ogg' '{tmp_file}.mp3'",
-                                shell=True,
-                                stdout=subprocess.DEVNULL,
-                                stderr=subprocess.STDOUT,
-                            ).wait())
+                            print(
+                                subprocess.Popen(
+                                    f"ffmpeg -i '{tmp_file}.ogg' '{tmp_file}.mp3'",
+                                    shell=True,
+                                    stdout=subprocess.DEVNULL,
+                                    stderr=subprocess.STDOUT,
+                                ).wait()
+                            )
                             print("Done converting")
                             try:
                                 with open(f"{tmp_file}.mp3", "rb") as file:
-                                    transcript = openai.Audio.transcribe("whisper-1", file)
+                                    transcript = openai.Audio.transcribe(
+                                        "whisper-1", file
+                                    )
                             except:
                                 print(traceback.format_exc())
-                                return respond_text("Error transcribing audio. Please try again later.")
+                                return respond_text(
+                                    "Error transcribing audio. Please try again later."
+                                )
 
                             # remove tmp files
                             if os.path.exists(f"{tmp_file}.ogg"):
@@ -535,86 +448,7 @@ def bot():
                                     tokens=tokens,
                                 )
 
-                                # check if response is too long
-                                if len(text) >= 3200:
-                                    # too long even if halved
-                                    text = "Your response is too long. Please rephrase your question."
-                                    return respond_text(text)
-                                elif len(text) >= 1600:
-                                    # split message into 2. Send first half and return second half
-                                    sentences = text.split(". ")
-                                    sentence_count = len(sentences)
-                                    first = int(sentence_count / 2)
-                                    second = sentence_count - first
-                                    first_part = ""
-                                    second_part = ""
-                                    for index, sentence in enumerate(sentences):
-                                        if index <= first:
-                                            if index == 0:
-                                                first_part += f"{sentence}"
-                                            first_part += f". {sentence}"
-                                        elif index >= second:
-                                            if index == second:
-                                                second_part += f"{sentence}"
-                                            second_part += f". {sentence}"
-
-                                    if len(first_part) >= 1600:
-                                        # further divide into 2 and send individually
-                                        sentences = first_part.split(". ")
-                                        sentence_count = len(sentences)
-                                        first = int(sentence_count / 2)
-                                        second = sentence_count - first
-                                        part_one = ""
-                                        part_two = ""
-                                        for index, sentence in enumerate(sentences):
-                                            if index <= first:
-                                                part_one += f". {sentence}"
-                                            elif index >= second:
-                                                part_two += f". {sentence}"
-
-                                        send_whatspp_message(
-                                            message=part_one, phone_no=number
-                                        )
-                                        send_whatspp_message(
-                                            message=part_two, phone_no=number
-                                        )
-
-                                        text = second_part
-                                        return respond_text(text)
-
-                                    elif len(second_part) >= 1600:
-                                        # further divide into 2 and send first part
-                                        sentences = first_part.split(". ")
-                                        sentence_count = len(sentences)
-                                        first = int(sentence_count / 2)
-                                        second = sentence_count - first
-                                        part_one = ""
-                                        part_two = ""
-                                        for index, sentence in enumerate(sentences):
-                                            if index <= first:
-                                                part_one += f". {sentence}"
-                                            elif index >= second:
-                                                part_two += f". {sentence}"
-
-                                        send_whatspp_message(
-                                            message=first_part, phone_no=number
-                                        )
-                                        send_whatspp_message(
-                                            message=part_one, phone_no=number
-                                        )
-
-                                        text = part_two
-                                        return respond_text(text)
-
-                                    # send message
-                                    send_whatspp_message(
-                                        message=first_part, phone_no=number
-                                    )
-
-                                    text = second_part
-                                    return respond_text(text)
-                                else:
-                                    return respond_text(text)
+                                return check_and_respond_text(text, number)
                             except:
                                 print(traceback.format_exc())
                                 text = "Sorry, I cannot respond to that at the moment, please try again later."
@@ -688,83 +522,16 @@ def fallback():
                         media_url = f"{url_for('chatbot.send_voice_note', _external=True)}?filename={audio_filename.split('.')[0]}.opus"
 
                         return respond_media(media_url)
-                    except:
+                    except BotoCoreError:
+                        print(traceback.format_exc())
+                        text = "Sorry, I cannot respond to that at the moment, please try again later."
+                        return respond_text(text)
+                    except ClientError:
                         print(traceback.format_exc())
                         text = "Sorry, you're response was too long. Please rephrase the question or break it into segments."
                         return respond_text(text)
                 else:
-                    # check if response is too long
-                    if len(text) >= 3200:
-                        # too long even if halved
-                        text = (
-                            "Your response is too long. Please rephrase your question."
-                        )
-                        return respond_text(text)
-                    elif len(text) >= 1600:
-                        # split message into 2. Send first half and return second half
-                        sentences = text.split(". ")
-                        sentence_count = len(sentences)
-                        first = int(sentence_count / 2)
-                        second = sentence_count - first
-                        first_part = ""
-                        second_part = ""
-                        for index, sentence in enumerate(sentences):
-                            if index <= first:
-                                if index == 0:
-                                    first_part += f"{sentence}"
-                                first_part += f". {sentence}"
-                            elif index >= second:
-                                if index == second:
-                                    second_part += f"{sentence}"
-                                second_part += f". {sentence}"
-
-                        if len(first_part) >= 1600:
-                            # further divide into 2 and send individually
-                            sentences = first_part.split(". ")
-                            sentence_count = len(sentences)
-                            first = int(sentence_count / 2)
-                            second = sentence_count - first
-                            part_one = ""
-                            part_two = ""
-                            for index, sentence in enumerate(sentences):
-                                if index <= first:
-                                    part_one += f". {sentence}"
-                                elif index >= second:
-                                    part_two += f". {sentence}"
-
-                            send_whatspp_message(message=part_one, phone_no=number)
-                            send_whatspp_message(message=part_two, phone_no=number)
-
-                            text = second_part
-                            return respond_text(text)
-
-                        elif len(second_part) >= 1600:
-                            # further divide into 2 and send first part
-                            sentences = first_part.split(". ")
-                            sentence_count = len(sentences)
-                            first = int(sentence_count / 2)
-                            second = sentence_count - first
-                            part_one = ""
-                            part_two = ""
-                            for index, sentence in enumerate(sentences):
-                                if index <= first:
-                                    part_one += f". {sentence}"
-                                elif index >= second:
-                                    part_two += f". {sentence}"
-
-                            send_whatspp_message(message=first_part, phone_no=number)
-                            send_whatspp_message(message=part_one, phone_no=number)
-
-                            text = part_two
-                            return respond_text(text)
-
-                        # send message
-                        send_whatspp_message(message=first_part, phone_no=number)
-
-                        text = second_part
-                        return respond_text(text)
-                    else:
-                        return respond_text(text)
+                    return check_and_respond_text(text)
             except:
                 print(traceback.format_exc())
                 text = "Sorry, I cannot respond to that at the moment, please try again later."

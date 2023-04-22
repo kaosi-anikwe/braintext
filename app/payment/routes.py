@@ -176,8 +176,8 @@ def payment_callback():
                     subscription.payment_status = "failed"
                     subscription.update()
                     return redirect(url_for("main.profile"))
-            except Exception as e:
-                traceback.format_exc()
+            except:
+                print(traceback.format_exc())
                 # update record as error
                 subscription.payment_status = "error"
                 subscription.update()
@@ -186,7 +186,7 @@ def payment_callback():
                 )
                 return redirect(url_for("main.profile"))
     else:
-        flash("No transaction found, or already confirmed.", "danger")
+        flash("Thank you for upgrading your account!", "success")
         return redirect(url_for("main.profile"))
 
 
@@ -313,8 +313,8 @@ def payment_webhook():
                             subscription.payment_status = "failed"
                             subscription.update()
                             return jsonify({"success": False}), 417
-                    except Exception as e:
-                        traceback.format_exc()
+                    except:
+                        print(traceback.format_exc())
                         # update record as error
                         subscription.payment_status = "error"
                         subscription.update()

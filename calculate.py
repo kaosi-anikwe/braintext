@@ -4,9 +4,11 @@ from app.chatbot.chatbot import send_whatspp_message
 from app import create_app
 from app.models import Users
 
+
 def daterange(start_date, end_date):
     for n in range(int((end_date - start_date).days)):
         yield start_date + timedelta(n)
+
 
 message = f"Daily usage collation started at {datetime.utcnow().strftime('%H:%M')}"
 send_whatspp_message(message=message, phone_no="+2349016456964")
@@ -26,7 +28,15 @@ for user_folder in alpha_folders:
         user_token = 0
         for log_file in os.listdir(os.path.join(log_dir, user_folder, day_log)):
             if log_file == f"{datetime.utcnow().strftime('%d-%m-%Y')}.log":
-                with open(os.path.join(log_dir, user_folder, day_log, f"{datetime.utcnow().strftime('%d-%m-%Y')}.log"), "r") as f:
+                with open(
+                    os.path.join(
+                        log_dir,
+                        user_folder,
+                        day_log,
+                        f"{datetime.utcnow().strftime('%d-%m-%Y')}.log",
+                    ),
+                    "r",
+                ) as f:
                     lines = f.readlines()
                     for line in lines:
                         line = line.split()
@@ -38,7 +48,9 @@ for user_folder in alpha_folders:
                         token_count += token
                         user_token += token
         if user_token > most_used["tokens"]:
-            most_used["user"] = os.path.join(log_dir, user_folder, day_log).split("_")[-1]
+            most_used["user"] = os.path.join(log_dir, user_folder, day_log).split("_")[
+                -1
+            ]
             most_used["tokens"] = user_token
 
 # create app context to query db
@@ -52,4 +64,7 @@ send_whatspp_message(message=message, phone_no="+2349016456964")
 # log stats
 cost = (token_count / 1000) * 0.2
 with open("/home/braintext/website/logs/usage.log", "a") as log:
-    print(f"{datetime.utcnow().strftime('%d-%m-%Y')} \nTokens: {token_count} \nCost: {cost} \nMost Used: {most_used}\n", file=log)
+    print(
+        f"{datetime.utcnow().strftime('%d-%m-%Y')} \nTokens: {token_count} \nCost: {cost} \nMost Used: {most_used}\n",
+        file=log,
+    )
