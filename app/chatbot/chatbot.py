@@ -388,15 +388,12 @@ def bot():
                                 stderr=subprocess.STDOUT,
                             ).wait()
                             # convert to mp3 with ffmpeg
-                            print(
-                                subprocess.Popen(
-                                    f"ffmpeg -i '{tmp_file}.ogg' '{tmp_file}.mp3'",
-                                    shell=True,
-                                    stdout=subprocess.DEVNULL,
-                                    stderr=subprocess.STDOUT,
-                                ).wait()
-                            )
-                            print("Done converting")
+                            subprocess.Popen(
+                                f"ffmpeg -i '{tmp_file}.ogg' '{tmp_file}.mp3'",
+                                shell=True,
+                                stdout=subprocess.DEVNULL,
+                                stderr=subprocess.STDOUT,
+                            ).wait()
                             try:
                                 with open(f"{tmp_file}.mp3", "rb") as file:
                                     transcript = openai.Audio.transcribe(
@@ -416,7 +413,6 @@ def bot():
 
                             prompt = transcript.text
                             task_queue.put(prompt)
-                            print(task_queue.queue)
                             abort(500)  # abort to continue with fallback function
 
                         # Image generation

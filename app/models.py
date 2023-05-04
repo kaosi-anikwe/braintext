@@ -202,7 +202,7 @@ class BasicSubscription(db.Model, TimestampMixin, DatabaseHelperMixin):
     def respond(self) -> bool:
         if self.expired():
             self.renew()
-        if self.prompts < 3:
+        if self.prompts < 10:
             self.prompts += 1
             self.update()
             return True

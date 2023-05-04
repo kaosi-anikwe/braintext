@@ -66,7 +66,7 @@ def register():
         for i in get_browser_time:
             browser_time += f"{i} "
         browser_time = datetime.strptime(browser_time.strip(), "%a %b %d %Y %H:%M:%S")
-        timezone_offset = (browser_time - datetime.utcnow()).seconds
+        timezone_offset = round((browser_time - datetime.utcnow()).seconds, -2) 
 
         # create user class instance / database record
         new_user = Users(first_name, last_name, email, password, timezone_offset)
