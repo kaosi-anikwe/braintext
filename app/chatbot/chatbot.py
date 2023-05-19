@@ -116,7 +116,10 @@ def log_location(name: str, number: str) -> str:
         user_directory = f"{directory}/{name.replace(' ', '_').strip()}_{number}"
         if not os.path.exists(user_directory):
             os.mkdir(user_directory)
-        day_log = f"{user_directory}/{datetime.utcnow().strftime('%d-%m-%Y')}.log"
+        month_log = os.path.join(user_directory, f"{datetime.utcnow().strftime('%m-%Y')}")
+        if not os.path.exists(month_log):
+            os.mkdir(month_log)
+        day_log = f"{month_log}/{datetime.utcnow().strftime('%d-%m-%Y')}.log"
         return day_log
 
     else:  # first character is not a letter
@@ -126,7 +129,10 @@ def log_location(name: str, number: str) -> str:
         user_directory = f"{directory}/{name.replace(' ', '_').strip()}_{number}"
         if not os.path.exists(user_directory):
             os.mkdir(user_directory)
-        day_log = f"{user_directory}/{datetime.utcnow().strftime('%d-%m-%Y')}.log"
+        month_log = os.path.join(user_directory, f"{datetime.utcnow().strftime('%m-%Y')}")
+        if not os.path.exists(month_log):
+            os.mkdir(month_log)
+        day_log = f"{month_log}/{datetime.utcnow().strftime('%d-%m-%Y')}.log"
         return day_log
 
 
@@ -234,7 +240,7 @@ def log_response(name: str, number: str, message: str, tokens: int = 0) -> None:
         )
 
 
-@timeout_decorator.timeout(13.5, use_signals=False, timeout_exception=TimeoutError)
+@timeout_decorator.timeout(14.5, use_signals=False, timeout_exception=TimeoutError)
 def text_response(prompt: str, number: str) -> tuple:
     completion = openai.Completion.create(
         model="text-davinci-003",
@@ -515,7 +521,8 @@ def fallback():
                         if os.path.exists(audio_filename):
                             os.remove(audio_filename)
 
-                        media_url = f"{url_for('chatbot.send_voice_note', _external=True)}?filename={audio_filename.split('.')[0]}.opus"
+                        media_url = f"{url_for('chatbot.send_voice_note', _external=True, _scheme='https')}?filename={audio_filename.split('.')[0]}.opus"
+                        print(media_url)
 
                         return respond_media(media_url)
                     except BotoCoreError:

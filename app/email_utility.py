@@ -61,7 +61,7 @@ def send_email(
 # Convenience function - registration / verification email
 def send_registration_email(user):
     token = generate_confirmation_token(user.email)
-    confirm_url = url_for("auth.confirm_email", token=token, _external=True)
+    confirm_url = url_for("auth.confirm_email", token=token, _external=True, _scheme="https")
     print(confirm_url)
     # check if user already registered
     if user.edited:
@@ -82,7 +82,7 @@ def send_registration_email(user):
 # Convenience function - forgot password email
 def send_forgot_password_email(user):
     token = generate_confirmation_token(user.email)
-    change_url = url_for("auth.change_password", token=token, _external=True)
+    change_url = url_for("auth.change_password", token=token, _external=True, _scheme="https")
     subject = "Change password - Follow the link below to change your password."
     plaintext = "Follow the link to change your password."
     html = render_template(
