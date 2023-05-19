@@ -1,0 +1,37 @@
+{
+  "event": "charge.completed",
+  "data": {
+    "id": 4215112,
+    "tx_ref": "stnrd-7fa0251529e843218084e799d9742ed4-1679400288",
+    "flw_ref": "FLW-MOCK-248c344dbbb4f9e2a58be53e7a4cc1e1",
+    "device_fingerprint": "ba22bcea763690453d89c26bafb6fb83",
+    "amount": 750,
+    "currency": "NGN",
+    "charged_amount": 750,
+    "app_fee": 10.5,
+    "merchant_fee": 0,
+    "processor_response": "successful",
+    "auth_model": "PIN",
+    "ip": "52.209.154.143",
+    "narration": "CARD Transaction ",
+    "status": "successful",
+    "payment_type": "card",
+    "created_at": "2023-03-21T12:06:15.000Z",
+    "account_id": 1912828,
+    "customer": {
+      "id": 2006564,
+      "name": "Kaosi Anikwe",
+      "phone_number": null,
+      "email": "anikwehenryasa@gmail.com",
+      "created_at": "2023-03-21T12:06:15.000Z"
+    },
+    "card": {
+      "first_6digits": "553188",
+      "last_4digits": "2950",
+      "issuer": "MASTERCARD  CREDIT",
+      "country": "NG",
+      "type": "MASTERCARD",
+      "expiry": "09/32"
+    }
+  }
+}

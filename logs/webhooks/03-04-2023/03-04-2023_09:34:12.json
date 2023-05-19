@@ -1,0 +1,30 @@
+{
+  "event": "charge.completed",
+  "data": {
+    "id": 882860098,
+    "tx_ref": "stnrd-b8af84ea235f404db31edff6166e4afa-1680473482",
+    "flw_ref": "100004230403093308103625424303",
+    "device_fingerprint": "ba22bcea763690453d89c26bafb6fb83",
+    "amount": 1000,
+    "currency": "NGN",
+    "charged_amount": 1014,
+    "app_fee": 14,
+    "merchant_fee": 0,
+    "processor_response": "success",
+    "auth_model": "AUTH",
+    "ip": "197.210.55.7",
+    "narration": "Braintext.io",
+    "status": "successful",
+    "payment_type": "bank_transfer",
+    "created_at": "2023-04-03T09:34:10.000Z",
+    "account_id": 2109822,
+    "customer": {
+      "id": 556087682,
+      "name": "Tamuno Bethel",
+      "phone_number": "08012345678",
+      "email": "tammybeths400@gmail.com",
+      "created_at": "2023-04-03T09:31:37.000Z"
+    }
+  },
+  "event.type": "BANK_TRANSFER_TRANSACTION"
+}

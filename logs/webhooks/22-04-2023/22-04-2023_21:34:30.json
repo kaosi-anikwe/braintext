@@ -1,0 +1,30 @@
+{
+  "event": "charge.completed",
+  "data": {
+    "id": 900029916,
+    "tx_ref": "prmum-338b28eff0c045299a91215d451a0f0c-1682199152",
+    "flw_ref": "QTDI8797316821991996",
+    "device_fingerprint": "e6cdcd3de255b83b861fb9ce575206d1",
+    "amount": 1200,
+    "currency": "NGN",
+    "charged_amount": 1216.8,
+    "app_fee": 16.8,
+    "merchant_fee": 0,
+    "processor_response": "Transaction Successful",
+    "auth_model": "USSD",
+    "ip": "197.210.227.188",
+    "narration": "Braintext.io",
+    "status": "successful",
+    "payment_type": "ussd",
+    "created_at": "2023-04-22T21:33:18.000Z",
+    "account_id": 2109822,
+    "customer": {
+      "id": 567837105,
+      "name": "Deborah Anyachukwu",
+      "phone_number": null,
+      "email": "jesusdebbie01@gmail.com",
+      "created_at": "2023-04-22T21:33:18.000Z"
+    }
+  },
+  "event.type": "USSD_TRANSACTION"
+}

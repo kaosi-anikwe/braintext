@@ -1,0 +1,596 @@
+[2023-03-18 15:53:51 +0000] [296512] [INFO] Starting gunicorn 20.1.0
+[2023-03-18 15:53:51 +0000] [296512] [INFO] Listening at: http://0.0.0.0:5000 (296512)
+[2023-03-18 15:53:51 +0000] [296512] [INFO] Using worker: sync
+[2023-03-18 15:53:51 +0000] [296514] [INFO] Booting worker with pid: 296514
+SM90501b52db4ddd36f7e77aa885558e50 -- 2023-03-18 15:55:20
+stnrd-3a8b321047f644d2bf16509e39853ef4-1679154949
+Payment successful
+[2023-03-18 16:01:55 +0000] [296514] [INFO] Parent changed, shutting down: <Worker 296514>
+[2023-03-18 16:01:55 +0000] [296514] [INFO] Worker exiting (pid: 296514)
+[2023-03-18 16:02:18 +0000] [296827] [INFO] Starting gunicorn 20.1.0
+[2023-03-18 16:02:18 +0000] [296827] [INFO] Listening at: http://0.0.0.0:5000 (296827)
+[2023-03-18 16:02:18 +0000] [296827] [INFO] Using worker: sync
+[2023-03-18 16:02:18 +0000] [296829] [INFO] Booting worker with pid: 296829
+[2023-03-18 16:08:48,551] ERROR in app: Exception on /verify-payment-webhook [POST]
+Traceback (most recent call last):
+  File "/home/braintext/website/env/lib/python3.10/site-packages/flask/app.py", line 2525, in wsgi_app
+    response = self.full_dispatch_request()
+  File "/home/braintext/website/env/lib/python3.10/site-packages/flask/app.py", line 1822, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "/home/braintext/website/env/lib/python3.10/site-packages/flask/app.py", line 1820, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "/home/braintext/website/env/lib/python3.10/site-packages/flask/app.py", line 1796, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)
+  File "/home/braintext/website/app/payment/routes.py", line 182, in payment_webhook
+    "w",
+  File "/home/braintext/website/env/lib/python3.10/site-packages/sqlalchemy/orm/query.py", line 2806, in one
+    return self._iter().one()  # type: ignore
+  File "/home/braintext/website/env/lib/python3.10/site-packages/sqlalchemy/engine/result.py", line 1797, in one
+    return self._only_one_row(
+  File "/home/braintext/website/env/lib/python3.10/site-packages/sqlalchemy/engine/result.py", line 735, in _only_one_row
+    raise exc.NoResultFound(
+sqlalchemy.exc.NoResultFound: No row was found when one was required
+[2023-03-18 17:08:52,360] ERROR in app: Exception on /verify-payment-webhook [POST]
+Traceback (most recent call last):
+  File "/home/braintext/website/env/lib/python3.10/site-packages/flask/app.py", line 2525, in wsgi_app
+    response = self.full_dispatch_request()
+  File "/home/braintext/website/env/lib/python3.10/site-packages/flask/app.py", line 1822, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "/home/braintext/website/env/lib/python3.10/site-packages/flask/app.py", line 1820, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "/home/braintext/website/env/lib/python3.10/site-packages/flask/app.py", line 1796, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)
+  File "/home/braintext/website/app/payment/routes.py", line 182, in payment_webhook
+    "w",
+  File "/home/braintext/website/env/lib/python3.10/site-packages/sqlalchemy/orm/query.py", line 2806, in one
+    return self._iter().one()  # type: ignore
+  File "/home/braintext/website/env/lib/python3.10/site-packages/sqlalchemy/engine/result.py", line 1797, in one
+    return self._only_one_row(
+  File "/home/braintext/website/env/lib/python3.10/site-packages/sqlalchemy/engine/result.py", line 735, in _only_one_row
+    raise exc.NoResultFound(
+sqlalchemy.exc.NoResultFound: No row was found when one was required
+/profile
+prmum-3a8b321047f644d2bf16509e39853ef4-1679165383 - 2023-03-18 18:50:06
+Payment successful - 2023-03-18 18:50:50
+SM79c793d6e266bb14bbb92ec7378c970d -- 2023-03-18 19:46:40
+SM3ca0bfaf51187147fa9a6f13421a8cfd -- 2023-03-18 19:47:16
+SMa4f430ae029096afac6f284854dfcc2a -- 2023-03-18 19:50:44
+stnrd-cdc3cd2ae65c423380c963b57ea746f1-1679169257 - 2023-03-18 19:56:31
+Payment cancelled - 2023-03-18 19:56:48
+stnrd-cdc3cd2ae65c423380c963b57ea746f1-1679169411 - 2023-03-18 19:57:08
+Payment cancelled - 2023-03-18 20:01:09
+stnrd-cdc3cd2ae65c423380c963b57ea746f1-1679169738 - 2023-03-18 20:07:26
+Payment successful - 2023-03-18 20:08:10
+SMb23c23eb2722b3cf47dee8e532171ea1 -- 2023-03-18 20:27:59
+SM9a7920a496200db0ba719b1b7d06fc07 -- 2023-03-18 20:28:19
+SMb92ba2b50f1f867d9b49dcd0e2c2e755 -- 2023-03-18 20:28:28
+stnrd-b43e79c4229a49e98b445a260ff1e902-1679171326 - 2023-03-18 20:28:53
+Payment successful - 2023-03-18 20:30:23
+SM33ca146b13251ed95b8442a29f45f955 -- 2023-03-19 14:10:27
+stnrd-cb5c4afd8a4d427fa47ab5cb5de723f8-1679235109 - 2023-03-19 14:11:57
+stnrd-cb5c4afd8a4d427fa47ab5cb5de723f8-1679235109 - 2023-03-19 14:13:05
+Payment successful - 2023-03-19 14:15:19
+SM36b937b2cd799a5dd00bf653a1c98be3 -- 2023-03-19 16:25:35
+[2023-03-19 20:38:41 +0000] [296829] [INFO] Parent changed, shutting down: <Worker 296829>
+[2023-03-19 20:38:41 +0000] [296829] [INFO] Worker exiting (pid: 296829)
+[2023-03-20 13:23:44 +0000] [352924] [INFO] Starting gunicorn 20.1.0
+[2023-03-20 13:23:44 +0000] [352924] [INFO] Listening at: http://0.0.0.0:5000 (352924)
+[2023-03-20 13:23:44 +0000] [352924] [INFO] Using worker: sync
+[2023-03-20 13:23:44 +0000] [352926] [INFO] Booting worker with pid: 352926
+[2023-03-20 13:23:44 +0000] [352926] [ERROR] Exception in worker process
+Traceback (most recent call last):
+  File "/home/braintext/website/env/lib/python3.10/site-packages/gunicorn/arbiter.py", line 589, in spawn_worker
+    worker.init_process()
+  File "/home/braintext/website/env/lib/python3.10/site-packages/gunicorn/workers/base.py", line 134, in init_process
+    self.load_wsgi()
+  File "/home/braintext/website/env/lib/python3.10/site-packages/gunicorn/workers/base.py", line 146, in load_wsgi
+    self.wsgi = self.app.wsgi()
+  File "/home/braintext/website/env/lib/python3.10/site-packages/gunicorn/app/base.py", line 67, in wsgi
+    self.callable = self.load()
+  File "/home/braintext/website/env/lib/python3.10/site-packages/gunicorn/app/wsgiapp.py", line 58, in load
+    return self.load_wsgiapp()
+  File "/home/braintext/website/env/lib/python3.10/site-packages/gunicorn/app/wsgiapp.py", line 48, in load_wsgiapp
+    return util.import_app(self.app_uri)
+  File "/home/braintext/website/env/lib/python3.10/site-packages/gunicorn/util.py", line 359, in import_app
+    mod = importlib.import_module(module)
+  File "/usr/lib/python3.10/importlib/__init__.py", line 126, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+  File "<frozen importlib._bootstrap>", line 1050, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1027, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1006, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 688, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 883, in exec_module
+  File "<frozen importlib._bootstrap>", line 241, in _call_with_frames_removed
+  File "/home/braintext/website/run.py", line 3, in <module>
+    app = create_app()
+  File "/home/braintext/website/app/__init__.py", line 28, in create_app
+    from app.auth.routes import auth
+  File "/home/braintext/website/app/auth/routes.py", line 2, in <module>
+    from email_utility import send_registration_email, send_forgot_password_email
+  File "/home/braintext/website/email_utility.py", line 7, in <module>
+    from verification import generate_confirmation_token
+  File "/home/braintext/website/verification.py", line 5, in <module>
+    app = create_app()
+  File "/home/braintext/website/app/__init__.py", line 28, in create_app
+    from app.auth.routes import auth
+ImportError: cannot import name 'auth' from partially initialized module 'app.auth.routes' (most likely due to a circular import) (/home/braintext/website/app/auth/routes.py)
+[2023-03-20 13:23:44 +0000] [352926] [INFO] Worker exiting (pid: 352926)
+[2023-03-20 13:23:44 +0000] [352924] [INFO] Shutting down: Master
+[2023-03-20 13:23:44 +0000] [352924] [INFO] Reason: Worker failed to boot.
+[2023-03-20 13:24:51 +0000] [353071] [INFO] Starting gunicorn 20.1.0
+[2023-03-20 13:24:51 +0000] [353071] [INFO] Listening at: http://0.0.0.0:5000 (353071)
+[2023-03-20 13:24:51 +0000] [353071] [INFO] Using worker: sync
+[2023-03-20 13:24:51 +0000] [353073] [INFO] Booting worker with pid: 353073
+[2023-03-20 13:24:51 +0000] [353073] [ERROR] Exception in worker process
+Traceback (most recent call last):
+  File "/home/braintext/website/env/lib/python3.10/site-packages/gunicorn/arbiter.py", line 589, in spawn_worker
+    worker.init_process()
+  File "/home/braintext/website/env/lib/python3.10/site-packages/gunicorn/workers/base.py", line 134, in init_process
+    self.load_wsgi()
+  File "/home/braintext/website/env/lib/python3.10/site-packages/gunicorn/workers/base.py", line 146, in load_wsgi
+    self.wsgi = self.app.wsgi()
+  File "/home/braintext/website/env/lib/python3.10/site-packages/gunicorn/app/base.py", line 67, in wsgi
+    self.callable = self.load()
+  File "/home/braintext/website/env/lib/python3.10/site-packages/gunicorn/app/wsgiapp.py", line 58, in load
+    return self.load_wsgiapp()
+  File "/home/braintext/website/env/lib/python3.10/site-packages/gunicorn/app/wsgiapp.py", line 48, in load_wsgiapp
+    return util.import_app(self.app_uri)
+  File "/home/braintext/website/env/lib/python3.10/site-packages/gunicorn/util.py", line 359, in import_app
+    mod = importlib.import_module(module)
+  File "/usr/lib/python3.10/importlib/__init__.py", line 126, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+  File "<frozen importlib._bootstrap>", line 1050, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1027, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1006, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 688, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 883, in exec_module
+  File "<frozen importlib._bootstrap>", line 241, in _call_with_frames_removed
+  File "/home/braintext/website/run.py", line 3, in <module>
+    app = create_app()
+  File "/home/braintext/website/app/__init__.py", line 28, in create_app
+    from app.auth.routes import auth
+  File "/home/braintext/website/app/auth/routes.py", line 2, in <module>
+    from email_utility import send_registration_email, send_forgot_password_email
+  File "/home/braintext/website/email_utility.py", line 7, in <module>
+    from verification import generate_confirmation_token
+  File "/home/braintext/website/verification.py", line 5, in <module>
+    app = create_app()
+  File "/home/braintext/website/app/__init__.py", line 28, in create_app
+    from app.auth.routes import auth
+ImportError: cannot import name 'auth' from partially initialized module 'app.auth.routes' (most likely due to a circular import) (/home/braintext/website/app/auth/routes.py)
+[2023-03-20 13:24:51 +0000] [353073] [INFO] Worker exiting (pid: 353073)
+[2023-03-20 13:24:51 +0000] [353071] [INFO] Shutting down: Master
+[2023-03-20 13:24:51 +0000] [353071] [INFO] Reason: Worker failed to boot.
+[2023-03-20 13:27:05 +0000] [353175] [INFO] Starting gunicorn 20.1.0
+[2023-03-20 13:27:05 +0000] [353175] [INFO] Listening at: http://0.0.0.0:5000 (353175)
+[2023-03-20 13:27:05 +0000] [353175] [INFO] Using worker: sync
+[2023-03-20 13:27:05 +0000] [353177] [INFO] Booting worker with pid: 353177
+[2023-03-20 13:27:05 +0000] [353177] [ERROR] Exception in worker process
+Traceback (most recent call last):
+  File "/home/braintext/website/env/lib/python3.10/site-packages/gunicorn/arbiter.py", line 589, in spawn_worker
+    worker.init_process()
+  File "/home/braintext/website/env/lib/python3.10/site-packages/gunicorn/workers/base.py", line 134, in init_process
+    self.load_wsgi()
+  File "/home/braintext/website/env/lib/python3.10/site-packages/gunicorn/workers/base.py", line 146, in load_wsgi
+    self.wsgi = self.app.wsgi()
+  File "/home/braintext/website/env/lib/python3.10/site-packages/gunicorn/app/base.py", line 67, in wsgi
+    self.callable = self.load()
+  File "/home/braintext/website/env/lib/python3.10/site-packages/gunicorn/app/wsgiapp.py", line 58, in load
+    return self.load_wsgiapp()
+  File "/home/braintext/website/env/lib/python3.10/site-packages/gunicorn/app/wsgiapp.py", line 48, in load_wsgiapp
+    return util.import_app(self.app_uri)
+  File "/home/braintext/website/env/lib/python3.10/site-packages/gunicorn/util.py", line 359, in import_app
+    mod = importlib.import_module(module)
+  File "/usr/lib/python3.10/importlib/__init__.py", line 126, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+  File "<frozen importlib._bootstrap>", line 1050, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1027, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1006, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 688, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 883, in exec_module
+  File "<frozen importlib._bootstrap>", line 241, in _call_with_frames_removed
+  File "/home/braintext/website/run.py", line 3, in <module>
+    app = create_app()
+  File "/home/braintext/website/app/__init__.py", line 28, in create_app
+    from app.auth.routes import auth
+  File "/home/braintext/website/app/auth/routes.py", line 2, in <module>
+    from email_utility import send_registration_email, send_forgot_password_email
+ModuleNotFoundError: No module named 'email_utility'
+[2023-03-20 13:27:05 +0000] [353177] [INFO] Worker exiting (pid: 353177)
+[2023-03-20 13:27:05 +0000] [353175] [INFO] Shutting down: Master
+[2023-03-20 13:27:05 +0000] [353175] [INFO] Reason: Worker failed to boot.
+[2023-03-20 13:29:47 +0000] [353238] [INFO] Starting gunicorn 20.1.0
+[2023-03-20 13:29:47 +0000] [353238] [INFO] Listening at: http://0.0.0.0:5000 (353238)
+[2023-03-20 13:29:47 +0000] [353238] [INFO] Using worker: sync
+[2023-03-20 13:29:47 +0000] [353240] [INFO] Booting worker with pid: 353240
+[2023-03-20 13:29:48 +0000] [353240] [ERROR] Exception in worker process
+Traceback (most recent call last):
+  File "/home/braintext/website/env/lib/python3.10/site-packages/gunicorn/arbiter.py", line 589, in spawn_worker
+    worker.init_process()
+  File "/home/braintext/website/env/lib/python3.10/site-packages/gunicorn/workers/base.py", line 134, in init_process
+    self.load_wsgi()
+  File "/home/braintext/website/env/lib/python3.10/site-packages/gunicorn/workers/base.py", line 146, in load_wsgi
+    self.wsgi = self.app.wsgi()
+  File "/home/braintext/website/env/lib/python3.10/site-packages/gunicorn/app/base.py", line 67, in wsgi
+    self.callable = self.load()
+  File "/home/braintext/website/env/lib/python3.10/site-packages/gunicorn/app/wsgiapp.py", line 58, in load
+    return self.load_wsgiapp()
+  File "/home/braintext/website/env/lib/python3.10/site-packages/gunicorn/app/wsgiapp.py", line 48, in load_wsgiapp
+    return util.import_app(self.app_uri)
+  File "/home/braintext/website/env/lib/python3.10/site-packages/gunicorn/util.py", line 359, in import_app
+    mod = importlib.import_module(module)
+  File "/usr/lib/python3.10/importlib/__init__.py", line 126, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+  File "<frozen importlib._bootstrap>", line 1050, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1027, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1006, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 688, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 883, in exec_module
+  File "<frozen importlib._bootstrap>", line 241, in _call_with_frames_removed
+  File "/home/braintext/website/run.py", line 3, in <module>
+    app = create_app()
+  File "/home/braintext/website/app/__init__.py", line 28, in create_app
+    from app.auth.routes import auth
+  File "/home/braintext/website/app/auth/routes.py", line 2, in <module>
+    from app.email_utility import send_registration_email, send_forgot_password_email
+  File "/home/braintext/website/app/email_utility.py", line 7, in <module>
+    from app.verification import generate_confirmation_token
+  File "/home/braintext/website/app/verification.py", line 5, in <module>
+    app = create_app()
+  File "/home/braintext/website/app/__init__.py", line 28, in create_app
+    from app.auth.routes import auth
+ImportError: cannot import name 'auth' from partially initialized module 'app.auth.routes' (most likely due to a circular import) (/home/braintext/website/app/auth/routes.py)
+[2023-03-20 13:29:48 +0000] [353240] [INFO] Worker exiting (pid: 353240)
+[2023-03-20 13:29:48 +0000] [353238] [INFO] Shutting down: Master
+[2023-03-20 13:29:48 +0000] [353238] [INFO] Reason: Worker failed to boot.
+[2023-03-20 13:30:25 +0000] [353280] [INFO] Starting gunicorn 20.1.0
+[2023-03-20 13:30:25 +0000] [353280] [INFO] Listening at: http://0.0.0.0:5000 (353280)
+[2023-03-20 13:30:25 +0000] [353280] [INFO] Using worker: sync
+[2023-03-20 13:30:25 +0000] [353282] [INFO] Booting worker with pid: 353282
+http://braintext.io/confirm/ImFuaWt3ZWhlbnJ5YXNhQGdtYWlsLmNvbSI.ZBhgjg._ojSrjHszBkP8JYPODyCgvNavpA
+[2023-03-20 13:33:02,901] ERROR in app: Exception on /register [POST]
+Traceback (most recent call last):
+  File "/home/braintext/website/env/lib/python3.10/site-packages/flask/app.py", line 2525, in wsgi_app
+    response = self.full_dispatch_request()
+  File "/home/braintext/website/env/lib/python3.10/site-packages/flask/app.py", line 1822, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "/home/braintext/website/env/lib/python3.10/site-packages/flask/app.py", line 1820, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "/home/braintext/website/env/lib/python3.10/site-packages/flask/app.py", line 1796, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)
+  File "/home/braintext/website/app/auth/routes.py", line 66, in register
+    send_registration_email(new_user)
+  File "/home/braintext/website/app/email_utility.py", line 67, in send_registration_email
+    html = render_template(
+  File "/home/braintext/website/env/lib/python3.10/site-packages/flask/templating.py", line 146, in render_template
+    template = app.jinja_env.get_or_select_template(template_name_or_list)
+  File "/home/braintext/website/env/lib/python3.10/site-packages/jinja2/environment.py", line 1081, in get_or_select_template
+    return self.get_template(template_name_or_list, parent, globals)
+  File "/home/braintext/website/env/lib/python3.10/site-packages/jinja2/environment.py", line 1010, in get_template
+    return self._load_template(name, globals)
+  File "/home/braintext/website/env/lib/python3.10/site-packages/jinja2/environment.py", line 969, in _load_template
+    template = self.loader.load(self, name, self.make_globals(globals))
+  File "/home/braintext/website/env/lib/python3.10/site-packages/jinja2/loaders.py", line 126, in load
+    source, filename, uptodate = self.get_source(environment, name)
+  File "/home/braintext/website/env/lib/python3.10/site-packages/flask/templating.py", line 62, in get_source
+    return self._get_source_fast(environment, template)
+  File "/home/braintext/website/env/lib/python3.10/site-packages/flask/templating.py", line 98, in _get_source_fast
+    raise TemplateNotFound(template)
+jinja2.exceptions.TemplateNotFound: email/verification_email.html
+http://braintext.io/confirm/ImFuaWt3ZWhlbnJ5YXNhQGdtYWlsLmNvbSI.ZBhqeg.BdyiGQ5Ytx6jwFaQbUIZOj9zIoE
+[2023-03-20 14:19:15,495] ERROR in app: Exception on /forgot-password [POST]
+Traceback (most recent call last):
+  File "/home/braintext/website/env/lib/python3.10/site-packages/flask/app.py", line 2525, in wsgi_app
+    response = self.full_dispatch_request()
+  File "/home/braintext/website/env/lib/python3.10/site-packages/flask/app.py", line 1822, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "/home/braintext/website/env/lib/python3.10/site-packages/flask/app.py", line 1820, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "/home/braintext/website/env/lib/python3.10/site-packages/flask/app.py", line 1796, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)
+  File "/home/braintext/website/app/auth/routes.py", line 177, in forgot_password
+    return render_template("auth/login.html")
+  File "/home/braintext/website/env/lib/python3.10/site-packages/flask/templating.py", line 146, in render_template
+    template = app.jinja_env.get_or_select_template(template_name_or_list)
+  File "/home/braintext/website/env/lib/python3.10/site-packages/jinja2/environment.py", line 1081, in get_or_select_template
+    return self.get_template(template_name_or_list, parent, globals)
+  File "/home/braintext/website/env/lib/python3.10/site-packages/jinja2/environment.py", line 1010, in get_template
+    return self._load_template(name, globals)
+  File "/home/braintext/website/env/lib/python3.10/site-packages/jinja2/environment.py", line 969, in _load_template
+    template = self.loader.load(self, name, self.make_globals(globals))
+  File "/home/braintext/website/env/lib/python3.10/site-packages/jinja2/loaders.py", line 126, in load
+    source, filename, uptodate = self.get_source(environment, name)
+  File "/home/braintext/website/env/lib/python3.10/site-packages/flask/templating.py", line 62, in get_source
+    return self._get_source_fast(environment, template)
+  File "/home/braintext/website/env/lib/python3.10/site-packages/flask/templating.py", line 98, in _get_source_fast
+    raise TemplateNotFound(template)
+jinja2.exceptions.TemplateNotFound: auth/login.html
+[2023-03-20 14:46:48,031] ERROR in app: Exception on /forgot-password [POST]
+Traceback (most recent call last):
+  File "/home/braintext/website/env/lib/python3.10/site-packages/flask/app.py", line 2525, in wsgi_app
+    response = self.full_dispatch_request()
+  File "/home/braintext/website/env/lib/python3.10/site-packages/flask/app.py", line 1822, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "/home/braintext/website/env/lib/python3.10/site-packages/flask/app.py", line 1820, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "/home/braintext/website/env/lib/python3.10/site-packages/flask/app.py", line 1796, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)
+  File "/home/braintext/website/app/auth/routes.py", line 177, in forgot_password
+    return render_template("auth/auth.html")
+  File "/home/braintext/website/env/lib/python3.10/site-packages/flask/templating.py", line 146, in render_template
+    template = app.jinja_env.get_or_select_template(template_name_or_list)
+  File "/home/braintext/website/env/lib/python3.10/site-packages/jinja2/environment.py", line 1081, in get_or_select_template
+    return self.get_template(template_name_or_list, parent, globals)
+  File "/home/braintext/website/env/lib/python3.10/site-packages/jinja2/environment.py", line 1010, in get_template
+    return self._load_template(name, globals)
+  File "/home/braintext/website/env/lib/python3.10/site-packages/jinja2/environment.py", line 969, in _load_template
+    template = self.loader.load(self, name, self.make_globals(globals))
+  File "/home/braintext/website/env/lib/python3.10/site-packages/jinja2/loaders.py", line 126, in load
+    source, filename, uptodate = self.get_source(environment, name)
+  File "/home/braintext/website/env/lib/python3.10/site-packages/flask/templating.py", line 62, in get_source
+    return self._get_source_fast(environment, template)
+  File "/home/braintext/website/env/lib/python3.10/site-packages/flask/templating.py", line 98, in _get_source_fast
+    raise TemplateNotFound(template)
+jinja2.exceptions.TemplateNotFound: auth/login.html
+[2023-03-20 16:16:16 +0000] [353282] [INFO] Parent changed, shutting down: <Worker 353282>
+[2023-03-20 16:16:16 +0000] [353282] [INFO] Worker exiting (pid: 353282)
+[2023-03-20 16:50:07 +0000] [358737] [INFO] Starting gunicorn 20.1.0
+[2023-03-20 16:50:07 +0000] [358737] [INFO] Listening at: http://0.0.0.0:5000 (358737)
+[2023-03-20 16:50:07 +0000] [358737] [INFO] Using worker: sync
+[2023-03-20 16:50:07 +0000] [358739] [INFO] Booting worker with pid: 358739
+None
+None
+y
+None
+SMf4c150447f83a61224e96ce3d9343ec1 -- 2023-03-20 17:09:40
+SMb880c9f6caf56bbc9ff6e25539d50ba2 -- 2023-03-20 17:09:54
+http://braintext.io/confirm/ImFueWFidWluZWtldmluQGdtYWlsLmNvbSI.ZBiTdw.2A8q3nF36nr8M_WltPqLaG17B40
+SM9d461f1d781564fec698dbc1e0af2813 -- 2023-03-20 17:10:58
+http://braintext.io/confirm/ImFueWFidWluZWtldmluQGdtYWlsLmNvbSI.ZBiTog.6qS8PEgjkLfp0tBDrnpJUmRbIO8
+http://braintext.io/confirm/ImFueWFidWluZWtldmluQGdtYWlsLmNvbSI.ZBiTpw.TjXwYAEc9bkpO4D9Ae5tzzHvZbM
+SMb2be01f47c2a36a8ebc9a1a2c86003e7 -- 2023-03-20 17:11:30
+/profile
+/profile
+http://braintext.io/confirm/ImRhbmllbGpvaG5AZ21haWwuY29tIg.ZBiY_A.psYlBXiQDz2NyIZrKMGLPAllDjs
+http://braintext.io/confirm/ImRhbmllbGpvaG4yQGdtYWlsLmNvbSI.ZBiZcw.7nTOZ8neJal5b7bOC8uVQWiSpF8
+http://braintext.io/confirm/ImRhbmllbGpvaG4yQGdtYWlsLmNvbSI.ZBiZ2w.6k_EV3lvK-k16cyhvMjXtaFmsAw
+http://braintext.io/confirm/Im5nZW5lY2hpY2hldGE3OEBnbWFpbC5jb20i.ZBigoA.EK8awr7PctqOmr7JDy4kcTyxp1U
+http://braintext.io/confirm/Im5nZW5lY2hpY2hldGE3OEBnbWFpbC5jb20i.ZBihGQ.u4zkvWNOR6ffr_eKhWQsKdbX7po
+/profile
+SM6d0de4aeecf97b46a1b11fc15b3c3ff9 -- 2023-03-20 18:09:59
+[2023-03-21 01:53:38 +0000] [358737] [INFO] Handling signal: term
+[2023-03-21 01:53:38 +0000] [358739] [INFO] Worker exiting (pid: 358739)
+[2023-03-21 01:53:38 +0000] [358737] [INFO] Shutting down: Master
+[2023-03-21 04:29:21 +0000] [369374] [INFO] Starting gunicorn 20.1.0
+[2023-03-21 04:29:21 +0000] [369374] [INFO] Listening at: http://0.0.0.0:5000 (369374)
+[2023-03-21 04:29:21 +0000] [369374] [INFO] Using worker: sync
+[2023-03-21 04:29:21 +0000] [369376] [INFO] Booting worker with pid: 369376
+http://braintext.io/confirm/InRhbW15YmV0aHM0MDBAZ21haWwuY29tIg.ZBlavQ.cPi_tJdnOpDObtdTiMcQBfPqAAk
+http://braintext.io/confirm/InRhbW15YmV0aHM0MDBAZ21haWwuY29tIg.ZBlbWg.PoyQNP1A8Ho35zalXxGiB-CEMI0
+http://braintext.io/confirm/InRhbW15YmV0aHM0MDBAZ21haWwuY29tIg.ZBlbhg.waiB1mTMJQdiy3QDhhdNMHcR25Y
+SM869fe01fc4497a8a889efa5101eddd8f -- 2023-03-21 07:26:19
+http://braintext.io/confirm/Implc3VzZGViYmllMDFAZ21haWwuY29tIg.ZBltxg.w9My7r2wHXoyDIRUxIlvoqH49i0
+http://braintext.io/confirm/Implc3VzZGViYmllMDFAZ21haWwuY29tIg.ZBlt2Q.auGF2WshvVMvXwIT6M2o_-7ZjcI
+SM46bafe61748251a1598053bfc591f393 -- 2023-03-21 08:43:05
+http://braintext.io/confirm/InF1ZWVuZXN0aGVyZWRlYW5pMThAZ21haWwuY29tIg.ZBlyKg.F91jiZvb1lgzeAQyvRUJElE3NMI
+SMd5db1dc886247e85981fdeb44c69a28d -- 2023-03-21 09:04:54
+[2023-03-21 10:05:39 +0000] [369374] [INFO] Handling signal: term
+[2023-03-21 10:05:39 +0000] [369376] [INFO] Worker exiting (pid: 369376)
+[2023-03-21 10:05:39 +0000] [369374] [INFO] Shutting down: Master
+[2023-03-21 10:06:00 +0000] [373707] [INFO] Starting gunicorn 20.1.0
+[2023-03-21 10:06:00 +0000] [373707] [INFO] Listening at: http://0.0.0.0:5000 (373707)
+[2023-03-21 10:06:00 +0000] [373707] [INFO] Using worker: sync
+[2023-03-21 10:06:00 +0000] [373709] [INFO] Booting worker with pid: 373709
+None
+y
+y
+None
+[2023-03-21 11:58:20 +0000] [373707] [INFO] Handling signal: term
+[2023-03-21 11:58:20 +0000] [373709] [INFO] Worker exiting (pid: 373709)
+[2023-03-21 11:58:20 +0000] [373707] [INFO] Shutting down: Master
+[2023-03-21 11:58:53 +0000] [375622] [INFO] Starting gunicorn 20.1.0
+[2023-03-21 11:58:53 +0000] [375622] [INFO] Listening at: http://0.0.0.0:5000 (375622)
+[2023-03-21 11:58:53 +0000] [375622] [INFO] Using worker: sync
+[2023-03-21 11:58:53 +0000] [375624] [INFO] Booting worker with pid: 375624
+stnrd-7fa0251529e843218084e799d9742ed4-1679400288 - 2023-03-21 12:04:53
+Payment successful - 2023-03-21 12:06:26
+{
+  "created": 1679400558,
+  "data": [
+    {
+      "url": "https://oaidalleapiprodscus.blob.core.windows.net/private/org-B2t9xRwP1sXbrczXNhmVjUSv/user-CNe2y4K4o8NZCusHR1OOA9LX/img-9WJBOi1f8YCKRbvls5rT7juf.png?st=2023-03-21T11%3A09%3A18Z&se=2023-03-21T13%3A09%3A18Z&sp=r&sv=2021-08-06&sr=b&rscd=inline&rsct=image/png&skoid=6aaadede-4fb3-4698-a8f6-684d7786b067&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2023-03-21T05%3A01%3A28Z&ske=2023-03-22T05%3A01%3A28Z&sks=b&skv=2021-08-06&sig=IZCzmFdG33zBdgzh2KdNgA286Z8R%2BLhhcRQpR49nHwQ%3D"
+    }
+  ]
+}
+{
+  "created": 1679400608,
+  "data": [
+    {
+      "url": "https://oaidalleapiprodscus.blob.core.windows.net/private/org-B2t9xRwP1sXbrczXNhmVjUSv/user-CNe2y4K4o8NZCusHR1OOA9LX/img-S8umHVcS7Beny9B6NL0bcimF.png?st=2023-03-21T11%3A10%3A08Z&se=2023-03-21T13%3A10%3A08Z&sp=r&sv=2021-08-06&sr=b&rscd=inline&rsct=image/png&skoid=6aaadede-4fb3-4698-a8f6-684d7786b067&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2023-03-21T04%3A35%3A07Z&ske=2023-03-22T04%3A35%3A07Z&sks=b&skv=2021-08-06&sig=xgAoAioYlopGTgF/f5QrSNeFV79BwgH4ESJywMcUy%2BU%3D"
+    }
+  ]
+}
+{
+  "created": 1679400699,
+  "data": [
+    {
+      "url": "https://oaidalleapiprodscus.blob.core.windows.net/private/org-B2t9xRwP1sXbrczXNhmVjUSv/user-CNe2y4K4o8NZCusHR1OOA9LX/img-4xVmPQyHdVNDtzJHj6jz1VyT.png?st=2023-03-21T11%3A11%3A39Z&se=2023-03-21T13%3A11%3A39Z&sp=r&sv=2021-08-06&sr=b&rscd=inline&rsct=image/png&skoid=6aaadede-4fb3-4698-a8f6-684d7786b067&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2023-03-21T08%3A15%3A53Z&ske=2023-03-22T08%3A15%3A53Z&sks=b&skv=2021-08-06&sig=OrnFWT60eXku4N6IGe%2BSBSw5eWgp9r2HX9R/ksNR6LU%3D"
+    }
+  ]
+}
+[2023-03-21 12:14:12 +0000] [375624] [INFO] Worker exiting (pid: 375624)
+[2023-03-21 12:14:12 +0000] [375622] [INFO] Handling signal: term
+[2023-03-21 12:14:12 +0000] [375622] [WARNING] Worker with pid 375624 was terminated due to signal 15
+[2023-03-21 12:14:12 +0000] [375622] [INFO] Shutting down: Master
+[2023-03-21 12:14:35 +0000] [376383] [INFO] Starting gunicorn 20.1.0
+[2023-03-21 12:14:35 +0000] [376383] [INFO] Listening at: http://0.0.0.0:5000 (376383)
+[2023-03-21 12:14:35 +0000] [376383] [INFO] Using worker: sync
+[2023-03-21 12:14:35 +0000] [376385] [INFO] Booting worker with pid: 376385
+{
+  "created": 1679400925,
+  "data": [
+    {
+      "url": "https://oaidalleapiprodscus.blob.core.windows.net/private/org-B2t9xRwP1sXbrczXNhmVjUSv/user-CNe2y4K4o8NZCusHR1OOA9LX/img-BRYIooVe4KWNEON944e2Fzew.png?st=2023-03-21T11%3A15%3A25Z&se=2023-03-21T13%3A15%3A25Z&sp=r&sv=2021-08-06&sr=b&rscd=inline&rsct=image/png&skoid=6aaadede-4fb3-4698-a8f6-684d7786b067&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2023-03-21T04%3A35%3A07Z&ske=2023-03-22T04%3A35%3A07Z&sks=b&skv=2021-08-06&sig=z%2B6zasxW7PdlWQ6YRewJoWjKvl2gT5LO7h5MDdXxNf8%3D"
+    },
+    {
+      "url": "https://oaidalleapiprodscus.blob.core.windows.net/private/org-B2t9xRwP1sXbrczXNhmVjUSv/user-CNe2y4K4o8NZCusHR1OOA9LX/img-gL5avKBMrc5jNXcGi5JOmcFc.png?st=2023-03-21T11%3A15%3A25Z&se=2023-03-21T13%3A15%3A25Z&sp=r&sv=2021-08-06&sr=b&rscd=inline&rsct=image/png&skoid=6aaadede-4fb3-4698-a8f6-684d7786b067&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2023-03-21T04%3A35%3A07Z&ske=2023-03-22T04%3A35%3A07Z&sks=b&skv=2021-08-06&sig=g173PDQZh/liBNLxHn64%2B/nJBQdZCr2jERcn9SVg90o%3D"
+    },
+    {
+      "url": "https://oaidalleapiprodscus.blob.core.windows.net/private/org-B2t9xRwP1sXbrczXNhmVjUSv/user-CNe2y4K4o8NZCusHR1OOA9LX/img-SZNU8asXa9cYMbPeyjkQrmAT.png?st=2023-03-21T11%3A15%3A25Z&se=2023-03-21T13%3A15%3A25Z&sp=r&sv=2021-08-06&sr=b&rscd=inline&rsct=image/png&skoid=6aaadede-4fb3-4698-a8f6-684d7786b067&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2023-03-21T04%3A35%3A07Z&ske=2023-03-22T04%3A35%3A07Z&sks=b&skv=2021-08-06&sig=5gedXJsKsCO0h4nxONtmKU5KjoqU1VSdo6aEvZDiTwY%3D"
+    }
+  ]
+}
+[2023-03-21 12:17:05 +0000] [376383] [INFO] Handling signal: term
+[2023-03-21 12:17:05 +0000] [376385] [INFO] Worker exiting (pid: 376385)
+[2023-03-21 12:17:05 +0000] [376383] [INFO] Shutting down: Master
+[2023-03-21 12:17:18 +0000] [376496] [INFO] Starting gunicorn 20.1.0
+[2023-03-21 12:17:18 +0000] [376496] [INFO] Listening at: http://0.0.0.0:5000 (376496)
+[2023-03-21 12:17:18 +0000] [376496] [INFO] Using worker: sync
+[2023-03-21 12:17:18 +0000] [376503] [INFO] Booting worker with pid: 376503
+[2023-03-21 12:22:29 +0000] [376496] [INFO] Handling signal: term
+[2023-03-21 12:22:29 +0000] [376503] [INFO] Worker exiting (pid: 376503)
+[2023-03-21 12:22:29 +0000] [376496] [INFO] Shutting down: Master
+[2023-03-21 13:40:21 +0000] [383099] [INFO] Starting gunicorn 20.1.0
+[2023-03-21 13:40:21 +0000] [383099] [INFO] Listening at: http://0.0.0.0:5000 (383099)
+[2023-03-21 13:40:21 +0000] [383099] [INFO] Using worker: sync
+[2023-03-21 13:40:21 +0000] [383101] [INFO] Booting worker with pid: 383101
+[2023-03-21 13:46:03 +0000] [383099] [INFO] Handling signal: ttou
+[2023-03-21 13:46:33 +0000] [383099] [CRITICAL] WORKER TIMEOUT (pid:383101)
+[2023-03-21 13:46:33 +0000] [383101] [INFO] Worker exiting (pid: 383101)
+[2023-03-21 13:46:33 +0000] [383740] [INFO] Booting worker with pid: 383740
+[2023-03-21 13:46:52 +0000] [383099] [INFO] Handling signal: ttou
+[2023-03-21 13:47:21 +0000] [383099] [CRITICAL] WORKER TIMEOUT (pid:383740)
+[2023-03-21 13:47:21 +0000] [383740] [INFO] Worker exiting (pid: 383740)
+[2023-03-21 13:47:21 +0000] [383756] [INFO] Booting worker with pid: 383756
+[2023-03-21 13:48:32 +0000] [383099] [INFO] Handling signal: ttou
+[2023-03-21 13:49:02 +0000] [383099] [CRITICAL] WORKER TIMEOUT (pid:383756)
+[2023-03-21 13:49:02 +0000] [383756] [INFO] Worker exiting (pid: 383756)
+[2023-03-21 13:49:02 +0000] [383783] [INFO] Booting worker with pid: 383783
+[2023-03-21 13:51:27 +0000] [383783] [INFO] Worker exiting (pid: 383783)
+[2023-03-21 13:51:27 +0000] [383099] [INFO] Handling signal: term
+[2023-03-21 13:51:27 +0000] [383099] [INFO] Shutting down: Master
+[2023-03-21 13:51:40 +0000] [383901] [INFO] Starting gunicorn 20.1.0
+[2023-03-21 13:51:40 +0000] [383901] [INFO] Listening at: http://0.0.0.0:5000 (383901)
+[2023-03-21 13:51:40 +0000] [383901] [INFO] Using worker: sync
+[2023-03-21 13:51:40 +0000] [383903] [INFO] Booting worker with pid: 383903
+[2023-03-21 13:52:02 +0000] [383901] [INFO] Handling signal: ttou
+[2023-03-21 13:53:31 +0000] [383901] [CRITICAL] WORKER TIMEOUT (pid:383903)
+[2023-03-21 13:53:31 +0000] [383903] [INFO] Worker exiting (pid: 383903)
+[2023-03-21 13:53:32 +0000] [383959] [INFO] Booting worker with pid: 383959
+[2023-03-21 13:59:00 +0000] [383901] [INFO] Handling signal: term
+[2023-03-21 13:59:00 +0000] [383959] [INFO] Worker exiting (pid: 383959)
+[2023-03-21 13:59:00 +0000] [383901] [INFO] Shutting down: Master
+[2023-03-21 13:59:10 +0000] [384041] [INFO] Starting gunicorn 20.1.0
+[2023-03-21 13:59:10 +0000] [384041] [INFO] Listening at: http://0.0.0.0:5000 (384041)
+[2023-03-21 13:59:10 +0000] [384041] [INFO] Using worker: sync
+[2023-03-21 13:59:10 +0000] [384043] [INFO] Booting worker with pid: 384043
+[2023-03-21 13:59:10 +0000] [384044] [INFO] Booting worker with pid: 384044
+[2023-03-21 13:59:10 +0000] [384045] [INFO] Booting worker with pid: 384045
+[2023-03-21 13:59:34 +0000] [384041] [INFO] Handling signal: ttou
+[2023-03-21 14:02:07 +0000] [384041] [INFO] Handling signal: term
+[2023-03-21 14:02:07 +0000] [384044] [INFO] Worker exiting (pid: 384044)
+[2023-03-21 14:02:07 +0000] [384045] [INFO] Worker exiting (pid: 384045)
+[2023-03-21 14:02:17 +0000] [384183] [DEBUG] Current configuration:
+  config: ./gunicorn.conf.py
+  wsgi_app: None
+  bind: [':5000']
+  backlog: 2048
+  workers: 3
+  worker_class: sync
+  threads: 1
+  worker_connections: 1000
+  max_requests: 0
+  max_requests_jitter: 0
+  timeout: 0
+  graceful_timeout: 30
+  keepalive: 2
+  limit_request_line: 4094
+  limit_request_fields: 100
+  limit_request_field_size: 8190
+  reload: False
+  reload_engine: auto
+  reload_extra_files: []
+  spew: False
+  check_config: False
+  print_config: False
+  preload_app: False
+  sendfile: None
+  reuse_port: False
+  chdir: /home/braintext/website
+  daemon: False
+  raw_env: []
+  pidfile: None
+  worker_tmp_dir: None
+  user: 1000
+  group: 1000
+  umask: 0
+  initgroups: False
+  tmp_upload_dir: None
+  secure_scheme_headers: {'X-FORWARDED-PROTOCOL': 'ssl', 'X-FORWARDED-PROTO': 'https', 'X-FORWARDED-SSL': 'on'}
+  forwarded_allow_ips: ['127.0.0.1']
+  accesslog: logs/gunicorn/access.log
+  disable_redirect_access_to_syslog: False
+  access_log_format: %(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s"
+  errorlog: logs/gunicorn/error.log
+  loglevel: debug
+  capture_output: True
+  logger_class: gunicorn.glogging.Logger
+  logconfig: None
+  logconfig_dict: {}
+  syslog_addr: udp://localhost:514
+  syslog: False
+  syslog_prefix: None
+  syslog_facility: user
+  enable_stdio_inheritance: False
+  statsd_host: None
+  dogstatsd_tags: 
+  statsd_prefix: 
+  proc_name: None
+  default_proc_name: run:app
+  pythonpath: None
+  paste: None
+  on_starting: <function OnStarting.on_starting at 0x7f987efe7f40>
+  on_reload: <function OnReload.on_reload at 0x7f987effc0d0>
+  when_ready: <function WhenReady.when_ready at 0x7f987effc1f0>
+  pre_fork: <function Prefork.pre_fork at 0x7f987effc310>
+  post_fork: <function Postfork.post_fork at 0x7f987effc430>
+  post_worker_init: <function PostWorkerInit.post_worker_init at 0x7f987effc550>
+  worker_int: <function WorkerInt.worker_int at 0x7f987effc670>
+  worker_abort: <function WorkerAbort.worker_abort at 0x7f987effc790>
+  pre_exec: <function PreExec.pre_exec at 0x7f987effc8b0>
+  pre_request: <function PreRequest.pre_request at 0x7f987effc9d0>
+  post_request: <function PostRequest.post_request at 0x7f987effca60>
+  child_exit: <function ChildExit.child_exit at 0x7f987effcb80>
+  worker_exit: <function WorkerExit.worker_exit at 0x7f987effcca0>
+  nworkers_changed: <function NumWorkersChanged.nworkers_changed at 0x7f987effcdc0>
+  on_exit: <function OnExit.on_exit at 0x7f987effcee0>
+  proxy_protocol: False
+  proxy_allow_ips: ['127.0.0.1']
+  keyfile: None
+  certfile: None
+  ssl_version: 2
+  cert_reqs: 0
+  ca_certs: None
+  suppress_ragged_eofs: True
+  do_handshake_on_connect: False
+  ciphers: None
+  raw_paste_global_conf: []
+  strip_header_spaces: False
+[2023-03-21 14:02:17 +0000] [384183] [INFO] Starting gunicorn 20.1.0
+[2023-03-21 14:02:17 +0000] [384183] [ERROR] Connection in use: ('', 5000)
+[2023-03-21 14:02:17 +0000] [384183] [DEBUG] connection to ('', 5000) failed: [Errno 98] Address already in use
+[2023-03-21 14:02:17 +0000] [384183] [ERROR] Retrying in 1 second.
+[2023-03-21 14:02:18 +0000] [384183] [ERROR] Connection in use: ('', 5000)
+[2023-03-21 14:02:18 +0000] [384183] [DEBUG] connection to ('', 5000) failed: [Errno 98] Address already in use
+[2023-03-21 14:02:18 +0000] [384183] [ERROR] Retrying in 1 second.
+[2023-03-21 14:02:19 +0000] [384183] [ERROR] Connection in use: ('', 5000)
+[2023-03-21 14:02:19 +0000] [384183] [DEBUG] connection to ('', 5000) failed: [Errno 98] Address already in use
+[2023-03-21 14:02:19 +0000] [384183] [ERROR] Retrying in 1 second.
+[2023-03-21 14:02:20 +0000] [384183] [ERROR] Connection in use: ('', 5000)
+[2023-03-21 14:02:20 +0000] [384183] [DEBUG] connection to ('', 5000) failed: [Errno 98] Address already in use
+[2023-03-21 14:02:20 +0000] [384183] [ERROR] Retrying in 1 second.
+[2023-03-21 14:02:21 +0000] [384183] [ERROR] Connection in use: ('', 5000)
+[2023-03-21 14:02:21 +0000] [384183] [DEBUG] connection to ('', 5000) failed: [Errno 98] Address already in use
+[2023-03-21 14:02:21 +0000] [384183] [ERROR] Retrying in 1 second.
+[2023-03-21 14:02:22 +0000] [384183] [ERROR] Can't connect to ('', 5000)
+[2023-03-21 14:02:37 +0000] [384041] [INFO] Shutting down: Master

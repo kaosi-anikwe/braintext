@@ -1,0 +1,30 @@
+{
+  "event": "charg                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        e.completed",
+  "data": {
+    "id": 913876829,
+    "tx_ref": "prmum-2f541bbff9ff43568230709cc99e0569-1683488353",
+    "flw_ref": "000016230507213115000091553591",
+    "device_fingerprint": "296fb39e6832dbbbd1abc93c876bb17b",
+    "amount": 1200,
+    "currency": "NGN",
+    "charged_amount": 1216.8,
+    "app_fee": 16.8,
+    "merchant_fee": 0,
+    "processor_response": "success",
+    "auth_model": "AUTH",
+    "ip": "105.113.33.159",
+    "narration": "Braintext.io",
+    "status": "successful",
+    "payment_type": "bank_transfer",
+    "created_at": "2023-05-07T20:33:29.000Z",
+    "account_id": 2109822,
+    "customer": {
+      "id": 577280775,
+      "name": "Saviour ",
+      "phone_number": "08012345678",
+      "email": "saviourokereke52@gmail.com",
+      "created_at": "2023-05-07T20:27:54.000Z"
+    }
+  },
+  "event.type": "BANK_TRANSFER_TRANSACTION"
+}

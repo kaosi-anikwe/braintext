@@ -1,0 +1,30 @@
+{
+  "event": "charge.completed",
+  "data": {
+    "id": 883874910,
+    "tx_ref": "prmum-e293f0a7301f4a94a21689d69f56efb7-1680609660",
+    "flw_ref": "000016230404130422000026238270",
+    "device_fingerprint": "ba22bcea763690453d89c26bafb6fb83",
+    "amount": 1200,
+    "currency": "NGN",
+    "charged_amount": 1216.8,
+    "app_fee": 16.8,
+    "merchant_fee": 0,
+    "processor_response": "success",
+    "auth_model": "AUTH",
+    "ip": "197.210.78.123",
+    "narration": "Braintext.io",
+    "status": "successful",
+    "payment_type": "bank_transfer",
+    "created_at": "2023-04-04T12:05:23.000Z",
+    "account_id": 2109822,
+    "customer": {
+      "id": 556824775,
+      "name": "Ogochukwu Anikwe",
+      "phone_number": "08012345678",
+      "email": "ogooanikwe@gmail.com",
+      "created_at": "2023-04-04T12:01:30.000Z"
+    }
+  },
+  "event.type": "BANK_TRANSFER_TRANSACTION"
+}
