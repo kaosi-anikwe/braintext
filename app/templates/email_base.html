@@ -64,10 +64,10 @@
       >
         <a
           style="color: #16507b"
-          href="{{ url_for('main.index', _external=True) }}"
+          href="{{ url_for('main.index', _external=True, _scheme='https') }}"
         >
           <img
-            src="{{ url_for('static', filename='assets/img/logo-header.png', _external=True) }}"
+            src="{{ url_for('static', filename='assets/img/logo-header.png', _external=True, _scheme='https') }}"
             alt="BrainText"
             style="max-height: 40px"
           />
@@ -90,11 +90,11 @@
       >
         <a
           style="color: #16507b"
-          href="{{ url_for('main.index', _external=True) }}"
+          href="{{ url_for('main.index', _external=True, _scheme='https') }}"
         >
           <img
             id="header-side-image"
-            src="{{ url_for('static', filename='assets/img/braintext_email_header.png', _external=True) }}"
+            src="{{ url_for('static', filename='assets/img/braintext_email_header.png', _external=True, _scheme='https') }}"
             alt="Learn through conversations"
             style="
               max-height: 40px;
@@ -203,7 +203,7 @@
             <!-- <h3>BrainText</h3> -->
             <img
               style="object-fit: contain; width: 100%"
-              src="{{ url_for('static', filename='assets/img/logo-footer.png', _external=True) }}"
+              src="{{ url_for('static', filename='assets/img/logo-footer.png', _external=True, _scheme='https') }}"
               alt="BrainText"
             />
             <p
@@ -265,7 +265,7 @@
                     display: inline-block;
                     line-height: 1;
                   "
-                  href="{{ url_for('main.index', _external=True) }}#"
+                  href="{{ url_for('main.index', _external=True, _scheme='https') }}#"
                   >Home</a
                 >
               </li>
@@ -286,7 +286,7 @@
                     display: inline-block;
                     line-height: 1;
                   "
-                  href="{{ url_for('main.index', _external=True) }}#about"
+                  href="{{ url_for('main.index', _external=True, _scheme='https') }}#about"
                   >About us</a
                 >
               </li>
@@ -307,7 +307,7 @@
                     display: inline-block;
                     line-height: 1;
                   "
-                  href="{{ url_for('main.index', _external=True) }}#services"
+                  href="{{ url_for('main.index', _external=True, _scheme='https') }}#services"
                   >Services</a
                 >
               </li>
@@ -328,7 +328,7 @@
                     display: inline-block;
                     line-height: 1;
                   "
-                  href="{{ url_for('main.terms_of_service', _external=True) }}"
+                  href="{{ url_for('main.terms_of_service', _external=True, _scheme='https') }}"
                   >Terms of service</a
                 >
               </li>
@@ -349,7 +349,7 @@
                     display: inline-block;
                     line-height: 1;
                   "
-                  href="{{ url_for('main.privacy_policy', _external=True) }}"
+                  href="{{ url_for('main.privacy_policy', _external=True, _scheme='https') }}"
                   >Privacy policy</a
                 >
               </li>

@@ -16,6 +16,7 @@ from flask_login import login_required, current_user
 from flask import Blueprint, render_template, request, flash, jsonify, redirect, url_for
 import traceback
 
+
 def send_otp_message(otp: int, name: str, phone_no: str) -> str:
     message = client.messages.create(
         body=f"Hi {name}! Here's your One Time Password to verify your number at Braintext. \n{otp} \nThe OTP will expire in 3 minutes.",
@@ -133,22 +134,24 @@ def send_otp():
         check_otp = OTP.query.filter(OTP.phone_no == phone_no).one_or_none()
         if check_otp:
             check_user = Users.query.filter(
-            Users.phone_no == phone_no, Users.phone_verified == True
-        ).one_or_none()
+                Users.phone_no == phone_no, Users.phone_verified == True
+            ).one_or_none()
             if check_user:
                 # number already used by another user
                 return jsonify({"error": True})
             else:
                 check_otp.otp = get_otp()
                 send_otp_message(
-                otp=check_otp.otp, name=current_user.first_name, phone_no=phone_no
-            )
+                    otp=check_otp.otp, name=current_user.first_name, phone_no=phone_no
+                )
                 check_otp.update()
 
                 return jsonify({"otp": check_otp.otp})
         else:
             otp = OTP(phone_no)
-            send_otp_message(otp=otp.otp, name=current_user.first_name, phone_no=phone_no)
+            send_otp_message(
+                otp=otp.otp, name=current_user.first_name, phone_no=phone_no
+            )
             otp.insert()
 
             return jsonify({"otp": otp.otp})
@@ -169,8 +172,8 @@ def resend_otp():
         if check_otp:
             check_otp.otp = get_otp()
             send_otp_message(
-            otp=check_otp.otp, name=current_user.first_name, phone_no=phone_no
-        )
+                otp=check_otp.otp, name=current_user.first_name, phone_no=phone_no
+            )
             check_otp.update()
 
             return jsonify({"otp": check_otp.otp})

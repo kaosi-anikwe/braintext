@@ -116,7 +116,9 @@ def log_location(name: str, number: str) -> str:
         user_directory = f"{directory}/{name.replace(' ', '_').strip()}_{number}"
         if not os.path.exists(user_directory):
             os.mkdir(user_directory)
-        month_log = os.path.join(user_directory, f"{datetime.utcnow().strftime('%m-%Y')}")
+        month_log = os.path.join(
+            user_directory, f"{datetime.utcnow().strftime('%m-%Y')}"
+        )
         if not os.path.exists(month_log):
             os.mkdir(month_log)
         day_log = f"{month_log}/{datetime.utcnow().strftime('%d-%m-%Y')}.log"
@@ -129,7 +131,9 @@ def log_location(name: str, number: str) -> str:
         user_directory = f"{directory}/{name.replace(' ', '_').strip()}_{number}"
         if not os.path.exists(user_directory):
             os.mkdir(user_directory)
-        month_log = os.path.join(user_directory, f"{datetime.utcnow().strftime('%m-%Y')}")
+        month_log = os.path.join(
+            user_directory, f"{datetime.utcnow().strftime('%m-%Y')}"
+        )
         if not os.path.exists(month_log):
             os.mkdir(month_log)
         day_log = f"{month_log}/{datetime.utcnow().strftime('%d-%m-%Y')}.log"
