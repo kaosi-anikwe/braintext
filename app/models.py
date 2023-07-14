@@ -249,6 +249,20 @@ class StandardSubscription(db.Model, TimestampMixin, DatabaseHelperMixin):
         else:
             return False
 
+    def update_account(self, user_id) -> None:
+        # updates account after expiry
+        user = Users.query.get(user_id)
+        user.account_type = "Basic"
+        user.update()
+        # renew basic sub
+        basic_sub = BasicSubscription.query.filter(
+            BasicSubscription.user_id == user_id
+        ).one()
+        if not basic_sub.renew():
+            print(
+                f"Failed to renew basic sub for user: {user.display_name()} with user ID: {user.id}"
+            )
+
 
 class PremiumSubscription(db.Model, TimestampMixin, DatabaseHelperMixin):
     __tablename__ = "premium_subscription"
@@ -287,3 +301,17 @@ class PremiumSubscription(db.Model, TimestampMixin, DatabaseHelperMixin):
             return True
         else:
             return False
+
+    def update_account(self, user_id) -> None:
+        # updates account after expiry
+        user = Users.query.get(user_id)
+        user.account_type = "Basic"
+        user.update()
+        # renew basic sub
+        basic_sub = BasicSubscription.query.filter(
+            BasicSubscription.user_id == user_id
+        ).one()
+        if not basic_sub.renew():
+            print(
+                f"Failed to renew basic sub for user: {user.display_name()} with user ID: {user.id}"
+            )

@@ -1,7 +1,11 @@
 import os
 import traceback
-from datetime import datetime, timedelta
 from twilio.rest import Client
+from datetime import datetime, timedelta
+from app.email_utility import send_email
+from app.functions import send_otp_message
+from flask_login import login_required, current_user
+from flask import Blueprint, render_template, request, flash, jsonify, redirect, url_for
 from app.models import (
     OTP,
     get_otp,
@@ -9,22 +13,7 @@ from app.models import (
     UserSettings,
     StandardSubscription,
     PremiumSubscription,
-    BasicSubscription,
 )
-from app.email_utility import send_email
-from flask_login import login_required, current_user
-from flask import Blueprint, render_template, request, flash, jsonify, redirect, url_for
-import traceback
-
-
-def send_otp_message(otp: int, name: str, phone_no: str) -> str:
-    message = client.messages.create(
-        body=f"Hi {name}! Here's your One Time Password to verify your number at Braintext. \n{otp} \nThe OTP will expire in 3 minutes.",
-        from_="whatsapp:+15076094633",
-        to=f"whatsapp:{phone_no}",
-    )
-    print(f"{message.sid} -- {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')}")
-    return message.sid
 
 
 account_sid = os.environ["TWILIO_ACCOUNT_SID"]
@@ -33,6 +22,7 @@ client = Client(account_sid, auth_token)
 
 
 main = Blueprint("main", __name__)
+
 
 # Index ---------------------------------------------
 @main.route("/")
@@ -142,7 +132,10 @@ def send_otp():
             else:
                 check_otp.otp = get_otp()
                 send_otp_message(
-                    otp=check_otp.otp, name=current_user.first_name, phone_no=phone_no
+                    client=client,
+                    otp=check_otp.otp,
+                    name=current_user.first_name,
+                    phone_no=phone_no,
                 )
                 check_otp.update()
 
@@ -150,7 +143,10 @@ def send_otp():
         else:
             otp = OTP(phone_no)
             send_otp_message(
-                otp=otp.otp, name=current_user.first_name, phone_no=phone_no
+                client=client,
+                otp=otp.otp,
+                name=current_user.first_name,
+                phone_no=phone_no,
             )
             otp.insert()
 
@@ -172,7 +168,10 @@ def resend_otp():
         if check_otp:
             check_otp.otp = get_otp()
             send_otp_message(
-                otp=check_otp.otp, name=current_user.first_name, phone_no=phone_no
+                client=client,
+                otp=check_otp.otp,
+                name=current_user.first_name,
+                phone_no=phone_no,
             )
             check_otp.update()
 
@@ -193,11 +192,9 @@ def verify_otp():
     if check_otp:
         if check_otp.updated_at:
             if int((datetime.utcnow() - check_otp.updated_at).total_seconds()) >= 180:
-
                 return jsonify({"expired": True})
         elif check_otp.created_at:
             if int((datetime.utcnow() - check_otp.created_at).total_seconds()) >= 180:
-
                 return jsonify({"expired": True})
 
     current_user.phone_no = phone_no

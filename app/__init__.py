@@ -29,14 +29,17 @@ def create_app(config=Config):
     from app.errors.handlers import errors
     from app.payment.routes import payment
     from app.chatbot.chatbot import chatbot
+    from app.vonage_chatbot.vonage_chatbot import newbot
 
     app.register_blueprint(main)
     app.register_blueprint(auth)
     app.register_blueprint(errors)
     app.register_blueprint(payment)
     app.register_blueprint(chatbot)
+    app.register_blueprint(newbot)
 
     csrf.exempt(payment)
     csrf.exempt(chatbot)
+    csrf.exempt(newbot)
 
     return app

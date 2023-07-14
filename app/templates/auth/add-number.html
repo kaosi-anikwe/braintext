@@ -251,7 +251,7 @@
     return new Promise((resolve) => setTimeout(resolve, milliseconds));
   };
   const send = async () => {
-    await sleep(750);
+    await sleep(1000);
     numberInput.value = phoneInput.getNumber();
     submitBtn.click();
   };

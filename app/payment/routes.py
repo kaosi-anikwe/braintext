@@ -7,7 +7,8 @@ from dotenv import load_dotenv
 from flask import Blueprint, request, render_template, redirect, url_for, jsonify, flash
 from flask_login import login_required, current_user
 from app.models import StandardSubscription, PremiumSubscription, Users
-from app.chatbot.chatbot import send_whatspp_message
+from app.functions import send_whatspp_message
+from twilio.rest import Client
 
 
 payment = Blueprint("payment", __name__)
@@ -16,6 +17,10 @@ load_dotenv()
 
 flw_pub_key = os.getenv("RAVE_PUBLIC_KEY")
 flw_sec_key = os.getenv("RAVE_SECRET_KEY")
+account_sid = os.getenv("TWILIO_ACCOUNT_SID")
+auth_token = os.getenv("TWILIO_AUTH_TOKEN")
+
+client = Client(account_sid, auth_token)
 
 
 # Checkout --------------------------------------
@@ -149,7 +154,9 @@ def payment_callback():
                             # send thank you message
                             message = "*Thank you for upgrading your account!*\nYour Standard account has been activated.\nCheck your account settings to adjust preferences.\nhttps://braintext.io/profile?settings=True"
                             send_whatspp_message(
-                                message=message, phone_no=current_user.phone_no
+                                client=client,
+                                message=message,
+                                phone_no=current_user.phone_no,
                             )
                         if premium:
                             old_sub = StandardSubscription.query.filter(
@@ -164,7 +171,9 @@ def payment_callback():
                             # send thank you message
                             message = "*Thank you for upgrading your account!*\nYour account has been fully activated.\nCheck your account settings to adjust preferences.\nhttps://braintext.io/profile?settings=True"
                             send_whatspp_message(
-                                message=message, phone_no=current_user.phone_no
+                                client=client,
+                                message=message,
+                                phone_no=current_user.phone_no,
                             )
 
                         print(
@@ -184,6 +193,7 @@ def payment_callback():
                 print(
                     f"Payment Failed - {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')}"
                 )
+                flash("Your payment failed. Please contact support", "danger")
                 return redirect(url_for("main.profile"))
     else:
         flash("Thank you for upgrading your account!", "success")

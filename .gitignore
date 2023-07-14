@@ -6,3 +6,5 @@ migrations
 tmp
 gunicorn_command.txt
 .vscode
+private.key
+project3
