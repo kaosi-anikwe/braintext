@@ -2,8 +2,8 @@ import os
 import traceback
 from twilio.rest import Client
 from datetime import datetime, timedelta
-from app.email_utility import send_email
-from app.functions import send_otp_message
+from app.modules.email_utility import send_email
+from app.modules.functions import send_otp_message
 from flask_login import login_required, current_user
 from flask import Blueprint, render_template, request, flash, jsonify, redirect, url_for
 from app.models import (
@@ -40,9 +40,7 @@ def email_template():
 @login_required
 def profile():
     settings = True if request.args.get("settings") else False
-    user_settings = UserSettings.query.filter(
-        UserSettings.user_id == current_user.id
-    ).one()
+    user_settings = current_user.user_settings()
 
     current_user.notify_on_profile_change = user_settings.notify_on_profile_change
     current_user.product_updates = user_settings.product_updates
@@ -51,23 +49,7 @@ def profile():
     current_user.voice_response = user_settings.voice_response
 
     # check account expiry
-    subscription = None
-    if current_user.account_type == "Standard":
-        subscriptions = StandardSubscription.query.filter(
-            StandardSubscription.user_id == current_user.id,
-            StandardSubscription.payment_status == "completed",
-        ).all()
-        for sub in subscriptions:
-            if not sub.expired() and sub.sub_status == "active":
-                subscription = sub
-    elif current_user.account_type == "Premium":
-        subscriptions = PremiumSubscription.query.filter(
-            PremiumSubscription.user_id == current_user.id,
-            PremiumSubscription.payment_status == "completed",
-        ).all()
-        for sub in subscriptions:
-            if not sub.expired() and sub.sub_status == "active":
-                subscription = sub
+    subscription = current_user.get_active_sub()
 
     if not subscription:  # all subscriptions have expired
         current_user.account_type = "Basic"

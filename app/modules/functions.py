@@ -1,13 +1,23 @@
+# python imports
 import os
-import openai
+import traceback
 import subprocess
-import timeout_decorator
-from boto3 import Session
 from datetime import datetime
 from contextlib import closing
+
+# installed imports
+import openai
+import tiktoken
+import timeout_decorator
+from boto3 import Session
+from pprint import pprint
+from sqlalchemy import desc
 from dotenv import load_dotenv
 from botocore.exceptions import BotoCoreError, ClientError
 from twilio.twiml.messaging_response import MessagingResponse
+
+# local imports
+from app.modules.messages import create_all, get_engine, Messages
 
 load_dotenv()
 
@@ -16,6 +26,7 @@ TEMP_FOLDER = os.getenv("TEMP_FOLDER")
 WHATSAPP_NUMBER = os.getenv("WHATSAPP_NUMBER")
 WHATSAPP_TEMPLATE_NAMESPACE = os.getenv("WHATSAPP_TEMPLATE_NAMESPACE")
 WHATSAPP_TEMPLATE_NAME = os.getenv("WHATSAPP_TEMPLATE_NAME")
+CONTEXT_LIMIT = int(os.getenv("CONTEXT_LIMIT"))
 
 
 class TimeoutError(Exception):
@@ -247,22 +258,115 @@ def delete_file(filename: str) -> None:
 
 
 @timeout_decorator.timeout(13.5, use_signals=False, timeout_exception=TimeoutError)
-def text_response(prompt: str, number: str) -> tuple:
-    completion = openai.Completion.create(
-        model="text-davinci-003",
-        prompt=prompt,
-        max_tokens=2000,
-        temperature=0.7,
+def text_response(messages: list, number: str) -> tuple:
+    """Get response from ChatGPT"""
+    completion = openai.ChatCompletion.create(
+        model="gpt-4-0314",
+        messages=messages,
+        temperature=0.8,
         user=f"{str(number)}",
     )
 
-    text = completion.choices[0].text
+    text = completion.choices[0].message.content
     tokens = int(completion.usage.total_tokens)
+    role = completion.choices[0].message.role
 
-    return text, tokens
+    return text, tokens, role
 
 
-## Vonage functions
+def chat_reponse(client, name, number, incoming_msg, user, subscription=None):
+    """Typical WhatsApp text response"""
+    try:
+        if subscription:
+            if subscription.expired():
+                subscription.update_account(user.id)
+                text = "It seems your subscription has expired. Plese renew your subscription to continue to enjoy your services. \nhttps://braintext.io/profile"
+                return respond_text(text)
+        try:
+            user_db_path = get_user_db(name=name, number=number)
+            messages = load_messages(prompt=incoming_msg, db_path=user_db_path)
+            text, tokens, role = text_response(messages=messages, number=number)
+        except TimeoutError:
+            text = "Sorry, your response is taking too long. Try rephrasing your question or breaking it into sections."
+            return respond_text(text)
+
+        # record ChatGPT response
+        new_message = {"role": role, "content": text}
+        new_message = Messages(new_message, user_db_path)
+        new_message.insert()
+
+        log_response(
+            name=name,
+            number=number,
+            message=incoming_msg,
+            tokens=tokens,
+        )
+
+        return check_and_respond_text(client, text, number)
+    except:
+        print(traceback.format_exc())
+        text = "Sorry, I cannot respond to that at the moment, please try again later."
+        return respond_text(text)
+
+
+def user_dir(name: str, number: str) -> str:
+    """Returns the user's folder"""
+    first_char = str(name[0]).upper()
+    if first_char.isalpha():
+        log_path = os.path.join(
+            LOG_DIR,
+            f"{first_char}{first_char}{first_char}",
+            f"{name.replace(' ', '_').strip()}_{number}",
+        )
+    else:
+        log_path = os.path.join(
+            LOG_DIR,
+            "###",
+            f"{name.replace(' ', '_').strip()}_{number}",
+        )
+    if not os.path.exists(log_path):
+        os.makedirs(log_path, exist_ok=True)
+
+    return log_path
+
+
+def are_same_day(datetime_obj1, datetime_obj2):
+    return (
+        datetime_obj1.year == datetime_obj2.year
+        and datetime_obj1.month == datetime_obj2.month
+        and datetime_obj1.day == datetime_obj2.day
+    )
+
+
+def get_user_db(name: str, number: str) -> str:
+    """Returns the current user's message database"""
+    db_path = os.path.join(user_dir(name, number), "messages.db")
+    if os.path.exists(db_path):
+        dp_mtime = datetime.fromtimestamp(os.path.getmtime(db_path))
+        if not are_same_day(dp_mtime, datetime.utcnow()):
+            # delte database
+            os.remove(db_path)
+    create_all(get_engine(db_path))
+    return db_path
+
+
+def load_messages(prompt: str, db_path: str):
+    user_message = {"role": "user", "content": prompt}
+    message = Messages(user_message, db_path)
+    message.insert()
+    # load previous messages
+    session = message.session()
+    get_messages = (
+        session.query(Messages).order_by(desc(Messages.id)).limit(CONTEXT_LIMIT).all()
+    )
+    messages = [
+        {"role": message.role, "content": message.content}
+        for message in reversed(get_messages)
+    ]
+    return messages
+
+
+## Vonage functions ---------------------------------------------------
 def vonage_text_response(prompt: str, number: str) -> tuple:
     completion = openai.Completion.create(
         model="text-davinci-003",
@@ -340,3 +444,45 @@ def vonage_send_otp(
             "whatsapp": {"policy": "deterministic", "locale": "en-GB"},
         }
     )
+
+
+# ChatGPT ----------------------------------
+def num_tokens_from_messages(messages, model="gpt-4-0314"):
+    """Returns the number of tokens used by a list of messages."""
+    try:
+        encoding = tiktoken.encoding_for_model(model)
+    except KeyError:
+        print("Warning: model not found. Using cl100k_base encoding.")
+        encoding = tiktoken.get_encoding("cl100k_base")
+    if model == "gpt-3.5-turbo":
+        print(
+            "Warning: gpt-3.5-turbo may change over time. Returning num tokens assuming gpt-3.5-turbo-0301."
+        )
+        return num_tokens_from_messages(messages, model="gpt-3.5-turbo-0301")
+    elif model == "gpt-4":
+        print(
+            "Warning: gpt-4 may change over time. Returning num tokens assuming gpt-4-0314."
+        )
+        return num_tokens_from_messages(messages, model="gpt-4-0314")
+    elif model == "gpt-3.5-turbo-0301":
+        tokens_per_message = (
+            4  # every message follows <|start|>{role/name}\n{content}<|end|>\n
+        )
+        tokens_per_name = -1  # if there's a name, the role is omitted
+    elif model == "gpt-4-0314":
+        tokens_per_message = 3
+        tokens_per_name = 1
+    else:
+        raise NotImplementedError(
+            f"""num_tokens_from_messages() is not implemented for model {model}. See https://github.com/openai/openai-python/blob/main/chatml.md for information on how messages are converted to tokens."""
+        )
+    num_tokens = 0
+    for message in messages:
+        num_tokens += tokens_per_message
+        for key, value in message.items():
+            num_tokens += len(encoding.encode(value))
+            if key == "name":
+                num_tokens += tokens_per_name
+    num_tokens += 3  # every reply is primed with <|start|>assistant<|message|>
+    # print(str(num_tokens))
+    return num_tokens

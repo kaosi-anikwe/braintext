@@ -71,6 +71,14 @@ class Users(db.Model, TimestampMixin, UserMixin, DatabaseHelperMixin):
     edited = db.Column(db.Boolean, default=False)
     password_hash = db.Column(db.String(128), nullable=False)
 
+    def __init__(self, first_name, last_name, email, password, timezone_offset) -> None:
+        self.first_name = first_name
+        self.last_name = last_name
+        self.email = email
+        self.password_hash = self.get_password_hash(password)
+        self.uid = uuid.uuid4().hex
+        self.timezone_offset = timezone_offset
+
     # generate user password i.e. hashing
     def get_password_hash(self, password):
         return generate_password_hash(password)
@@ -110,13 +118,31 @@ class Users(db.Model, TimestampMixin, UserMixin, DatabaseHelperMixin):
             return None
         return Users.query.get(id)
 
-    def __init__(self, first_name, last_name, email, password, timezone_offset) -> None:
-        self.first_name = first_name
-        self.last_name = last_name
-        self.email = email
-        self.password_hash = self.get_password_hash(password)
-        self.uid = uuid.uuid4().hex
-        self.timezone_offset = timezone_offset
+    def get_active_sub(self):
+        subscription = None
+        if self.account_type == "Standard":
+            subscriptions = StandardSubscription.query.filter(
+                StandardSubscription.user_id == self.id,
+                StandardSubscription.payment_status == "completed",
+                StandardSubscription.sub_status == "active",
+            ).all()
+            for sub in subscriptions:
+                if not sub.expired():
+                    subscription = sub
+
+        elif self.account_type == "Premium":
+            subscriptions = PremiumSubscription.query.filter(
+                PremiumSubscription.user_id == self.id,
+                PremiumSubscription.payment_status == "completed",
+                PremiumSubscription.sub_status == "active",
+            ).all()
+            for sub in subscriptions:
+                if not sub.expired():
+                    subscription = sub
+        return subscription
+
+    def user_settings(self):
+        return UserSettings.query.filter(UserSettings.user_id == self.id).one()
 
 
 class UserSettings(db.Model, TimestampMixin, DatabaseHelperMixin):

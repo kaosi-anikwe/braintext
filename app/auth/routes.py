@@ -1,9 +1,12 @@
 from app import db, csrf
 from datetime import datetime
-from app.verification import confirm_token
+from app.modules.verification import confirm_token
 from app.models import Users, BasicSubscription, UserSettings
 from flask_login import login_user, current_user, logout_user, login_required
-from app.email_utility import send_registration_email, send_forgot_password_email
+from app.modules.email_utility import (
+    send_registration_email,
+    send_forgot_password_email,
+)
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 
 auth = Blueprint("auth", __name__)

@@ -10,7 +10,7 @@ from datetime import datetime
 from flask import Blueprint, request, abort, url_for
 from botocore.exceptions import BotoCoreError, ClientError
 from app.models import Users, StandardSubscription, PremiumSubscription, UserSettings
-from app.functions import (
+from app.modules.functions import (
     delete_file,
     get_audio,
     image_response,

@@ -8,7 +8,7 @@ from twilio.rest import Client
 from dotenv import load_dotenv
 from botocore.exceptions import BotoCoreError, ClientError
 from flask import Blueprint, request, url_for, send_file, abort
-from ..functions import (
+from ..modules.functions import (
     respond_text,
     text_response,
     log_response,
@@ -16,6 +16,9 @@ from ..functions import (
     image_response,
     respond_media,
     synthesize_speech,
+    get_user_db,
+    load_messages,
+    chat_reponse,
     TimeoutError,
 )
 from app.models import (
@@ -85,29 +88,14 @@ def bot():
                             text = "You don't have access to this service. Please upgrade your account to decrease limits. \nhttps://braintext.io/profile"
                             return respond_text(text=text)
                         if subscription.respond():
-                            try:
-                                # Chat response
-                                try:
-                                    text, tokens = text_response(
-                                        prompt=incoming_msg, number=number
-                                    )
-                                except TimeoutError:
-                                    text = "Sorry, your response is taking too long. Try rephrasing your question or breaking it into sections."
-                                    return respond_text(text)
-
-                                log_response(
-                                    name=name,
-                                    number=number,
-                                    message=incoming_msg,
-                                    tokens=tokens,
-                                )
-
-                                return check_and_respond_text(client, text, number)
-                            except:
-                                print(traceback.format_exc())
-                                text = "Sorry, I cannot respond to that at the moment, please try again later."
-                                return respond_text(text)
-
+                            # chat response
+                            return chat_reponse(
+                                client=client,
+                                name=name,
+                                number=number,
+                                incoming_msg=incoming_msg,
+                                user=user,
+                            )
                         else:
                             text = f"You have exceed your limit for the week.\nYour prompts will be renewed on {subscription.get_expire_date().strftime('%A, %d/%m/%Y')} at {subscription.get_expire_date().strftime('%I:%M %p')}.\nUpgrade your account to decrease limits.\nhttps://braintext.io/profile"
                             return respond_text(text)
@@ -116,11 +104,7 @@ def bot():
                         return respond_text(text)
 
                 if user.account_type == "Standard":
-                    subscription = StandardSubscription.query.filter(
-                        StandardSubscription.user_id == user.id,
-                        StandardSubscription.payment_status == "completed",
-                        StandardSubscription.sub_status == "active",
-                    ).one_or_none()
+                    subscription = user.get_active_sub()
                     if subscription:
                         if not subscription.expired():
                             incoming_msg = request.values.get("Body", "")
@@ -143,28 +127,15 @@ def bot():
                                 text = "You don't have access to this service. Please upgrade your account to decrease limits. \nhttps://braintext.io/profile"
                                 return respond_text(text=text)
                             else:
-                                try:
-                                    # Chat response
-                                    try:
-                                        text, tokens = text_response(
-                                            prompt=incoming_msg, number=number
-                                        )
-                                    except TimeoutError:
-                                        text = "Sorry, your response is taking too long. Try rephrasing your question or breaking it into sections."
-                                        return respond_text(text)
-
-                                    log_response(
-                                        name=name,
-                                        number=number,
-                                        message=incoming_msg,
-                                        tokens=tokens,
-                                    )
-
-                                    return check_and_respond_text(client, text, number)
-                                except:
-                                    print(traceback.format_exc())
-                                    text = "Sorry, I cannot respond to that at the moment, please try again later."
-                                    return respond_text(text)
+                                # chat response
+                                return chat_reponse(
+                                    client=client,
+                                    name=name,
+                                    number=number,
+                                    incoming_msg=incoming_msg,
+                                    user=user,
+                                    subscription=subscription,
+                                )
                         else:
                             subscription.update_account(user.id)
                             text = "It seems your subscription has expired. Plese renew your subscription to continue to enjoy your services. \nhttps://braintext.io/profile"
@@ -174,11 +145,7 @@ def bot():
                         return respond_text(text)
 
                 if user.account_type == "Premium":
-                    subscription = PremiumSubscription.query.filter(
-                        PremiumSubscription.user_id == user.id,
-                        PremiumSubscription.payment_status == "completed",
-                        PremiumSubscription.sub_status == "active",
-                    ).one_or_none()
+                    subscription = user.get_active_sub()
                     if subscription:
                         if not subscription.expired():
                             incoming_msg = request.values.get("Body", "")
@@ -238,28 +205,15 @@ def bot():
                                     text = "Sorry, I cannot respond to that at the moment, please try again later."
                                     return respond_text(text)
                             else:
-                                try:
-                                    # Chat response
-                                    try:
-                                        text, tokens = text_response(
-                                            prompt=incoming_msg, number=number
-                                        )
-                                    except TimeoutError:
-                                        text = "Sorry, your response is taking too long. Try rephrasing your question or breaking it into sections."
-                                        return respond_text(text)
-
-                                    log_response(
-                                        name=name,
-                                        number=number,
-                                        message=incoming_msg,
-                                        tokens=tokens,
-                                    )
-
-                                    return check_and_respond_text(client, text, number)
-                                except:
-                                    print(traceback.format_exc())
-                                    text = "Sorry, I cannot respond to that at the moment, please try again later."
-                                    return respond_text(text)
+                                # chat response
+                                return chat_reponse(
+                                    client=client,
+                                    name=name,
+                                    number=number,
+                                    incoming_msg=incoming_msg,
+                                    user=user,
+                                    subscription=subscription,
+                                )
                                 # TODO:
                                 # add image variation
                                 # remebering pervious message
@@ -306,9 +260,7 @@ def fallback():
                     message=prompt,
                     tokens=tokens,
                 )
-                user_settings = UserSettings.query.filter(
-                    UserSettings.user_id == user.id
-                ).one()
+                user_settings = user.user_settings()
 
                 if user_settings.voice_response:
                     try:

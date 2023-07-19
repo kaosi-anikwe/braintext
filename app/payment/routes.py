@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 from flask import Blueprint, request, render_template, redirect, url_for, jsonify, flash
 from flask_login import login_required, current_user
 from app.models import StandardSubscription, PremiumSubscription, Users
-from app.functions import send_whatspp_message
+from app.modules.functions import send_whatspp_message
 from twilio.rest import Client
 
 

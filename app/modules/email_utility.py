@@ -4,7 +4,7 @@ import smtplib
 from email.mime.text import MIMEText
 from flask import url_for, render_template
 from email.mime.multipart import MIMEMultipart
-from app.verification import generate_confirmation_token
+from app.modules.verification import generate_confirmation_token
 
 
 # Common email sending function
