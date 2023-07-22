@@ -102,6 +102,7 @@ def bot():
                             # chat response
                             return chat_reponse(
                                 client=client,
+                                request_values=request.values,
                                 name=name,
                                 number=number,
                                 incoming_msg=incoming_msg,
@@ -120,6 +121,51 @@ def bot():
                         if not subscription.expired():
                             incoming_msg = request.values.get("Body", "")
                             name = request.values.get("ProfileName")
+                            content_type = request.values.get("MediaContentType0", "")
+
+                            if "audio" in content_type:
+                                # audio response
+                                text = "You don't have access to this service. Please upgrade your account to decrease limits. \nhttps://braintext.io/profile"
+                                return respond_text(text=text)
+                            if "image" in content_type:
+                                # Image editing/variation
+                                try:
+                                    image_url = request.values.get("MediaUrl0")
+                                    response = requests.get(image_url)
+                                    if response.ok:
+                                        image_path = f"tmp/{str(datetime.utcnow())}.png"
+                                        image = Image.open(BytesIO(response.content))
+                                        # Convert the image to PNG format
+                                        image = image.convert(
+                                            "RGBA"
+                                        )  # If the image has an alpha channel (transparency)
+                                        image.save(image_path, format="PNG")
+                                        if (
+                                            not incoming_msg
+                                            or "variation" in incoming_msg.lower()
+                                        ):
+                                            # Image variation
+                                            image_url = image_variation(image_path)
+                                        else:
+                                            # Image editing
+                                            image_url = image_edit(
+                                                image_path, incoming_msg
+                                            )
+                                        log_response(
+                                            name=name,
+                                            number=number,
+                                            message=incoming_msg,
+                                        )
+                                        return respond_media(image_url)
+                                    else:
+                                        text = "Something went wrong. Please try again later."
+                                        return respond_text(text)
+                                except:
+                                    print(traceback.format_exc())
+                                    text = (
+                                        "Something went wrong. Please try again later."
+                                    )
+                                    return respond_text(text)
                             if "dalle" in incoming_msg.lower():
                                 # Image generation
                                 prompt = incoming_msg.lower().replace("dalle", "")
@@ -133,14 +179,11 @@ def bot():
                                     print(traceback.format_exc())
                                     text = "Sorry, I cannot respond to that at the moment, please try again later."
                                     return respond_text(text)
-                            elif request.values.get("MediaContentType0"):
-                                # audio response
-                                text = "You don't have access to this service. Please upgrade your account to decrease limits. \nhttps://braintext.io/profile"
-                                return respond_text(text=text)
                             else:
                                 # chat response
                                 return chat_reponse(
                                     client=client,
+                                    request_values=request.values,
                                     name=name,
                                     number=number,
                                     incoming_msg=incoming_msg,
@@ -161,7 +204,7 @@ def bot():
                         if not subscription.expired():
                             incoming_msg = request.values.get("Body", "")
                             name = request.values.get("ProfileName")
-                            content_type = request.values.get("MediaContentType0")
+                            content_type = request.values.get("MediaContentType0", "")
 
                             if "audio" in content_type:
                                 # Audio response
@@ -257,6 +300,7 @@ def bot():
                                 # chat response
                                 return chat_reponse(
                                     client=client,
+                                    request_values=request.values,
                                     name=name,
                                     number=number,
                                     incoming_msg=incoming_msg,

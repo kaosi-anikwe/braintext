@@ -141,6 +141,11 @@ def respond_text(text: str) -> str:
     return str(response)
 
 
+def get_original_message(client, sid: str) -> str:
+    message = client.messages(sid).fetch()
+    return message.body
+
+
 def check_and_respond_text(client, text: str, number: str) -> str:
     print(f"Text is {len(text)} characters long.")
     text_length = len(text)
@@ -302,7 +307,9 @@ def text_response(messages: list, number: str) -> tuple:
     return text, tokens, role
 
 
-def chat_reponse(client, name, number, incoming_msg, user, subscription=None):
+def chat_reponse(
+    client, request_values, name, number, incoming_msg, user, subscription=None
+):
     """Typical WhatsApp text response"""
     try:
         if subscription:
@@ -311,8 +318,22 @@ def chat_reponse(client, name, number, incoming_msg, user, subscription=None):
                 text = "It seems your subscription has expired. Plese renew your subscription to continue to enjoy your services. \nhttps://braintext.io/profile"
                 return respond_text(text)
         try:
+            isreply = False
+            if request_values.get("OriginalRepliedMessageSender"):
+                # message is a reply. Get original
+                original_message_sid = request_values.get("OriginalRepliedMessageSid")
+                original_message = get_original_message(client, original_message_sid)
+                isreply = True
             user_db_path = get_user_db(name=name, number=number)
-            messages = load_messages(prompt=incoming_msg, db_path=user_db_path)
+            messages = (
+                load_messages(
+                    prompt=incoming_msg,
+                    db_path=user_db_path,
+                    original_message=original_message,
+                )
+                if isreply
+                else load_messages(prompt=incoming_msg, db_path=user_db_path)
+            )
             text, tokens, role = text_response(messages=messages, number=number)
         except TimeoutError:
             text = "Sorry, your response is taking too long. Try rephrasing your question or breaking it into sections."
@@ -379,7 +400,11 @@ def get_user_db(name: str, number: str) -> str:
     return db_path
 
 
-def load_messages(prompt: str, db_path: str):
+def load_messages(prompt: str, db_path: str, original_message=None):
+    if original_message:
+        assistant_mssg = {"role": "assistant", "content": original_message}
+        new_assistant_mssg = Messages(assistant_mssg, db_path)
+        new_assistant_mssg.insert()
     user_message = {"role": "user", "content": prompt}
     message = Messages(user_message, db_path)
     message.insert()
