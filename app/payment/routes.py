@@ -30,14 +30,22 @@ def checkout(package):
     if not current_user.phone_no:
         flash("Please verify your WhatsApp number to proceed.")
         return redirect(url_for("main.profile"))
-    check_standard = StandardSubscription.query.filter(
-        StandardSubscription.user_id == current_user.id,
-        StandardSubscription.payment_status == "pending",
-    ).one_or_none()
-    check_premium = PremiumSubscription.query.filter(
-        PremiumSubscription.user_id == current_user.id,
-        PremiumSubscription.payment_status == "pending",
-    ).one_or_none()
+    check_standard = (
+        StandardSubscription.query.filter(
+            StandardSubscription.user_id == current_user.id,
+            StandardSubscription.payment_status == "pending",
+        )
+        .order_by(StandardSubscription.id.desc())
+        .first()
+    )
+    check_premium = (
+        PremiumSubscription.query.filter(
+            PremiumSubscription.user_id == current_user.id,
+            PremiumSubscription.payment_status == "pending",
+        )
+        .order_by(PremiumSubscription.id.desc())
+        .first()
+    )
     if not check_premium and not check_standard:
         tx_id = f"{current_user.uid}-{str(time.time()).split('.')[0]}"
     elif check_standard:
@@ -57,20 +65,28 @@ def create_transaction():
     tx_ref = data["tx_ref"]
     if str(tx_ref).startswith("stnrd"):
         # create standard account instance if not found
-        check_pending = StandardSubscription.query.filter(
-            StandardSubscription.payment_status == "pending",
-            StandardSubscription.user_id == current_user.id,
-        ).one_or_none()
+        check_pending = (
+            StandardSubscription.query.filter(
+                StandardSubscription.payment_status == "pending",
+                StandardSubscription.user_id == current_user.id,
+            )
+            .order_by(StandardSubscription.id.desc())
+            .all()
+        )
         if not check_pending:
             subscription = StandardSubscription(tx_ref, current_user.id)
             subscription.insert()
         print(f"{tx_ref} - {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')}")
     elif str(tx_ref).startswith("prmum"):
         # create premium account instance if not found
-        check_pending = PremiumSubscription.query.filter(
-            PremiumSubscription.payment_status == "pending",
-            PremiumSubscription.user_id == current_user.id,
-        ).one_or_none()
+        check_pending = (
+            PremiumSubscription.query.filter(
+                PremiumSubscription.payment_status == "pending",
+                PremiumSubscription.user_id == current_user.id,
+            )
+            .order_by(PremiumSubscription.id.desc())
+            .all()
+        )
         if not check_pending:
             subscription = PremiumSubscription(tx_ref, current_user.id)
             subscription.insert()
@@ -86,18 +102,26 @@ def payment_callback():
     tx_ref = request.args.get("tx_ref")
     # get transaction details from database
     if str(tx_ref).startswith("stnrd"):
-        subscription = StandardSubscription.query.filter(
-            StandardSubscription.tx_ref == tx_ref,
-            StandardSubscription.payment_status == "pending",
-            StandardSubscription.user_id == current_user.id,
-        ).one_or_none()
+        subscription = (
+            StandardSubscription.query.filter(
+                StandardSubscription.tx_ref == tx_ref,
+                StandardSubscription.payment_status == "pending",
+                StandardSubscription.user_id == current_user.id,
+            )
+            .order_by(StandardSubscription.id.desc())
+            .first()
+        )
         standard = True if subscription else False
     elif str(tx_ref).startswith("prmum"):
-        subscription = PremiumSubscription.query.filter(
-            PremiumSubscription.tx_ref == tx_ref,
-            PremiumSubscription.payment_status == "pending",
-            PremiumSubscription.user_id == current_user.id,
-        ).one_or_none()
+        subscription = (
+            PremiumSubscription.query.filter(
+                PremiumSubscription.tx_ref == tx_ref,
+                PremiumSubscription.payment_status == "pending",
+                PremiumSubscription.user_id == current_user.id,
+            )
+            .order_by(PremiumSubscription.id.desc())
+            .first()
+        )
         premium = True if subscription else False
     # get transaction status
     if standard or premium:  # transaction found
@@ -142,10 +166,14 @@ def payment_callback():
 
                         # check for existing subscriptions and update user account
                         if standard:
-                            old_sub = PremiumSubscription.query.filter(
-                                PremiumSubscription.sub_status == "active",
-                                PremiumSubscription.user_id == current_user.id,
-                            ).one_or_none()
+                            old_sub = (
+                                PremiumSubscription.query.filter(
+                                    PremiumSubscription.sub_status == "active",
+                                    PremiumSubscription.user_id == current_user.id,
+                                )
+                                .order_by(PremiumSubscription.id.desc())
+                                .first()
+                            )
                             if old_sub:
                                 if not old_sub.expired():
                                     old_sub.upgrade()
@@ -159,10 +187,14 @@ def payment_callback():
                                 phone_no=current_user.phone_no,
                             )
                         if premium:
-                            old_sub = StandardSubscription.query.filter(
-                                StandardSubscription.sub_status == "active",
-                                StandardSubscription.user_id == current_user.id,
-                            ).one_or_none()
+                            old_sub = (
+                                StandardSubscription.query.filter(
+                                    StandardSubscription.sub_status == "active",
+                                    StandardSubscription.user_id == current_user.id,
+                                )
+                                .order_by(StandardSubscription.id.desc())
+                                .first()
+                            )
                             if old_sub:
                                 if not old_sub.expired():
                                     old_sub.upgrade()
@@ -230,16 +262,24 @@ def payment_webhook():
         if user:
             # get transaction details from database
             if str(tx_ref).startswith("stnrd"):
-                subscription = StandardSubscription.query.filter(
-                    StandardSubscription.tx_ref == tx_ref,
-                    StandardSubscription.user_id == user.id,
-                ).one_or_none()
+                subscription = (
+                    StandardSubscription.query.filter(
+                        StandardSubscription.tx_ref == tx_ref,
+                        StandardSubscription.user_id == user.id,
+                    )
+                    .order_by(StandardSubscription.id.desc())
+                    .first()
+                )
                 standard = True if subscription else False
             elif str(tx_ref).startswith("prmum"):
-                subscription = PremiumSubscription.query.filter(
-                    PremiumSubscription.tx_ref == tx_ref,
-                    PremiumSubscription.user_id == user.id,
-                ).one_or_none()
+                subscription = (
+                    PremiumSubscription.query.filter(
+                        PremiumSubscription.tx_ref == tx_ref,
+                        PremiumSubscription.user_id == user.id,
+                    )
+                    .order_by(PremiumSubscription.id.desc())
+                    .first()
+                )
                 premium = True if subscription else False
             if standard or premium:  # transaction found
                 # get transaction status
@@ -297,20 +337,28 @@ def payment_webhook():
 
                                 # check for existing subscriptions and update user account
                                 if standard:
-                                    old_sub = PremiumSubscription.query.filter(
-                                        PremiumSubscription.sub_status == "active",
-                                        PremiumSubscription.user_id == user.id,
-                                    ).one_or_none()
+                                    old_sub = (
+                                        PremiumSubscription.query.filter(
+                                            PremiumSubscription.sub_status == "active",
+                                            PremiumSubscription.user_id == user.id,
+                                        )
+                                        .order_by(PremiumSubscription.id.desc())
+                                        .first()
+                                    )
                                     if old_sub:
                                         if not old_sub.expired():
                                             old_sub.upgrade()
                                     user.account_type = "Standard"
                                     user.update()
                                 if premium:
-                                    old_sub = StandardSubscription.query.filter(
-                                        StandardSubscription.sub_status == "active",
-                                        StandardSubscription.user_id == user.id,
-                                    ).one_or_none()
+                                    old_sub = (
+                                        StandardSubscription.query.filter(
+                                            StandardSubscription.sub_status == "active",
+                                            StandardSubscription.user_id == user.id,
+                                        )
+                                        .order_by(StandardSubscription.id.desc())
+                                        .first()
+                                    )
                                     if old_sub:
                                         if not old_sub.expired():
                                             old_sub.upgrade()

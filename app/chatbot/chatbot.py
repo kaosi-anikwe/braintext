@@ -1,33 +1,43 @@
+# python imports
 import os
-import openai
+import requests
 import traceback
 import subprocess
+from io import BytesIO
 from queue import Queue
 from datetime import datetime
-from twilio.rest import Client
+
+# installed modules
+import openai
+from PIL import Image
 from dotenv import load_dotenv
+from twilio.rest import Client
 from botocore.exceptions import BotoCoreError, ClientError
 from flask import Blueprint, request, url_for, send_file, abort
+
+# local imports
 from ..modules.functions import (
     respond_text,
-    text_response,
-    log_response,
-    check_and_respond_text,
-    image_response,
     respond_media,
+    log_response,
+    chat_reponse,
+    split_and_respond,
+    text_response,
+    image_response,
+    image_edit,
+    image_variation,
     synthesize_speech,
     get_user_db,
     load_messages,
-    chat_reponse,
     TimeoutError,
+    WHATSAPP_CHAR_LIMIT,
 )
 from app.models import (
     Users,
     BasicSubscription,
-    StandardSubscription,
-    PremiumSubscription,
-    UserSettings,
 )
+
+from app.modules.messages import Messages
 
 
 load_dotenv()
@@ -65,6 +75,7 @@ def send_voice_note():
 
 @chatbot.post("/braintext-chatbot")
 def bot():
+    print(request.values)
     number = request.values.get("From").replace("whatsapp:", "")
     user = Users.query.filter(Users.phone_no == number).one_or_none()
 
@@ -152,7 +163,7 @@ def bot():
                             name = request.values.get("ProfileName")
                             content_type = request.values.get("MediaContentType0")
 
-                            if content_type == "audio/ogg":
+                            if "audio" in content_type:
                                 # Audio response
                                 audio_url = request.values.get("MediaUrl0")
                                 tmp_file = f"tmp/{str(datetime.utcnow())}"
@@ -190,9 +201,47 @@ def bot():
                                 prompt = transcript.text
                                 task_queue.put(prompt)
                                 abort(500)  # abort to continue with fallback function
-
-                            # Image generation
+                            if "image" in content_type:
+                                # Image editing/variation
+                                try:
+                                    image_url = request.values.get("MediaUrl0")
+                                    response = requests.get(image_url)
+                                    if response.ok:
+                                        image_path = f"tmp/{str(datetime.utcnow())}.png"
+                                        image = Image.open(BytesIO(response.content))
+                                        # Convert the image to PNG format
+                                        image = image.convert(
+                                            "RGBA"
+                                        )  # If the image has an alpha channel (transparency)
+                                        image.save(image_path, format="PNG")
+                                        if (
+                                            not incoming_msg
+                                            or "variation" in incoming_msg.lower()
+                                        ):
+                                            # Image variation
+                                            image_url = image_variation(image_path)
+                                        else:
+                                            # Image editing
+                                            image_url = image_edit(
+                                                image_path, incoming_msg
+                                            )
+                                        log_response(
+                                            name=name,
+                                            number=number,
+                                            message=incoming_msg,
+                                        )
+                                        return respond_media(image_url)
+                                    else:
+                                        text = "Something went wrong. Please try again later."
+                                        return respond_text(text)
+                                except:
+                                    print(traceback.format_exc())
+                                    text = (
+                                        "Something went wrong. Please try again later."
+                                    )
+                                    return respond_text(text)
                             if "dalle" in incoming_msg.lower():
+                                # Image generation
                                 prompt = incoming_msg.lower().replace("dalle", "")
                                 try:
                                     image_url = image_response(prompt)
@@ -249,10 +298,17 @@ def fallback():
             try:
                 # Chat response
                 try:
-                    text, tokens = text_response(prompt=prompt, number=number)
+                    user_db_path = get_user_db(name=name, number=number)
+                    messages = load_messages(prompt=prompt, db_path=user_db_path)
+                    text, tokens, role = text_response(messages=messages, number=number)
                 except TimeoutError:
                     text = "Sorry, your response is taking too long. Try rephrasing your question or breaking it into sections."
                     return respond_text(text)
+
+                # record ChatGPT response
+                new_message = {"role": role, "content": text}
+                new_message = Messages(new_message, user_db_path)
+                new_message.insert()
 
                 log_response(
                     name=name,
@@ -293,7 +349,9 @@ def fallback():
                         text = "Sorry, you're response was too long. Please rephrase the question or break it into segments."
                         return respond_text(text)
                 else:
-                    return check_and_respond_text(client, text, number)
+                    if len(text) < WHATSAPP_CHAR_LIMIT:
+                        return respond_text(text)
+                    return split_and_respond(client, text, number)
             except:
                 print(traceback.format_exc())
                 text = "Sorry, I cannot respond to that at the moment, please try again later."
@@ -304,3 +362,10 @@ def fallback():
         print(traceback.format_exc())
         text = "Sorry, I cannot respond to that at the moment, please try again later."
         return respond_text(text)
+
+
+@chatbot.post("/receive-sms")
+def receive_sms():
+    data = request.form
+    print(data)
+    return "200"

@@ -78,7 +78,7 @@ def chatbot():
                         except:
                             print(traceback.format_exc())
                             text = "Error transcribing audio. Please try again later."
-                            return vonage_send_text(client, text, number), 200
+                            return vonage_send_text(client, text, number), "200"
 
                         # remove tmp files
                         delete_file(f"{tmp_file}.ogg")
@@ -92,7 +92,7 @@ def chatbot():
                             )
                         except TimeoutError:
                             text = "Sorry, your response is taking too long. Try rephrasing your question or breaking it into sections."
-                            return vonage_send_text(client, text, number), 200
+                            return vonage_send_text(client, text, number), "200"
 
                         log_response(
                             name=name,
@@ -126,17 +126,20 @@ def chatbot():
                                 media_url = f"{url_for('chatbot.send_voice_note', _external=True, _scheme='https')}?filename={voice_note}"
                                 print(media_url)
 
-                                return vonage_send_audio(client, media_url, number), 200
+                                return (
+                                    vonage_send_audio(client, media_url, number),
+                                    "200",
+                                )
                             except BotoCoreError:
                                 print(traceback.format_exc())
                                 text = "Sorry, I cannot respond to that at the moment, please try again later."
-                                return vonage_send_text(client, text, number), 200
+                                return vonage_send_text(client, text, number), "200"
                             except ClientError:
                                 print(traceback.format_exc())
                                 text = "Sorry, you're response was too long. Please rephrase the question or break it into segments."
-                                return vonage_send_text(client, text, number), 200
+                                return vonage_send_text(client, text, number), "200"
                         else:
-                            return vonage_send_text(client, text, number), 200
+                            return vonage_send_text(client, text, number), "200"
 
                     # Image generation
                     if "dalle" in incoming_msg.lower():
@@ -144,11 +147,11 @@ def chatbot():
                         try:
                             image_url = image_response(prompt)
                             log_response(name=name, number=f"+{number}", message=prompt)
-                            return vonage_send_image(client, image_url, number), 200
+                            return vonage_send_image(client, image_url, number), "200"
                         except:
                             print(traceback.format_exc())
                             text = "Sorry, I cannot respond to that at the moment, please try again later."
-                            return vonage_send_text(client, text, number), 200
+                            return vonage_send_text(client, text, number), "200"
                     else:
                         try:
                             # Chat response
@@ -158,7 +161,7 @@ def chatbot():
                                 )
                             except TimeoutError:
                                 text = "Sorry, your response is taking too long. Try rephrasing your question or breaking it into sections."
-                                return vonage_send_text(client, text, number), 200
+                                return vonage_send_text(client, text, number), "200"
 
                             log_response(
                                 name=name,
@@ -167,24 +170,24 @@ def chatbot():
                                 tokens=tokens,
                             )
 
-                            return vonage_send_text(client, text, number), 200
+                            return vonage_send_text(client, text, number), "200"
                         except:
                             print(traceback.format_exc())
                             text = "Sorry, I cannot respond to that at the moment, please try again later."
-                            return vonage_send_text(client, text, number), 200
+                            return vonage_send_text(client, text, number), "200"
                 else:
                     text = "Please verify your email to access the service. https://braintext.io/profile"
-                    return vonage_send_text(client, text, number), 200
+                    return vonage_send_text(client, text, number), "200"
             else:
                 text = "Please verify your number to access the service. https://braintext.io/profile"
-                return vonage_send_text(client, text, number), 200
+                return vonage_send_text(client, text, number), "200"
         else:  # no account found
             text = "To use BrainText, please sign up for an account at https://braintext.io"
-            return vonage_send_text(client, text, number), 200
+            return vonage_send_text(client, text, number), "200"
     except:
         print(traceback.format_exc())
         text = "Sorry, I cannot respond to that at the moment, please try again later."
-        return vonage_send_text(client, text, number), 200
+        return vonage_send_text(client, text, number), "200"
 
 
 @newbot.post("/vonage-chatbot-status")

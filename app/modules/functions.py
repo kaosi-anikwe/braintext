@@ -27,6 +27,7 @@ WHATSAPP_NUMBER = os.getenv("WHATSAPP_NUMBER")
 WHATSAPP_TEMPLATE_NAMESPACE = os.getenv("WHATSAPP_TEMPLATE_NAMESPACE")
 WHATSAPP_TEMPLATE_NAME = os.getenv("WHATSAPP_TEMPLATE_NAME")
 CONTEXT_LIMIT = int(os.getenv("CONTEXT_LIMIT"))
+WHATSAPP_CHAR_LIMIT = int(os.getenv("WHATSAPP_CHAR_LIMIT"))
 
 
 class TimeoutError(Exception):
@@ -141,15 +142,21 @@ def respond_text(text: str) -> str:
 
 
 def check_and_respond_text(client, text: str, number: str) -> str:
+    print(f"Text is {len(text)} characters long.")
+    text_length = len(text)
+    while text_length >= 3200:
+        first
     # check if response is too long
     if len(text) >= 3200:
         # too long even if halved
         text = "Your response is too long. Please rephrase your question."
         return respond_text(text)
     elif len(text) >= 1600:
+        print(f"Text was split.")
         # split message into 2. Send first half and return second half
         sentences = text.split(". ")
         sentence_count = len(sentences)
+        print(f"Number of sentences: {sentence_count}")
         first = int(sentence_count / 2)
         second = sentence_count - first
         first_part = ""
@@ -163,7 +170,8 @@ def check_and_respond_text(client, text: str, number: str) -> str:
                 if index == second:
                     second_part += f"{sentence}"
                 second_part += f". {sentence}"
-
+        print(f"Length of first part: {len(first_part)}")
+        print(f"Lenght of second part: {len(second_part)}")
         if len(first_part) >= 1600:
             # further divide into 2 and send individually
             sentences = first_part.split(". ")
@@ -227,6 +235,26 @@ def image_response(prompt: str) -> str:
     return image_url
 
 
+def image_edit(image_path: str, prompt: str) -> str:
+    image = open(image_path, "rb")
+    image_response = openai.Image.create_edit(
+        image=image, prompt=prompt, n=1, size="1024x1024"
+    )
+    image_url = image_response.data[0].url
+    if os.path.exists(image_path):
+        os.remove(image_path)
+    return image_url
+
+
+def image_variation(image_path: str) -> str:
+    image = open(image_path, "rb")
+    image_response = openai.Image.create_variation(image=image, n=1, size="1024x1024")
+    image_url = image_response.data[0].url
+    if os.path.exists(image_path):
+        os.remove(image_path)
+    return image_url
+
+
 def log_response(name: str, number: str, message: str, tokens: int = 0) -> None:
     with open(log_location(name, number), "a") as file:
         message = message.replace("\n", " ")
@@ -261,7 +289,7 @@ def delete_file(filename: str) -> None:
 def text_response(messages: list, number: str) -> tuple:
     """Get response from ChatGPT"""
     completion = openai.ChatCompletion.create(
-        model="gpt-4-0314",
+        model="gpt-3.5-turbo-0301",
         messages=messages,
         temperature=0.8,
         user=f"{str(number)}",
@@ -301,8 +329,9 @@ def chat_reponse(client, name, number, incoming_msg, user, subscription=None):
             message=incoming_msg,
             tokens=tokens,
         )
-
-        return check_and_respond_text(client, text, number)
+        if len(text) < WHATSAPP_CHAR_LIMIT:
+            return respond_text(text)
+        return split_and_respond(client, text, number)
     except:
         print(traceback.format_exc())
         text = "Sorry, I cannot respond to that at the moment, please try again later."
@@ -486,3 +515,41 @@ def num_tokens_from_messages(messages, model="gpt-4-0314"):
     num_tokens += 3  # every reply is primed with <|start|>assistant<|message|>
     # print(str(num_tokens))
     return num_tokens
+
+
+def split_text(text):
+    middle_index = len(text) // 2
+
+    # Find the index of the nearest whitespace to the middle index
+    while middle_index < len(text) and not text[middle_index].isspace():
+        middle_index += 1
+
+    first_half = text[:middle_index]
+    second_half = text[middle_index:]
+    return first_half, second_half
+
+
+def split_and_respond(client, text: str, number: str, max_length=WHATSAPP_CHAR_LIMIT):
+    """Recursively split and send response to user."""
+    # If the text is shorter than the maximum length, process it directly
+    if len(text) <= max_length:
+        return send_whatspp_message(client=client, message=text, phone_no=number)
+
+    # Otherwise, split the text into two parts and process each part recursively
+    middle_index = len(text) // 2
+
+    # Find the index of the nearest whitespace to the middle index
+    while middle_index < len(text) and not text[middle_index].isspace():
+        middle_index += 1
+
+    first_half = text[:middle_index]
+    second_half = text[middle_index:]
+
+    # Process the first half recursively
+    split_and_respond(client, first_half, number, max_length)
+
+    # Process the second half recursively
+    split_and_respond(client, second_half, number, max_length)
+
+    # after splitting
+    return "200"
