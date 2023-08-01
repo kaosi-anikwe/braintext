@@ -96,6 +96,7 @@ def create_transaction():
 
 # Payment callback
 @payment.route("/verify-payment")
+@login_required
 def payment_callback():
     standard = False
     premium = False

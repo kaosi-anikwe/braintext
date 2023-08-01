@@ -28,18 +28,21 @@ def create_app(config=Config):
     from app.auth.routes import auth
     from app.errors.handlers import errors
     from app.payment.routes import payment
-    from app.chatbot.chatbot import chatbot
-    from app.vonage_chatbot.vonage_chatbot import newbot
+    from app.chatbot.chatbot import chatbot as meta_chabot
+    from app.twilio_chatbot.chatbot import chatbot as twilio_chatbot
+    from app.vonage_chatbot.chatbot import chatbot as vonage_chatbot
 
     app.register_blueprint(main)
     app.register_blueprint(auth)
     app.register_blueprint(errors)
     app.register_blueprint(payment)
-    app.register_blueprint(chatbot)
-    app.register_blueprint(newbot)
+    app.register_blueprint(meta_chabot)
+    app.register_blueprint(twilio_chatbot)
+    app.register_blueprint(vonage_chatbot)
 
     csrf.exempt(payment)
-    csrf.exempt(chatbot)
-    csrf.exempt(newbot)
+    csrf.exempt(meta_chabot)
+    csrf.exempt(twilio_chatbot)
+    csrf.exempt(vonage_chatbot)
 
     return app

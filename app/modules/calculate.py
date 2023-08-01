@@ -1,6 +1,6 @@
 import os
 from datetime import date, timedelta, datetime
-from app.chatbot.chatbot import send_whatspp_message
+from app.twilio_chatbot.chatbot import send_whatspp_message
 from app import create_app
 from app.models import Users
 

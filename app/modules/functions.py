@@ -13,11 +13,16 @@ from boto3 import Session
 from pprint import pprint
 from sqlalchemy import desc
 from dotenv import load_dotenv
+from twilio.rest import Client
 from botocore.exceptions import BotoCoreError, ClientError
 from twilio.twiml.messaging_response import MessagingResponse
 
 # local imports
-from app.modules.messages import create_all, get_engine, Messages
+from ..modules.messages import create_all, get_engine, Messages
+from ..twilio_chatbot.functions import (
+    respond_text,
+    get_original_message,
+)
 
 load_dotenv()
 
@@ -35,7 +40,7 @@ class TimeoutError(Exception):
     pass
 
 
-def send_otp_message(client, otp: int, name: str, phone_no: str) -> str:
+def send_otp_message(client: Client, otp: int, name: str, phone_no: str) -> str:
     message = client.messages.create(
         body=f"Hi {name}! Here's your One Time Password to verify your number at Braintext. \n{otp} \nThe OTP will expire in 3 minutes.",
         from_="whatsapp:+15076094633",
@@ -45,7 +50,7 @@ def send_otp_message(client, otp: int, name: str, phone_no: str) -> str:
     return message.sid
 
 
-def send_whatspp_message(client, message: str, phone_no: str) -> str:
+def send_whatspp_message(client: Client, message: str, phone_no: str) -> str:
     message = client.messages.create(
         body=message,
         from_="whatsapp:+15076094633",
@@ -133,20 +138,7 @@ def log_location(name: str, number: str) -> str:
         return day_log
 
 
-def respond_text(text: str) -> str:
-    response = MessagingResponse()
-    message = response.message()
-    message.body(text)
-
-    return str(response)
-
-
-def get_original_message(client, sid: str) -> str:
-    message = client.messages(sid).fetch()
-    return message.body
-
-
-def check_and_respond_text(client, text: str, number: str) -> str:
+def check_and_respond_text(client: Client, text: str, number: str) -> str:
     print(f"Text is {len(text)} characters long.")
     text_length = len(text)
     while text_length >= 3200:
@@ -224,14 +216,6 @@ def check_and_respond_text(client, text: str, number: str) -> str:
         return respond_text(text)
     else:
         return respond_text(text)
-
-
-def respond_media(image_url: str) -> str:
-    response = MessagingResponse()
-    message = response.message()
-    message.media(image_url)
-
-    return str(response)
 
 
 def image_response(prompt: str) -> str:
@@ -418,86 +402,6 @@ def load_messages(prompt: str, db_path: str, original_message=None):
         for message in reversed(get_messages)
     ]
     return messages
-
-
-## Vonage functions ---------------------------------------------------
-def vonage_text_response(prompt: str, number: str) -> tuple:
-    completion = openai.Completion.create(
-        model="text-davinci-003",
-        prompt=prompt,
-        max_tokens=2000,
-        temperature=0.7,
-        user=f"{str(number)}",
-    )
-
-    text = completion.choices[0].text
-    tokens = int(completion.usage.total_tokens)
-
-    return text, tokens
-
-
-def vonage_send_text(
-    client,
-    text: str,
-    to: str,
-):
-    return client.messages.send_message(
-        {
-            "channel": "whatsapp",
-            "message_type": "text",
-            "to": to,
-            "from": WHATSAPP_NUMBER,
-            "text": text,
-        }
-    )
-
-
-def vonage_send_audio(client, audio_url, to):
-    return client.messages.send_message(
-        {
-            "channel": "whatsapp",
-            "message_type": "audio",
-            "to": to,
-            "from": WHATSAPP_NUMBER,
-            "audio": {
-                "url": audio_url,
-            },
-        }
-    )
-
-
-def vonage_send_image(client, image_url, to):
-    return client.messages.send_message(
-        {
-            "channel": "whatsapp",
-            "message_type": "image",
-            "to": to,
-            "from": WHATSAPP_NUMBER,
-            "image": {"url": image_url},
-        }
-    )
-
-
-def vonage_send_otp(
-    client,
-    to_number: str,
-    otp: str,
-):
-    return client.messages.send_message(
-        {
-            "channel": "whatsapp",
-            "message_type": "template",
-            "to": to_number,
-            "from": WHATSAPP_NUMBER,
-            "template": {
-                "name": f"{WHATSAPP_TEMPLATE_NAMESPACE}:{WHATSAPP_TEMPLATE_NAME}",
-                "parameters": [
-                    otp,
-                ],
-            },
-            "whatsapp": {"policy": "deterministic", "locale": "en-GB"},
-        }
-    )
 
 
 # ChatGPT ----------------------------------
