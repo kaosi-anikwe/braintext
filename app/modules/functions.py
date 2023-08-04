@@ -16,6 +16,8 @@ from dotenv import load_dotenv
 from twilio.rest import Client
 from botocore.exceptions import BotoCoreError, ClientError
 from twilio.twiml.messaging_response import MessagingResponse
+from google.cloud.speech_v2 import SpeechClient
+from google.cloud.speech_v2.types import cloud_speech
 
 # local imports
 from ..modules.messages import create_all, get_engine, Messages
@@ -60,11 +62,12 @@ def send_whatspp_message(client: Client, message: str, phone_no: str) -> str:
     return message.sid
 
 
-def synthesize_speech(text: str, voice: str) -> str:
+def synthesize_speech(text: str, voice: str) -> str | None:
     # Create a client using the credentials and region defined in the [adminuser]
     # section of the AWS credentials file (~/.aws/credentials).
     session = Session(profile_name="AdministratorAccess-138631087373")
     polly = session.client("polly")
+    response = None
 
     try:
         # Request speech synthesis
@@ -76,7 +79,7 @@ def synthesize_speech(text: str, voice: str) -> str:
         print(error)
 
     # Access the audio stream from the response
-    if "AudioStream" in response:
+    if response and "AudioStream" in response:
         # Note: Closing the stream is important because the service throttles on the
         # number of parallel connections. Here we are using contextlib.closing to
         # ensure the close method of the stream object will be called automatically
@@ -89,7 +92,7 @@ def synthesize_speech(text: str, voice: str) -> str:
                 # Open a file for writing the output as a binary stream
                 with open(output, "wb") as file:
                     file.write(stream.read())
-                return output
+                return filename
             except IOError as error:
                 # Could not write to file, exit gracefully
                 print(error)
@@ -97,6 +100,7 @@ def synthesize_speech(text: str, voice: str) -> str:
     else:
         # The response didn't contain audio data, exit gracefully
         print("Could not stream audio")
+        return response
 
 
 def log_location(name: str, number: str) -> str:
@@ -274,7 +278,7 @@ def delete_file(filename: str) -> None:
         os.remove(filename)
 
 
-@timeout_decorator.timeout(13.5, use_signals=False, timeout_exception=TimeoutError)
+@timeout_decorator.timeout(15.0, use_signals=False, timeout_exception=TimeoutError)
 def text_response(messages: list, number: str) -> tuple:
     """Get response from ChatGPT"""
     completion = openai.ChatCompletion.create(
@@ -401,11 +405,48 @@ def load_messages(prompt: str, db_path: str, original_message=None):
         {"role": message.role, "content": message.content}
         for message in reversed(get_messages)
     ]
+    while num_tokens_from_messages(messages) > 4000:
+        messages.pop(0)
     return messages
 
 
+def transcribe_audio(
+    audio_file: str,
+    project_id="braintext-394611",
+) -> cloud_speech.RecognizeResponse:
+    """Transcribe an audio file."""
+    # Instantiates a client
+    client = SpeechClient()
+
+    # Reads a file as bytes
+    with open(audio_file, "rb") as f:
+        content = f.read()
+
+    config = cloud_speech.RecognitionConfig(
+        auto_decoding_config=cloud_speech.AutoDetectDecodingConfig(),
+        language_codes=["en-US"],
+        model="long",
+    )
+
+    request = cloud_speech.RecognizeRequest(
+        recognizer=f"projects/{project_id}/locations/global/recognizers/_",
+        config=config,
+        content=content,
+    )
+
+    # Transcribes the audio into text
+    response = client.recognize(request=request)
+
+    transcript = ""
+    for result in response.results:
+        print(f"Transcript: {result.alternatives[0].transcript}")
+        transcript += f"{result.alternatives[0].transcript}. "
+
+    return transcript
+
+
 # ChatGPT ----------------------------------
-def num_tokens_from_messages(messages, model="gpt-4-0314"):
+def num_tokens_from_messages(messages, model="gpt-3.5-turbo-0301"):
     """Returns the number of tokens used by a list of messages."""
     try:
         encoding = tiktoken.encoding_for_model(model)

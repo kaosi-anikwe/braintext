@@ -128,7 +128,7 @@ def webhook():
                                 if os.path.exists(audio_filename):
                                     os.remove(audio_filename)
 
-                                media_url = f"{url_for('chatbot.send_voice_note', _external=True, _scheme='https')}?filename={voice_note}"
+                                media_url = f"{url_for('twilio_chatbot.send_voice_note', _external=True, _scheme='https')}?filename={voice_note}"
                                 print(media_url)
 
                                 return (

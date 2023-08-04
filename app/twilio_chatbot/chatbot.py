@@ -33,40 +33,29 @@ from ..modules.functions import (
     synthesize_speech,
     get_user_db,
     load_messages,
+    transcribe_audio,
     TimeoutError,
     WHATSAPP_CHAR_LIMIT,
 )
 
-
 load_dotenv()
 
+task_queue = Queue()
 chatbot = Blueprint("twilio_chatbot", __name__)
-
 openai_url = "https://api.openai.com/v1/completions"
 openai.api_key = os.getenv("OPENAI_API_KEY")
-log_dir = os.getenv("CHATBOT_LOG")
-tmp_folder = os.getenv("TEMP_FOLDER")
-
-# create log folder if not exists
-if not os.path.exists(log_dir):
-    os.makedirs(log_dir)
-# create tmp folder if not exists
-if not os.path.exists(tmp_folder):
-    os.makedirs(tmp_folder)
-
-
-task_queue = Queue()
-
 account_sid = os.environ["TWILIO_ACCOUNT_SID"]
 auth_token = os.environ["TWILIO_AUTH_TOKEN"]
 client = Client(account_sid, auth_token)
+TEMP_FOLDER = os.getenv("TEMP_FOLDER")
 
 
 @chatbot.get("/send-voice-note")
 def send_voice_note():
     filename = request.args.get("filename")
-    if os.path.exists(str(filename)):
-        return send_file(f"{filename}")
+    file_ = f"{TEMP_FOLDER}/{filename}"
+    if os.path.exists(file_):
+        return send_file(file_)
     else:
         return "Not found", 404
 
@@ -206,41 +195,39 @@ def webhook():
                             if "audio" in content_type:
                                 # Audio response
                                 audio_url = request.values.get("MediaUrl0")
-                                tmp_file = f"tmp/{str(datetime.utcnow())}"
+                                tmp_file = f"{TEMP_FOLDER}/{str(datetime.utcnow())}.ogg"
                                 # get audio file in ogg
                                 subprocess.Popen(
-                                    f"wget {audio_url} -O '{tmp_file}.ogg'",
+                                    f"wget {audio_url} -O '{tmp_file}'",
                                     shell=True,
                                     stdout=subprocess.DEVNULL,
                                     stderr=subprocess.STDOUT,
                                 ).wait()
                                 # convert to mp3 with ffmpeg
-                                subprocess.Popen(
-                                    f"ffmpeg -i '{tmp_file}.ogg' '{tmp_file}.mp3'",
-                                    shell=True,
-                                    stdout=subprocess.DEVNULL,
-                                    stderr=subprocess.STDOUT,
-                                ).wait()
+                                # subprocess.Popen(
+                                #     f"ffmpeg -i '{tmp_file}.ogg' '{tmp_file}.mp3'",
+                                #     shell=True,
+                                #     stdout=subprocess.DEVNULL,
+                                #     stderr=subprocess.STDOUT,
+                                # ).wait()
                                 try:
-                                    with open(f"{tmp_file}.mp3", "rb") as file:
-                                        transcript = openai.Audio.transcribe(
-                                            "whisper-1", file
-                                        )
+                                    transcript = transcribe_audio(tmp_file)
+                                    # with open(tmp_file, "rb") as file:
+                                    #     transcript = openai.Audio.transcribe(
+                                    #         "whisper-1", file
+                                    #     )
                                 except:
                                     print(traceback.format_exc())
-                                    return respond_text(
-                                        "Error transcribing audio. Please try again later."
-                                    )
+                                    text = "Error transcribing audio. Please try again later."
+                                    return respond_text(text)
 
-                                # remove tmp files
-                                if os.path.exists(f"{tmp_file}.ogg"):
-                                    os.remove(f"{tmp_file}.ogg")
-                                if os.path.exists(f"{tmp_file}.mp3"):
-                                    os.remove(f"{tmp_file}.mp3")
+                                # remove tmp file
+                                if os.path.exists(tmp_file):
+                                    os.remove(tmp_file)
 
-                                prompt = transcript.text
-                                task_queue.put(prompt)
+                                task_queue.put(transcript)
                                 abort(500)  # abort to continue with fallback function
+
                             if "image" in content_type:
                                 # Image editing/variation
                                 try:
@@ -379,20 +366,25 @@ def fallback():
                         audio_filename = synthesize_speech(
                             text=text, voice=user_settings.ai_voice_type
                         )
+                        if audio_filename == None:
+                            text = "AWS session expired."
+                            return respond_text(text)
+
+                        audio_path = f"{TEMP_FOLDER}/{audio_filename}"
 
                         # convert to ogg with ffmpeg
                         subprocess.Popen(
-                            f"ffmpeg -i '{audio_filename}' -c:a libopus '{audio_filename.split('.')[0]}.opus'",
+                            f"ffmpeg -i '{audio_path}' -c:a libopus '{audio_path.split('.')[0]}.opus'",
                             shell=True,
                             stdout=subprocess.DEVNULL,
                             stderr=subprocess.STDOUT,
                         ).wait()
 
                         # remove tts audio
-                        if os.path.exists(audio_filename):
-                            os.remove(audio_filename)
+                        if os.path.exists(audio_path):
+                            os.remove(audio_path)
 
-                        media_url = f"{url_for('chatbot.send_voice_note', _external=True, _scheme='https')}?filename={audio_filename.split('.')[0]}.opus"
+                        media_url = f"{url_for('twilio_chatbot.send_voice_note', _external=True, _scheme='https')}?filename={audio_filename.split('.')[0]}.opus"
                         print(media_url)
 
                         return respond_media(media_url)

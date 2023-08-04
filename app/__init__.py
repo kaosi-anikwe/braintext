@@ -1,3 +1,4 @@
+import os
 from flask import Flask
 from flask_wtf import CSRFProtect
 from flask_login import LoginManager
@@ -7,6 +8,15 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 
 load_dotenv()
+
+log_dir = os.getenv("CHATBOT_LOG")
+tmp_folder = os.getenv("TEMP_FOLDER")
+# create log folder if not exists
+if not os.path.exists(log_dir):
+    os.makedirs(log_dir)
+# create tmp folder if not exists
+if not os.path.exists(tmp_folder):
+    os.makedirs(tmp_folder)
 
 db = SQLAlchemy()
 login_manager = LoginManager()
