@@ -2,8 +2,12 @@
 import os
 import requests
 import traceback
-from dotenv import load_dotenv
 from typing import Any, Dict, Union
+
+# installed imports
+from flask import url_for, after_this_request
+from dotenv import load_dotenv
+from PIL import Image
 
 # local imports
 from ..models import Users, BasicSubscription, StandardSubscription, PremiumSubscription
@@ -47,7 +51,7 @@ def is_reply(data: Dict[Any, Any]) -> bool:
     """
     data = _preprocess(data)
     if "messages" in data:
-        if "context" in data["messages"]:
+        if "context" in data["messages"][0]:
             return True
         return False
     return False
@@ -175,11 +179,12 @@ def send_template(template: str, recipient: str, components: Any) -> bool:
     """
     data = {
         "messaging_product": "whatsapp",
+        "recipient_type": "individual",
         "to": recipient,
         "type": "template",
         "template": {
             "name": template,
-            "language": {"code": "en_US"},
+            "language": {"code": "en"},
             "components": components,
         },
     }
@@ -401,6 +406,36 @@ def get_message_status(data: Dict[Any, Any]) -> Union[str, None]:
         return data["statuses"][0]["status"]
 
 
+def send_otp_message(otp: int, number: str):
+    components = [
+        {
+            "type": "body",
+            "parameters": [
+                {
+                    "type": "text",
+                    "text": str(otp),
+                }
+            ],
+        },
+        {
+            "type": "button",
+            "sub_type": "url",
+            "index": "0",
+            "parameters": [{"type": "text", "text": str(otp)}],
+        },
+    ]
+    try:
+        success = send_template(
+            template="phone_number_verification",
+            recipient=number,
+            components=components,
+        )
+        return success
+    except:
+        print(traceback.format_exc())
+        raise Exception
+
+
 def meta_split_and_respond(
     text: str,
     number: str,
@@ -430,46 +465,86 @@ def meta_split_and_respond(
     second_half = text[middle_index:]
 
     # Process the first half recursively
-    split_and_respond(first_half, number, prev_mssg_id)
+    meta_split_and_respond(first_half, number, prev_mssg_id)
 
     # Process the second half recursively
-    split_and_respond(second_half, number, prev_mssg_id)
+    meta_split_and_respond(second_half, number, prev_mssg_id)
 
 
-def meta_chat_response(
-    data: Dict[Any, Any],
-    user: Users,
-    subscription: Union[
-        BasicSubscription, StandardSubscription, PremiumSubscription
-    ] = None,
-):
-    """
-    Typical WhatsApp text response
-    """
-    name = get_name(data)
-    number = f"+{get_number(data)}"
-    message = get_message(data)
-    message_id = get_message_id(data)
+def speech_synthesis(text: str, voice_type: str, number: str):
+    """Synthesize audio output and send to user."""
     try:
-        if subscription:
-            if subscription.expired():
-                subscription.update_account(user.id)
-                text = "It seems your subscription has expired. Plese renew your subscription to continue to enjoy your services. \nhttps://braintext.io/profile"
-                reply_to_message(message_id, number, text)
+        audio_filename = synthesize_speech(
+            text=text,
+            voice=voice_type,
+        )
+        if audio_filename == None:
+            text = "AWS session expired."
+            return send_text(text, number)
+        audio_path = os.path.join(TEMP_FOLDER, audio_filename)
+        converted_filename = f"{audio_filename.split('.')[0]}.opus"
+        converted_path = os.path.join(TEMP_FOLDER, converted_filename)
+
+        # convert to ogg with ffmpeg
+        conversion = subprocess.Popen(
+            f"ffmpeg -i '{audio_path}' -c:a libopus '{converted_path}'",
+            shell=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        ).wait()
+        print(f"Convesion result: {conversion}")
+
+        # remove original audio
+        if os.path.exists(audio_path):
+            os.remove(audio_path)
+
+        media_url = f"{url_for('chatbot.send_voice_note', _external=True, _scheme='https')}?filename={converted_filename}"
+        print(media_url)
+
+        return send_audio(media_url, number)
+    except BotoCoreError:
+        print(traceback.format_exc())
+        text = "Sorry, I cannot respond to that at the moment, please try again later."
+        return send_text(text, number)
+    except ClientError:
+        print(traceback.format_exc())
+        text = "Sorry, you're response was too long. Please rephrase the question or break it into segments."
+        return send_text(text, number)
+
+
+def speech_response(data: Dict[Any, Any], voice_type: str):
+    """Respond with audio from WhatsApp text."""
+    try:
+        name = get_name(data)
+        number = get_number(data)
+        message = get_message(data)
+        message_id = get_message_id(data)
+        greeting = contains_greeting(message)
+        thanks = contains_thanks(message)
+
         try:
-            isreply = is_reply(data)
-            user_db_path = get_user_db(name=name, number=number)
+            user_db_path = get_user_db(name, number)
             messages = load_messages(
                 prompt=message,
                 db_path=user_db_path,
             )
-            text, tokens, role = text_response(messages=messages, number=number)
-        except TimeoutError:
-            text = "Sorry, your response is taking longer than usual. Please hold on."
+            text, tokens, role = text_response(
+                messages=messages,
+                number=number,
+                message_id=message_id,
+            )
+        except:
+            print(traceback.format_exc())
+            text = (
+                "Sorry I can't respond to that at the moment. Please try again later."
+            )
             return reply_to_message(message_id, number, text)
 
         # record ChatGPT response
-        new_message = {"role": role, "content": text}
+        new_message = {
+            "role": role,
+            "content": text,
+        }
         new_message = Messages(new_message, user_db_path)
         new_message.insert()
 
@@ -480,6 +555,116 @@ def meta_chat_response(
             tokens=tokens,
         )
 
+        send_reaction(
+            chr(128075), message_id, number
+        ) if greeting else None  # react waving hand
+        send_reaction(
+            chr(128153), message_id, number
+        ) if thanks else None  # react blue love emoji
+
+        return speech_synthesis(text=text, voice_type=voice_type, number=number)
+    except:
+        print(traceback.format_exc())
+        text = "Sorry I can't respond to that at the moment. Please try again later."
+        return reply_to_message(message_id, number, text)
+
+
+def meta_chat_response(
+    data: Dict[Any, Any],
+    user: Users,
+    subscription: Union[
+        BasicSubscription, StandardSubscription, PremiumSubscription
+    ] = None,
+):
+    """
+    Typical WhatsApp text response with Meta functions.
+    """
+    name = get_name(data)
+    number = f"+{get_number(data)}"
+    message = get_message(data)
+    message_id = get_message_id(data)
+    greeting = contains_greeting(message)
+    thanks = contains_thanks(message)
+    isreply = is_reply(data)
+    image = False
+    audio = False
+    user_db_path = get_user_db(name=name, number=number)
+    messages = load_messages(
+        prompt=message,
+        db_path=user_db_path,
+    )
+    try:
+        if subscription:
+            if subscription.expired():
+                subscription.update_account(user.id)
+                text = "It seems your subscription has expired. Plese renew your subscription to continue to enjoy your services. \nhttps://braintext.io/profile"
+                return reply_to_message(message_id, number, text)
+        try:
+            if "dalle" in message.lower():
+                # Image generation
+                image = True
+                prompt = message.lower().replace("dalle", "")
+                image_url = image_response(prompt)
+                log_response(
+                    name=name,
+                    number=number,
+                    message=message,
+                )
+                return send_image(image_url, number)  # function ends here
+            elif "voicegen" in message.lower():
+                # Speech synthesis
+                audio = True
+                text = message.lower().replace("voicegen", "")
+                voice_type = user.user_settings().ai_voice_type
+                log_response(
+                    name=name,
+                    number=number,
+                    message=message,
+                )
+                return speech_synthesis(text=text, voice_type=voice_type, number=number)
+            elif "whysper" in message.lower():
+                # Audio response
+                audio = True
+                text = message.lower().replace("whysper", "")
+                voice_type = user.user_settings().ai_voice_type
+                log_response(
+                    name=name,
+                    number=number,
+                    message=message,
+                )
+                return speech_response(
+                    data=data,
+                    voice_type=voice_type,
+                )
+            else:
+                text, tokens, role = text_response(
+                    messages=messages, number=number, message_id=message_id
+                )
+                log_response(
+                    name=name,
+                    number=number,
+                    message=message,
+                    tokens=tokens,
+                )
+        except:
+            print(traceback.format_exc())
+            text = (
+                "Sorry, I can't respond to that at the moment. Please try again later."
+            )
+            return reply_to_message(message_id, number, text)
+
+        if not image and not audio:
+            # record ChatGPT response
+            new_message = {"role": role, "content": text}
+            new_message = Messages(new_message, user_db_path)
+            new_message.insert()
+
+        send_reaction(
+            chr(128075), message_id, number
+        ) if greeting else None  # react waving hand
+        send_reaction(
+            chr(128153), message_id, number
+        ) if thanks else None  # react blue love emoji
         if len(text) < WHATSAPP_CHAR_LIMIT:
             return (
                 send_text(text, number)
@@ -494,4 +679,127 @@ def meta_chat_response(
     except:
         print(traceback.format_exc())
         text = "Sorry, I cannot respond to that at the moment, please try again later."
-        reply_to_message(message_id, number, text)
+        return reply_to_message(message_id, number, text)
+
+
+def meta_audio_response(user: Users, data: Dict[Any, Any]):
+    """WhatsApp audio response with Meta functions."""
+    name = get_name(data)
+    number = f"+{get_number(data)}"
+    message_id = get_message_id(data)
+
+    try:
+        audio_url = get_media_url(get_audio_id(data))
+        audio_file = download_media(
+            audio_url,
+            f"{datetime.utcnow().strftime('%M%S%f')}",
+        )
+        try:
+            transcript = transcribe_audio(audio_file)
+            greeting = contains_greeting(transcript)
+            thanks = contains_thanks(transcript)
+        except:
+            print(traceback.format_exc())
+            text = "Error transcribing audio. Please try again later."
+            return send_text(text, number)
+
+        # delete audio file
+        if os.path.exists(audio_file):
+            os.remove(audio_file)
+        try:
+            user_db_path = get_user_db(name, number)
+            messages = load_messages(
+                prompt=transcript,
+                db_path=user_db_path,
+            )
+            text, tokens, role = text_response(
+                messages=messages,
+                number=number,
+                message_id=message_id,
+            )
+        except:
+            print(traceback.format_exc())
+            text = (
+                "Sorry I can't respond to that at the moment. Please try again later."
+            )
+            return send_text(text, number)
+
+        # record ChatGPT response
+        new_message = {
+            "role": role,
+            "content": text,
+        }
+        new_message = Messages(new_message, user_db_path)
+        new_message.insert()
+
+        log_response(
+            name=name,
+            number=number,
+            message=transcript,
+            tokens=tokens,
+        )
+        send_reaction(
+            chr(128075), message_id, number
+        ) if greeting else None  # react waving hand
+        send_reaction(
+            chr(128153), message_id, number
+        ) if thanks else None  # react blue love emoji
+
+        user_settings = user.user_settings()
+        if user_settings.voice_response:
+            return speech_synthesis(
+                text=text, voice_type=user_settings.ai_voice_type, number=number
+            )
+        else:
+            if len(text) < WHATSAPP_CHAR_LIMIT:
+                return send_text(text, number)
+            else:
+                return meta_split_and_respond(
+                    text,
+                    number,
+                    get_message_id(data),
+                )
+    except:
+        print(traceback.format_exc())
+        text = "Sorry, I cannot respond to that at the moment, please try again later."
+        return send_text(text, number)
+
+
+def meta_image_response(data: Dict[Any, Any]):
+    """WhatsApp image response wtih Meta functions."""
+    name = get_name(data)
+    number = f"+{get_number(data)}"
+    try:
+        image = get_image(data)
+        image_url = get_media_url(image["id"])
+        prompt = ""
+        image_path = download_media(
+            image_url,
+            f"{datetime.utcnow().strftime('%M%S%f')}.jpg",
+        )
+        # convert to png
+        image_content = Image.open(image_path)
+        image_content = image_content.convert(
+            "RGBA"
+        )  # If the image has an alpha channel (transparency)
+        image_content.save(image_path, format="PNG")
+        if "caption" in image:
+            prompt = image["caption"]
+            if "variation" in prompt.lower():
+                image_url = image_variation(image_path)
+            else:
+                image_url = image_edit(image_path, prompt)
+        else:
+            # Image variation
+            image_url = image_variation(image_path)
+
+        log_response(
+            name=name,
+            number=number,
+            message=prompt,
+        )
+        send_image(image_url, number)
+    except:
+        print(traceback.format_exc())
+        text = "Something went wrong. Please try again later."
+        return send_text(text, number)

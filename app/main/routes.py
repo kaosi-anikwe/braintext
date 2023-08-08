@@ -3,7 +3,7 @@ import traceback
 from twilio.rest import Client
 from datetime import datetime, timedelta
 from app.modules.email_utility import send_email
-from app.modules.functions import send_otp_message
+from app.chatbot.functions import send_otp_message
 from flask_login import login_required, current_user
 from flask import Blueprint, render_template, request, flash, jsonify, redirect, url_for
 from app.models import (
@@ -114,10 +114,8 @@ def send_otp():
             else:
                 check_otp.otp = get_otp()
                 send_otp_message(
-                    client=client,
                     otp=check_otp.otp,
-                    name=current_user.first_name,
-                    phone_no=phone_no,
+                    number=phone_no,
                 )
                 check_otp.update()
 
@@ -125,10 +123,8 @@ def send_otp():
         else:
             otp = OTP(phone_no)
             send_otp_message(
-                client=client,
                 otp=otp.otp,
-                name=current_user.first_name,
-                phone_no=phone_no,
+                number=phone_no,
             )
             otp.insert()
 
@@ -150,10 +146,8 @@ def resend_otp():
         if check_otp:
             check_otp.otp = get_otp()
             send_otp_message(
-                client=client,
                 otp=check_otp.otp,
-                name=current_user.first_name,
-                phone_no=phone_no,
+                number=phone_no,
             )
             check_otp.update()
 

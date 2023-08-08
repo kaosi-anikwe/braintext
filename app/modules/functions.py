@@ -1,7 +1,12 @@
 # python imports
 import os
+import re
+import time
+import requests
 import traceback
+import threading
 import subprocess
+from typing import Union
 from datetime import datetime
 from contextlib import closing
 
@@ -10,12 +15,10 @@ import openai
 import tiktoken
 import timeout_decorator
 from boto3 import Session
-from pprint import pprint
 from sqlalchemy import desc
 from dotenv import load_dotenv
 from twilio.rest import Client
 from botocore.exceptions import BotoCoreError, ClientError
-from twilio.twiml.messaging_response import MessagingResponse
 from google.cloud.speech_v2 import SpeechClient
 from google.cloud.speech_v2.types import cloud_speech
 
@@ -35,6 +38,15 @@ WHATSAPP_TEMPLATE_NAMESPACE = os.getenv("WHATSAPP_TEMPLATE_NAMESPACE")
 WHATSAPP_TEMPLATE_NAME = os.getenv("WHATSAPP_TEMPLATE_NAME")
 CONTEXT_LIMIT = int(os.getenv("CONTEXT_LIMIT"))
 WHATSAPP_CHAR_LIMIT = int(os.getenv("WHATSAPP_CHAR_LIMIT"))
+# Meta
+TOKEN = os.getenv("META_VERIFY_TOKEN")
+PHONE_NUMBER_ID = os.getenv("PHONE_NUMBER_ID")
+BASE_URL = "https://graph.facebook.com/v17.0"
+URL = f"{BASE_URL}/{PHONE_NUMBER_ID}/messages"
+HEADERS = {
+    "Content-Type": "application/json",
+    "Authorization": f"Bearer {TOKEN}",
+}
 
 
 class TimeoutError(Exception):
@@ -62,6 +74,37 @@ def send_whatspp_message(client: Client, message: str, phone_no: str) -> str:
     return message.sid
 
 
+def send_text(message: str, recipient: str) -> Union[str, None]:
+    data = {
+        "messaging_product": "whatsapp",
+        "recipient_type": "individual",
+        "to": recipient,
+        "type": "text",
+        "text": {"preview_url": True, "body": message},
+    }
+    response = requests.post(URL, headers=HEADERS, json=data)
+    if response.status_code == 200:
+        data = response.json()
+        return str(data["messages"][0]["id"])
+    return None
+
+
+def reply_to_message(message_id: str, recipient: str, message: str) -> Union[str, None]:
+    data = {
+        "messaging_product": "whatsapp",
+        "recipient_type": "individual",
+        "to": recipient,
+        "type": "text",
+        "context": {"message_id": message_id},
+        "text": {"preview_url": True, "body": message},
+    }
+    response = requests.post(URL, headers=HEADERS, json=data)
+    if response.status_code == 200:
+        data = response.json()
+        return str(data["messages"][0]["id"])
+    return False
+
+
 def synthesize_speech(text: str, voice: str) -> str | None:
     # Create a client using the credentials and region defined in the [adminuser]
     # section of the AWS credentials file (~/.aws/credentials).
@@ -72,7 +115,7 @@ def synthesize_speech(text: str, voice: str) -> str | None:
     try:
         # Request speech synthesis
         response = polly.synthesize_speech(
-            Text=text, OutputFormat="ogg_vorbis", Engine="neural", VoiceId=voice
+            Text=text, OutputFormat="mp3", Engine="neural", VoiceId=voice
         )
     except (BotoCoreError, ClientError) as error:
         # The service returned an error, exit gracefully
@@ -85,7 +128,7 @@ def synthesize_speech(text: str, voice: str) -> str | None:
         # ensure the close method of the stream object will be called automatically
         # at the end of the with statement's scope.
         with closing(response["AudioStream"]) as stream:
-            filename = f"{str(datetime.utcnow().strftime('%d-%m-%Y_%H-%M-%S'))}.ogg"
+            filename = f"{str(datetime.utcnow().strftime('%d-%m-%Y_%H-%M-%S'))}.mp3"
             output = f"{TEMP_FOLDER}/{filename}"
 
             try:
@@ -278,9 +321,26 @@ def delete_file(filename: str) -> None:
         os.remove(filename)
 
 
-@timeout_decorator.timeout(15.0, use_signals=False, timeout_exception=TimeoutError)
-def text_response(messages: list, number: str) -> tuple:
+def text_response(messages: list, number: str, message_id: str = None) -> tuple:
     """Get response from ChatGPT"""
+
+    # Event to signal the status update function to stop if OpenAI responds on time
+    stop_event = threading.Event()
+
+    def status_update():
+        """Wait ```n``` seconds and send status update."""
+        if not stop_event.wait(15):
+            text = "Sorry, your request is taking longer than usual. Please hold on."
+            send_text(
+                message=text, recipient=number
+            ) if not message_id else reply_to_message(
+                message_id=message_id, recipient=number, message=text
+            )
+
+    # set timer
+    thread = threading.Thread(target=status_update)
+    thread.start()
+
     completion = openai.ChatCompletion.create(
         model="gpt-3.5-turbo-0301",
         messages=messages,
@@ -291,6 +351,12 @@ def text_response(messages: list, number: str) -> tuple:
     text = completion.choices[0].message.content
     tokens = int(completion.usage.total_tokens)
     role = completion.choices[0].message.role
+
+    # Signal the status update function to stop
+    stop_event.set()
+
+    # Wait for status update thread to complete
+    thread.join()
 
     return text, tokens, role
 
@@ -439,10 +505,37 @@ def transcribe_audio(
 
     transcript = ""
     for result in response.results:
-        print(f"Transcript: {result.alternatives[0].transcript}")
         transcript += f"{result.alternatives[0].transcript}. "
 
     return transcript
+
+
+def contains_greeting(text):
+    # Convert the input text to lowercase to make the comparison case-insensitive
+    text = text.lower()
+
+    # Define a regular expression pattern to match different greetings
+    greeting_pattern = r"\b(hello|hi|hey|good morning|good afternoon|good evening|morning|afternoon|evening)\b"
+
+    # Use the re.search() function to find the pattern in the text
+    match = re.search(greeting_pattern, text)
+
+    # If a match is found, return True; otherwise, return False
+    return bool(match)
+
+
+def contains_thanks(text):
+    # Convert the input text to lowercase to make the comparison case-insensitive
+    text = text.lower()
+
+    # Define a regular expression pattern to match greetings and thanks
+    thanks_pattern = r"\b(thank|thanks)\b"
+
+    # Use the re.search() function to find the patterns in the text
+    thanks_match = re.search(thanks_pattern, text)
+
+    # If either a greeting or a thanks is found, return True; otherwise, return False
+    return bool(thanks_match)
 
 
 # ChatGPT ----------------------------------

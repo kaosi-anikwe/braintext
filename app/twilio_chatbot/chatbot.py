@@ -12,6 +12,7 @@ import openai
 from PIL import Image
 from dotenv import load_dotenv
 from twilio.rest import Client
+from twilio.twiml.voice_response import VoiceResponse
 from botocore.exceptions import BotoCoreError, ClientError
 from flask import Blueprint, request, url_for, send_file, abort
 
@@ -22,21 +23,7 @@ from ..models import (
     Users,
     BasicSubscription,
 )
-from ..modules.functions import (
-    log_response,
-    chat_reponse,
-    split_and_respond,
-    text_response,
-    image_response,
-    image_edit,
-    image_variation,
-    synthesize_speech,
-    get_user_db,
-    load_messages,
-    transcribe_audio,
-    TimeoutError,
-    WHATSAPP_CHAR_LIMIT,
-)
+from ..modules.functions import *
 
 load_dotenv()
 
@@ -417,3 +404,47 @@ def receive_sms():
     data = request.form
     print(data)
     return "200"
+
+
+@chatbot.route("/receive-calls", methods=["POST"])
+def handle_incoming_call():
+    response = VoiceResponse()
+
+    # Start recording the call
+    response.record(
+        action="/recording_complete",
+        recording_status_callback="/recording_status",
+        timeout=10,
+        max_length=3600,
+        transcribe=True,
+        transcribe_callback="/transcription_status",
+    )
+
+    return str(response)
+
+
+@chatbot.route("/recording_complete", methods=["POST"])
+def recording_complete():
+    data = f"RECORD COMPLETE\n{request.values}"
+    print(data)
+    # This function will be called when the recording is complete
+    # You can perform any necessary actions with the recording here
+    return ""
+
+
+@chatbot.route("/recording_status", methods=["POST"])
+def recording_status():
+    data = f"RECORD STATUS\n{request.values}"
+    print(data)
+    # This function will be called with the recording status updates
+    # You can use this to track the progress of the recording, if needed
+    return ""
+
+
+@chatbot.route("/transcription_status", methods=["POST"])
+def transcription_status():
+    data = f"TRANSCRIBE STATUS\n{request.values}"
+    print(data)
+    # This function will be called with the transcription status updates
+    # You can use this to track the progress of the transcription, if enabled
+    return ""
