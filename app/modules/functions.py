@@ -1,5 +1,6 @@
 # python imports
 import os
+
 import re
 import time
 import requests
@@ -330,7 +331,7 @@ def text_response(messages: list, number: str, message_id: str = None) -> tuple:
     def status_update():
         """Wait ```n``` seconds and send status update."""
         if not stop_event.wait(15):
-            text = "Sorry, your request is taking longer than usual. Please hold on."
+            text = "Sorry for the wait. I'm still working on your request. Thanks for your patience!"
             send_text(
                 message=text, recipient=number
             ) if not message_id else reply_to_message(

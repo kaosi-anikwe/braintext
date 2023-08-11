@@ -68,6 +68,7 @@ class Users(db.Model, TimestampMixin, UserMixin, DatabaseHelperMixin):
     phone_no = db.Column(db.String(20))
     phone_verified = db.Column(db.Boolean, default=False)
     email_verified = db.Column(db.Boolean, default=False)
+    from_anonymous = db.Column(db.Boolean, default=False)
     edited = db.Column(db.Boolean, default=False)
     password_hash = db.Column(db.String(128), nullable=False)
 
@@ -105,7 +106,11 @@ class Users(db.Model, TimestampMixin, UserMixin, DatabaseHelperMixin):
 
     # get local time with timezone
     def timenow(self):
-        return datetime.now(tz=self.get_timezone())
+        return (
+            datetime.now(tz=self.get_timezone())
+            if not self.from_anonymous
+            else datetime.utcnow()
+        )
 
     # verify token generated for resetting password
     @staticmethod
@@ -164,6 +169,34 @@ class UserSettings(db.Model, TimestampMixin, DatabaseHelperMixin):
         self.user_id = user_id
 
 
+class AnonymousUsers(db.Model, TimestampMixin, DatabaseHelperMixin):
+    __tablename__ = "anonymous_user"
+
+    id = db.Column(db.Integer, primary_key=True)
+    uid = db.Column(db.String(200), unique=True, nullable=False)
+    first_name = db.Column(db.String(50))
+    last_name = db.Column(db.String(50))
+    email = db.Column(db.String(100))
+    phone_no = db.Column(db.String(20))
+    prompts = db.Column(db.Integer)
+    signup_stage = db.Column(db.String(50))
+
+    def __init__(self, phone_no) -> None:
+        self.phone_no = phone_no
+        self.prompts = 0
+        self.uid = uuid.uuid4().hex
+        self.signup_stage = "anonymous"
+
+    def respond(self) -> bool:
+        if self.prompts < 20:
+            return True
+        return False
+
+    # return concatenated name
+    def display_name(self):
+        return f"{self.first_name} {self.last_name}"
+
+
 class OTP(db.Model, TimestampMixin, DatabaseHelperMixin):
     __tablename__ = "otp"
 
@@ -184,7 +217,6 @@ class BasicSubscription(db.Model, TimestampMixin, DatabaseHelperMixin):
 
     id = db.Column(db.Integer, primary_key=True)
     expire_date = db.Column(db.DateTime(timezone=True))
-    time
     sub_status = db.Column(db.String(20))
     prompts = db.Column(db.Integer)
     user_id = db.Column(db.ForeignKey("user.id"), nullable=False)

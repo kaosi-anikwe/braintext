@@ -50,10 +50,10 @@ def register():
         return render_template("auth/auth.html", title="Sign up")
 
     else:
-        first_name = request.form.get("firstname")
-        last_name = request.form.get("lastname")
-        email = request.form.get("email")
-        password = request.form.get("password")
+        first_name = request.form.get("firstname").strip()
+        last_name = request.form.get("lastname").strip()
+        email = request.form.get("email").strip()
+        password = request.form.get("password").strip()
         get_browser_time = request.form.get("time").split()[:5]
 
         check = Users.query.filter(Users.email == email).first()

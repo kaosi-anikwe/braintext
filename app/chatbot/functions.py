@@ -1,8 +1,9 @@
 # python imports
+import re
 import os
 import requests
 import traceback
-from typing import Any, Dict, Union
+from typing import Any, Dict, Union, Literal
 
 # installed imports
 from flask import url_for, after_this_request
@@ -10,7 +11,16 @@ from dotenv import load_dotenv
 from PIL import Image
 
 # local imports
-from ..models import Users, BasicSubscription, StandardSubscription, PremiumSubscription
+from ..models import (
+    Users,
+    BasicSubscription,
+    StandardSubscription,
+    PremiumSubscription,
+    AnonymousUsers,
+    UserSettings,
+)
+from ..modules.email_utility import send_registration_email
+from ..modules.verification import generate_confirmation_token
 from ..modules.functions import *
 
 load_dotenv()
@@ -37,7 +47,7 @@ def _preprocess(data: Dict[Any, Any]) -> Dict[Any, Any]:
 def is_message(data: Dict[Any, Any]) -> bool:
     """
     Determines if incoming payload is from a message.
-    Returns ```bool```
+    Returns `bool`
     """
     data = _preprocess(data)
     if "messages" in data:
@@ -45,9 +55,20 @@ def is_message(data: Dict[Any, Any]) -> bool:
     return False
 
 
+def is_valid_email(email):
+    # Regular expression pattern for a basic email address validation
+    pattern = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
+
+    # Use the re.match function to check if the string matches the pattern
+    if re.match(pattern, email):
+        return True
+    else:
+        return False
+
+
 def is_reply(data: Dict[Any, Any]) -> bool:
     """
-    Returns ```True``` if message is a reply, else returns ```False```.
+    Returns `True` if message is a reply, else returns `False`.
     """
     data = _preprocess(data)
     if "messages" in data:
@@ -55,6 +76,17 @@ def is_reply(data: Dict[Any, Any]) -> bool:
             return True
         return False
     return False
+
+
+def is_interative_reply(data: Dict[Any, Any]) -> bool:
+    """
+    Returns `True` if message is a reply to an interactive message, else returns `False`.
+    """
+    is_reply = False
+    data = _preprocess(data)
+    if "interactive" in data["messages"][0]:
+        is_reply = True
+    return is_reply
 
 
 def get_number(data: Dict[Any, Any]) -> Union[str, None]:
@@ -158,7 +190,7 @@ def send_reaction(emoji, message_id, recipient) -> bool:
     """
     Sends a reaction message to a WhatsApp user's message.
 
-    Args: ```emoji```: Unicode value of emoji to be sent.
+    Args: `emoji`: Unicode value of emoji to be sent.
     """
     data = {
         "messaging_product": "whatsapp",
@@ -276,11 +308,14 @@ def send_document(document_link: str, recipient: str, caption=None) -> bool:
     return False
 
 
-def _create_button(button: Dict[Any, Any]) -> Dict[Any, Any]:
+def _create_interaction(
+    button: Dict[Any, Any], type: Literal["button", "list"] = "button"
+) -> Dict[Any, Any]:
     """
-    Creates a button to be used to send interactive messages. This function is meant to be called internally.
+    Creates a button to be used to send interactive messages.
+    This function is meant to be called internally.
     """
-    data = {"type": "list", "action": button.get("action")}
+    data = {"type": type, "action": button.get("action")}
     if button.get("header"):
         data["header"] = {"type": "text", "text": button.get("header")}
     if button.get("body"):
@@ -290,17 +325,19 @@ def _create_button(button: Dict[Any, Any]) -> Dict[Any, Any]:
     return data
 
 
-def send_button_message(button: Dict[Any, Any], recipient: str) -> Union[str, None]:
+def send_interactive_message(
+    button: Dict[Any, Any], recipient: str
+) -> Union[str, None]:
     """
     Sends an interactive message to the user.
 
-    Args: ```button```: button created with ```_create_button```
+    Args: `button`: button created with `_create_button`
     """
     data = {
         "messaging_product": "whatsapp",
         "to": recipient,
         "type": "interactive",
-        "interactive": _create_button(button),
+        "interactive": _create_interaction(button),
     }
     response = requests.post(URL, headers=HEADERS, json=data)
     if response.status_code == 200:
@@ -336,6 +373,34 @@ def download_media(
             print(traceback.format_exc())
             return None
     return None
+
+
+def generate_interactive_button(
+    body: str,
+    button_texts: list[str],
+    header: str = None,
+    footer: str = "Learn through conversations, evolve with AI.",
+):
+    """
+    Genereates the button to be used as a parameter to the `send_interactive_message` function.
+    """
+    data = {
+        "action": {"buttons": []},
+        "header": header,
+        "body": body,
+        "footer": footer,
+    }
+    for i, text in enumerate(button_texts):
+        data["action"]["buttons"].append(
+            {
+                "type": "reply",
+                "reply": {
+                    "id": f"{header.lower().replace(' ', '_')}_{i}",
+                    "title": text,
+                },
+            }
+        )
+    return data
 
 
 def get_interactive_response(data: Dict[Any, Any]) -> Union[str, None]:
@@ -492,14 +557,12 @@ def speech_synthesis(text: str, voice_type: str, number: str):
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         ).wait()
-        print(f"Convesion result: {conversion}")
 
         # remove original audio
         if os.path.exists(audio_path):
             os.remove(audio_path)
 
         media_url = f"{url_for('chatbot.send_voice_note', _external=True, _scheme='https')}?filename={converted_filename}"
-        print(media_url)
 
         return send_audio(media_url, number)
     except BotoCoreError:
@@ -508,7 +571,7 @@ def speech_synthesis(text: str, voice_type: str, number: str):
         return send_text(text, number)
     except ClientError:
         print(traceback.format_exc())
-        text = "Sorry, you're response was too long. Please rephrase the question or break it into segments."
+        text = "Sorry, your response was too long. Please rephrase the question or break it into segments."
         return send_text(text, number)
 
 
@@ -518,6 +581,7 @@ def speech_response(data: Dict[Any, Any], voice_type: str):
         name = get_name(data)
         number = get_number(data)
         message = get_message(data)
+        message = message.lower().replace("whysper", "")
         message_id = get_message_id(data)
         greeting = contains_greeting(message)
         thanks = contains_thanks(message)
@@ -575,6 +639,7 @@ def meta_chat_response(
     subscription: Union[
         BasicSubscription, StandardSubscription, PremiumSubscription
     ] = None,
+    anonymous: bool = False,
 ):
     """
     Typical WhatsApp text response with Meta functions.
@@ -615,7 +680,9 @@ def meta_chat_response(
                 # Speech synthesis
                 audio = True
                 text = message.lower().replace("voicegen", "")
-                voice_type = user.user_settings().ai_voice_type
+                voice_type = (
+                    user.user_settings().ai_voice_type if not anonymous else "Joanna"
+                )
                 log_response(
                     name=name,
                     number=number,
@@ -625,8 +692,9 @@ def meta_chat_response(
             elif "whysper" in message.lower():
                 # Audio response
                 audio = True
-                text = message.lower().replace("whysper", "")
-                voice_type = user.user_settings().ai_voice_type
+                voice_type = (
+                    user.user_settings().ai_voice_type if not anonymous else "Joanna"
+                )
                 log_response(
                     name=name,
                     number=number,
@@ -682,7 +750,7 @@ def meta_chat_response(
         return reply_to_message(message_id, number, text)
 
 
-def meta_audio_response(user: Users, data: Dict[Any, Any]):
+def meta_audio_response(user: Users, data: Dict[Any, Any], anonymous: bool = False):
     """WhatsApp audio response with Meta functions."""
     name = get_name(data)
     number = f"+{get_number(data)}"
@@ -745,11 +813,14 @@ def meta_audio_response(user: Users, data: Dict[Any, Any]):
             chr(128153), message_id, number
         ) if thanks else None  # react blue love emoji
 
-        user_settings = user.user_settings()
-        if user_settings.voice_response:
-            return speech_synthesis(
-                text=text, voice_type=user_settings.ai_voice_type, number=number
-            )
+        user_settings = user.user_settings() if not anonymous else None
+        if user_settings:
+            if user_settings.voice_response:
+                return speech_synthesis(
+                    text=text, voice_type=user_settings.ai_voice_type, number=number
+                )
+        elif anonymous:
+            return speech_synthesis(text=text, voice_type="Joanna", number=number)
         else:
             if len(text) < WHATSAPP_CHAR_LIMIT:
                 return send_text(text, number)
@@ -803,3 +874,101 @@ def meta_image_response(data: Dict[Any, Any]):
         print(traceback.format_exc())
         text = "Something went wrong. Please try again later."
         return send_text(text, number)
+
+
+def whatsapp_signup(
+    data: Dict[Any, Any], user: AnonymousUsers, interactive_reply: bool = False
+):
+    message_id = get_message_id(data)
+    number = f"+{get_number(data)}"
+
+    if interactive_reply:
+        response = get_interactive_response(data)
+        response_id = response["button_reply"][
+            "id"
+        ]  # to determind what what was replied to
+        text = response["button_reply"]["title"]  # actual response
+
+        if "register_now" in response_id:
+            if "Yes" in text:
+                body = "How would you like to register?"
+                header = "Register to continue"
+                button_texts = ["Our website", "Continue here"]
+                button = generate_interactive_button(
+                    body=body, header=header, button_texts=button_texts
+                )
+                send_interactive_message(button=button, recipient=number)
+            elif "Maybe later" in text:
+                message = "That's alright."
+                send_text(message, number)
+        elif "register_to_continue" in response_id:
+            if "Our website" in text:
+                message = "Follow this link to continue the registration process. https://braintext.io/register"
+                send_text(message, number)
+            elif "Continue here" in text:
+                user.signup_stage = "firstname_prompted"
+                user.update()
+                message = "Okay, let's get started. What's your first name?"
+                send_text(message, number)
+    else:
+        if user.signup_stage == "firstname_prompted":
+            first_name = get_message(data).strip()
+            user.first_name = first_name
+            user.signup_stage = "lastname_prompted"
+            user.update()
+            message = f"Okay {user.first_name}, what is your last name?"
+            send_text(message, number)
+        elif user.signup_stage == "lastname_prompted":
+            last_name = get_message(data).strip()
+            user.last_name = last_name
+            user.signup_stage = "email_prompted"
+            user.update()
+            message = f"Alright {user.display_name()}, what is your email address?"
+            send_text(message, number)
+        elif user.signup_stage == "email_prompted":
+            email = get_message(data).strip()
+            if not is_valid_email(email):
+                message = "Please enter a valid email address."
+                send_text(message, number)
+            else:
+                check = Users.query.filter(Users.email == email).first()
+                if check:  # email already used
+                    message = "An account already exists with this email. Please use a different email address to continue."
+                    send_text(message, number)
+                else:
+                    user.email = email
+                    user.signup_stage = "completed"
+                    user.update()
+                    # setup account
+                    password = number
+                    new_user = Users(
+                        first_name=user.first_name,
+                        last_name=user.last_name,
+                        email=user.email,
+                        password=password,
+                        timezone_offset=0,
+                    )
+                    new_user.uid = user.uid
+                    new_user.phone_no = number
+                    new_user.phone_verified = True
+                    new_user.from_anonymous = True
+                    new_user.insert()
+                    # create basic sub instance
+                    basic_sub = BasicSubscription(new_user.id)
+                    basic_sub.insert()
+                    # create user setting instance
+                    user_settings = UserSettings(new_user.id)
+                    user_settings.insert()
+
+                    send_registration_email(new_user)
+
+                    token = generate_confirmation_token(new_user.email)
+                    change_url = url_for(
+                        "auth.change_password",
+                        token=token,
+                        _external=True,
+                        _scheme="https",
+                    )
+
+                    message = f"Awesome! You're all set up. Login to change your settings. https://braintext.io/profile?settings=True.\n*Your password the number you're texting with.*\nFollow this link to change your password.\n{change_url}\n\nThank you for choosing BrainText 💙."
+                    send_text(message, number)

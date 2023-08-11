@@ -12,8 +12,11 @@ from .functions import *
 from ..modules.functions import *
 from ..models import (
     Users,
+    AnonymousUsers,
     BasicSubscription,
 )
+
+import pprint
 
 load_dotenv()
 
@@ -39,9 +42,6 @@ def send_voice_note():
     return "Not found", 404
 
 
-# @chatbot.after_request
-
-
 @chatbot.route("/meta-chatbot", methods=["GET", "POST"])
 def webhook():
     data = request.get_json()
@@ -51,6 +51,7 @@ def webhook():
             message_id = get_message_id(data)
             message_type = get_message_type(data)
             mark_as_read(message_id)
+
             # try to get user
             user = Users.query.filter(Users.phone_no == number).one_or_none()
             if user:  # user account exists
@@ -77,7 +78,10 @@ def webhook():
                                         # Audio response
                                         meta_audio_response(user=user, data=data)
                                 else:
-                                    text = f"You have exceed your limit for the week.\nYour prompts will be renewed on {subscription.get_expire_date().strftime('%A, %d/%m/%Y')} at {subscription.get_expire_date().strftime('%I:%M %p')}.\nUpgrade your account to decrease limits.\nhttps://braintext.io/profile"
+                                    if not user.from_anonymous:
+                                        text = f"You have exceed your limit for the week.\nYour prompts will be renewed on {subscription.get_expire_date().strftime('%A, %d/%m/%Y')} at {subscription.get_expire_date().strftime('%I:%M %p')}.\nUpgrade your account to decrease limits.\nhttps://braintext.io/profile"
+                                    else:
+                                        text = f"You have exceed your limit for the week.\nYour prompts will be renewed on {subscription.get_expire_date().strftime('%A, %d/%m/%Y')} at {subscription.get_expire_date().strftime('%I:%M %p')} UTC.\nUpgrade your account to decrease limits.\nhttps://braintext.io/profile"
                                     reply_to_message(
                                         message_id, number, text
                                     ) if message_type == "text" else send_text(
@@ -158,10 +162,71 @@ def webhook():
                         message_id, number, text
                     ) if message_type == "text" else send_text(text, number)
             else:  # no account found
-                text = "To use BrainText, please sign up for an account at https://braintext.io"
-                reply_to_message(
-                    message_id, number, text
-                ) if message_type == "text" else send_text(text, number)
+                # Anonymous user
+                user = AnonymousUsers.query.filter(
+                    AnonymousUsers.phone_no == number
+                ).one_or_none()
+                if not user:
+                    user = AnonymousUsers(phone_no=number)
+                    user.insert()
+
+                    # first time message. send tos and pp
+                    @after_this_request
+                    def first_time(response):
+                        text = "Thank you for choosing BrainText 💙. We value your privacy and aim to provide the best service possible. In order to use our service, please review and agree to our Terms of Service https://braintext.io/terms-of-service and Privacy Policy https://braintext.io/privacy-policy. \nThese agreements outline how we collect, use, and protect your personal information. If you have any questions or concerns, please don't hesitate to contact us. \n\nThank you for your trust."
+                        send_text(text, number)
+                        # send list of features
+                        with open(f"{TEMP_FOLDER}/features.txt") as f:
+                            get_features = f.readlines()
+                        features = "\n".join(get_features)
+                        send_text(features, number)
+                        # send option to sign up
+                        body = "Joining BrainText can enhance your experience by providing access to renewed prompts and features. Would you like to create an account now?"
+                        header = "Register Now"
+                        button_texts = ["Yes", "Maybe later"]
+                        button = generate_interactive_button(
+                            body=body, header=header, button_texts=button_texts
+                        )
+                        send_interactive_message(button=button, recipient=number)
+                        return response
+
+                signup = is_interative_reply(data)
+                if signup or user.signup_stage != "anonymous":
+                    whatsapp_signup(
+                        data,
+                        user,
+                        interactive_reply=signup,
+                    )  # processing ends here as this sends a response to user
+                    signup = True
+                if not signup and user.respond():
+                    user.prompts += 1
+                    user.update()
+                    if message_type == "image":
+                        # Image editing/variation
+                        meta_image_response(data=data)
+                    if message_type == "text":
+                        # Chat/Dalle response
+                        meta_chat_response(
+                            data=data,
+                            user=user,
+                            anonymous=True,
+                        )
+                    elif message_type == "audio":
+                        # Audio response
+                        meta_audio_response(user=user, data=data, anonymous=True)
+                elif not signup and not user.respond():
+                    text = "Thank you for using our service. We're sorry to inform you that you have reached your limit of prompts. To continue receiving prompts, please consider signing up for an account at BrainText. Here, you can access more prompts and enhance your experience. Thank you for your understanding and support."
+                    reply_to_message(
+                        message_id, number, text
+                    ) if message_type == "text" else send_text(text, number)
+                    # send option to sign up
+                    body = "How would you like to register?"
+                    header = "Register to continue"
+                    button_texts = ["Our website", "Continue here"]
+                    button = generate_interactive_button(
+                        body=body, header=header, button_texts=button_texts
+                    )
+                    send_interactive_message(button=button, recipient=number)
     except:
         print(traceback.format_exc())
         text = "Sorry, I can't respond to that at the moment. Plese try again later."
