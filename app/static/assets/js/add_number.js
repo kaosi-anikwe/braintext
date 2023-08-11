@@ -23,7 +23,6 @@ numberForm.addEventListener("submit", (e) => {
   sendOTP.classList.toggle("running");
   sendOTP.disabled = true;
   phoneNumber = phoneInput.getNumber();
-  console.log(phoneNumber);
   dialCode = phoneInput.s.dialCode;
   // Send OTP
   (async () => {
@@ -60,7 +59,6 @@ numberForm.addEventListener("submit", (e) => {
         numberRow.hidden = !numberRow.hidden;
         otpRow.hidden = !otpRow.hidden;
 
-        console.log(data.otp);
         pin = parseInt(data.otp);
         // Show toast
         let toastItem = document.querySelector("#resent-toast");
@@ -134,7 +132,6 @@ if (resendOTP) {
         resendOTP.parentElement.classList.toggle("running");
         resendOTP.style.cursor = "pointer";
         let data = await response.json();
-        console.log(data["otp"]);
         pin = parseInt(data["otp"]);
         // Show toast
         var toastItem = document.querySelector("#resent-toast");
@@ -175,7 +172,7 @@ verifyForm.onsubmit = async (e) => {
         "Content-Type": "application/json",
         "X-CSRFToken": csrfToken,
       },
-      body: JSON.stringify({ phone_no: phoneNumber }),
+      body: JSON.stringify({ phone_no: phoneNumber, reverify: reverify }),
     });
     if (response.redirected) {
       window.location.href = response.url;

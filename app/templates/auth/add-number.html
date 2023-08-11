@@ -241,6 +241,8 @@
 <script>
   const numberInput = document.getElementById("whatsapp-phone");
   numberInput.value = "{{ current_user.phone_no }}";
+  var reverify = "{{ reverify }}";
+  reverify === "True" ? (reverify = true) : (reverify = false);
 </script>
 {% endif %}
 <script src="{{ url_for('static', filename='assets/js/add_number.js') }}"></script>

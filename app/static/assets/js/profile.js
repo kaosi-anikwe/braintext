@@ -87,12 +87,14 @@ window.addEventListener("input", checkEdit);
 window.addEventListener("load", checkEdit);
 
 const sendVerificatonEmail = document.getElementById("send-verification-email");
-sendVerificatonEmail.addEventListener("click", async () => {
-  sendVerificatonEmail.classList.toggle("running");
-  let response = await fetch("/send-verification-email");
-  if (response.ok) {
+if (sendVerificatonEmail) {
+  sendVerificatonEmail.addEventListener("click", async () => {
     sendVerificatonEmail.classList.toggle("running");
-    sendVerificatonEmail.innerText = "Email Sent";
-    sendVerificatonEmail.disabled = true;
-  }
-});
+    let response = await fetch("/send-verification-email");
+    if (response.ok) {
+      sendVerificatonEmail.classList.toggle("running");
+      sendVerificatonEmail.innerText = "Email Sent";
+      sendVerificatonEmail.disabled = true;
+    }
+  });
+}

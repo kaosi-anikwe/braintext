@@ -1,6 +1,5 @@
 # python imports
 import os
-
 import re
 import time
 import requests
@@ -516,7 +515,7 @@ def contains_greeting(text):
     text = text.lower()
 
     # Define a regular expression pattern to match different greetings
-    greeting_pattern = r"\b(hello|hi|hey|good morning|good afternoon|good evening|morning|afternoon|evening)\b"
+    greeting_pattern = r"\b(hello|hi|hey|good morning|good afternoon|good evening)\b"
 
     # Use the re.search() function to find the pattern in the text
     match = re.search(greeting_pattern, text)

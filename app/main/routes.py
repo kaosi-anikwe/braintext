@@ -1,24 +1,29 @@
+# python imports
 import os
 import traceback
-from twilio.rest import Client
 from datetime import datetime, timedelta
-from app.modules.email_utility import send_email
-from app.chatbot.functions import send_otp_message
+
+# installed imports
+from twilio.rest import Client
+from dotenv import load_dotenv
 from flask_login import login_required, current_user
 from flask import Blueprint, render_template, request, flash, jsonify, redirect, url_for
-from app.models import (
+
+# local imports
+from ..modules.email_utility import send_email
+from ..chatbot.functions import send_text, send_otp_message
+from ..models import (
     OTP,
     get_otp,
     Users,
-    UserSettings,
-    StandardSubscription,
-    PremiumSubscription,
 )
 
+load_dotenv()
 
 account_sid = os.environ["TWILIO_ACCOUNT_SID"]
 auth_token = os.environ["TWILIO_AUTH_TOKEN"]
 client = Client(account_sid, auth_token)
+TEMP_FOLDER = os.getenv("TEMP_FOLDER")
 
 
 main = Blueprint("main", __name__)
@@ -179,6 +184,16 @@ def verify_otp():
     check_otp.verified = True
     check_otp.update()
     flash("Phone number updated successfully", "success")
+
+    # send list of features
+    if not data["reverify"]:
+        message = "Thank you for verifying your number. You're all set up and ready to use BrainText!"
+        send_text(message, phone_no)
+        with open(f"{TEMP_FOLDER}/features.txt") as f:
+            get_features = f.readlines()
+        features = "\n".join(get_features)
+        send_text(features, phone_no)
+
     return redirect(url_for("main.profile"))
 
 
