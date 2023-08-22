@@ -579,9 +579,9 @@ def speech_response(data: Dict[Any, Any], voice_type: str):
     """Respond with audio from WhatsApp text."""
     try:
         name = get_name(data)
-        number = get_number(data)
+        number = f"+{get_number(data)}"
         message = get_message(data)
-        message = message.lower().replace("whysper", "")
+        prompt = message.lower().replace("whysper", "")
         message_id = get_message_id(data)
         greeting = contains_greeting(message)
         thanks = contains_thanks(message)
@@ -589,7 +589,7 @@ def speech_response(data: Dict[Any, Any], voice_type: str):
         try:
             user_db_path = get_user_db(name, number)
             messages = load_messages(
-                prompt=message,
+                prompt=prompt,
                 db_path=user_db_path,
             )
             text, tokens, role = text_response(
@@ -695,11 +695,7 @@ def meta_chat_response(
                 voice_type = (
                     user.user_settings().ai_voice_type if not anonymous else "Joanna"
                 )
-                log_response(
-                    name=name,
-                    number=number,
-                    message=message,
-                )
+
                 return speech_response(
                     data=data,
                     voice_type=voice_type,
@@ -910,6 +906,17 @@ def whatsapp_signup(
                 user.update()
                 message = "Okay, let's get started. What's your first name?"
                 send_text(message, number)
+        elif "confirm_name" in response_id:
+            if "Yes" in text:
+                user.signup_stage = "firstname_prompted"
+                user.update()
+                message = "What is your first name?"
+                send_text(message, number)
+            elif "No" in text:
+                user.signup_stage = "email_prompted"
+                user.update()
+                message = f"Alright {user.display_name()}, what is your email address?"
+                send_text(message, number)
     else:
         if user.signup_stage == "firstname_prompted":
             first_name = get_message(data).strip()
@@ -921,10 +928,16 @@ def whatsapp_signup(
         elif user.signup_stage == "lastname_prompted":
             last_name = get_message(data).strip()
             user.last_name = last_name
-            user.signup_stage = "email_prompted"
+            user.signup_stage = "confirm_name"
             user.update()
-            message = f"Alright {user.display_name()}, what is your email address?"
-            send_text(message, number)
+            # confirm name
+            header = "Confirm name"
+            body = f"Your name is registered as {user.display_name()}. Would you like to change that?"
+            button_texts = ["Yes", "No"]
+            button = generate_interactive_button(
+                body=body, header=header, button_texts=button_texts
+            )
+            send_interactive_message(button=button, recipient=number)
         elif user.signup_stage == "email_prompted":
             email = get_message(data).strip()
             if not is_valid_email(email):
@@ -961,6 +974,8 @@ def whatsapp_signup(
                     user_settings.insert()
 
                     send_registration_email(new_user)
+                    message = f"New sign up from {user.display_name()}.\nNumber: {user.phone_no}"
+                    send_text(message=message, recipient="+2349016456964")
 
                     token = generate_confirmation_token(new_user.email)
                     change_url = url_for(

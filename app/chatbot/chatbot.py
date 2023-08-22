@@ -81,14 +81,14 @@ def webhook():
                                     if not user.from_anonymous:
                                         text = f"You have exceed your limit for the week.\nYour prompts will be renewed on {subscription.get_expire_date().strftime('%A, %d/%m/%Y')} at {subscription.get_expire_date().strftime('%I:%M %p')}.\nUpgrade your account to decrease limits.\nhttps://braintext.io/profile"
                                     else:
-                                        text = f"You have exceed your limit for the week.\nYour prompts will be renewed on {subscription.get_expire_date().strftime('%A, %d/%m/%Y')} at {subscription.get_expire_date().strftime('%I:%M %p')} UTC.\nUpgrade your account to decrease limits.\nhttps://braintext.io/profile"
+                                        text = f"You have exceed your limit for the week.\nYour prompts will be renewed on {subscription.get_expire_date().strftime('%A, %d/%m/%Y')} at {subscription.get_expire_date().strftime('%I:%M %p')} GMT.\nUpgrade your account to decrease limits.\nhttps://braintext.io/profile"
                                     reply_to_message(
                                         message_id, number, text
                                     ) if message_type == "text" else send_text(
                                         text, number
                                     )
                             else:
-                                text = "There's a problem, I can't respond at this time.\nCheck your settings in your profle. https://braintext.io/profile"
+                                text = "There's a problem, I can't respond at this time. Your subscription may have expired.\nCheck your profle to confirm. https://braintext.io/profile"
                                 reply_to_message(
                                     message_id, number, text
                                 ) if message_type == "text" else send_text(text, number)
@@ -118,7 +118,7 @@ def webhook():
                                         text, number
                                     )
                             else:
-                                text = "There's a problem, I can't respond at this time.\nCheck your settings in your profle. https://braintext.io/profile"
+                                text = "There's a problem, I can't respond at this time. Your subscription may have expired.\nCheck your profle to confirm. https://braintext.io/profile"
                                 reply_to_message(
                                     message_id, number, text
                                 ) if message_type == "text" else send_text(text, number)
@@ -147,17 +147,17 @@ def webhook():
                                         text, number
                                     )
                             else:
-                                text = "There's a problem, I can't respond at this time.\nCheck your settings in your profle. https://braintext.io/profile"
+                                text = "There's a problem, I can't respond at this time. Your subscription may have expired.\nCheck your profle to confirm. https://braintext.io/profile"
                                 reply_to_message(
                                     message_id, number, text
                                 ) if message_type == "text" else send_text(text, number)
                     else:
-                        text = "Please verify your email to access the service. https://braintext.io/profile"
+                        text = "Please verify your email to access the service. Check your inbox for the verification link, or login to request another. https://braintext.io/profile"
                         reply_to_message(
                             message_id, number, text
                         ) if message_type == "text" else send_text(text, number)
                 else:
-                    text = "Please verify your number to access the service. https://braintext.io/profile"
+                    text = "Please verify your number to access the service. Login to your profile to verify your number. https://braintext.io/profile"
                     reply_to_message(
                         message_id, number, text
                     ) if message_type == "text" else send_text(text, number)
@@ -233,7 +233,7 @@ def webhook():
         reply_to_message(
             message_id, number, text
         ) if message_type == "text" else send_text(text, number)
-
-    response = jsonify(success=True)
-    response.status_code = 200
-    return response
+    finally:
+        response = jsonify(success=True)
+        response.status_code = 200
+        return response

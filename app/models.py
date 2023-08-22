@@ -236,7 +236,11 @@ class BasicSubscription(db.Model, TimestampMixin, DatabaseHelperMixin):
     # get localized expire_date
     def get_expire_date(self):
         user = Users.query.get(self.user_id)
-        return self.expire_date.replace(tzinfo=user.get_timezone())
+        return (
+            self.expire_date.replace(tzinfo=user.get_timezone())
+            if not user.from_anonymous
+            else self.expire_date
+        )
 
     def expired(self) -> bool:
         user = Users.query.get(self.user_id)
@@ -294,7 +298,11 @@ class StandardSubscription(db.Model, TimestampMixin, DatabaseHelperMixin):
     # get localized expire_date
     def get_expire_date(self):
         user = Users.query.get(self.user_id)
-        return self.expire_date.replace(tzinfo=user.get_timezone())
+        return (
+            self.expire_date.replace(tzinfo=user.get_timezone())
+            if not user.from_anonymous
+            else self.expire_date
+        )
 
     def expired(self) -> bool:
         # return False
@@ -348,7 +356,11 @@ class PremiumSubscription(db.Model, TimestampMixin, DatabaseHelperMixin):
     # get localized expire_date
     def get_expire_date(self):
         user = Users.query.get(self.user_id)
-        return self.expire_date.replace(tzinfo=user.get_timezone())
+        return (
+            self.expire_date.replace(tzinfo=user.get_timezone())
+            if not user.from_anonymous
+            else self.expire_date
+        )
 
     def expired(self) -> bool:
         user = Users.query.get(self.user_id)
