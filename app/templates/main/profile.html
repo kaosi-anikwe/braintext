@@ -71,7 +71,7 @@
                 <div class="row">
                   <div class="col-lg-3 col-md-4 label">Account Type</div>
                   <div class="col-lg-9 col-md-8">
-                    <p style="margin: 5px 0">{{ current_user.account_type }} {% if current_user.days_left %} <small style="font-size: 0.675rem;">({{ current_user.days_left }})</small> {% endif %} </p>
+                    <p style="margin: 5px 0">{{ current_user.account_type }} </p>
                     {% if current_user.account_type == "Standard" %}
                     <a
                       href="{{ url_for('payment.checkout', package='prmum') }}"

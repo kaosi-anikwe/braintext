@@ -448,7 +448,7 @@ def get_user_db(name: str, number: str) -> str:
     if os.path.exists(db_path):
         dp_mtime = datetime.fromtimestamp(os.path.getmtime(db_path))
         if not are_same_day(dp_mtime, datetime.utcnow()):
-            # delte database
+            # delete database
             os.remove(db_path)
     create_all(get_engine(db_path))
     return db_path

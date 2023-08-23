@@ -3,6 +3,7 @@ import re
 import os
 import requests
 import traceback
+from datetime import timedelta
 from typing import Any, Dict, Union, Literal
 
 # installed imports
@@ -89,6 +90,17 @@ def is_interative_reply(data: Dict[Any, Any]) -> bool:
     return is_reply
 
 
+def is_old(data):
+    """
+    Returns `True` if message is too old to reply to (more than 3 minutes old).
+    """
+    age = datetime.utcnow() - get_timestamp(data)
+    if age < timedelta(minutes=1):
+        return False
+    print(f"Old message is {age}")
+    return True
+
+
 def get_number(data: Dict[Any, Any]) -> Union[str, None]:
     """
     Extracts the mobile number of the sender.
@@ -114,6 +126,15 @@ def get_message(data: Dict[Any, Any]) -> Union[str, None]:
     data = _preprocess(data)
     if "messages" in data:
         return data["messages"][0]["text"]["body"]
+
+
+def get_timestamp(data: Dict[Any, Any]) -> datetime:
+    """
+    Extracts timestamp from message from message.
+    """
+    data = _preprocess(data)
+    if "messages" in data:
+        return datetime.fromtimestamp(float(data["messages"][0]["timestamp"]))
 
 
 def get_message_id(data: Dict[Any, Any]) -> Union[str, None]:
@@ -972,6 +993,9 @@ def whatsapp_signup(
                     # create user setting instance
                     user_settings = UserSettings(new_user.id)
                     user_settings.insert()
+
+                    # create fake premium sub
+                    PremiumSubscription.create_fake(new_user.id)
 
                     send_registration_email(new_user)
                     message = f"New sign up from {user.display_name()}.\nNumber: {user.phone_no}"

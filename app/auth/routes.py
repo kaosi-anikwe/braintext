@@ -1,7 +1,7 @@
 from app import db, csrf
 from datetime import datetime
 from app.modules.verification import confirm_token
-from app.models import Users, BasicSubscription, UserSettings
+from app.models import Users, BasicSubscription, UserSettings, PremiumSubscription
 from flask_login import login_user, current_user, logout_user, login_required
 from app.modules.email_utility import (
     send_registration_email,
@@ -84,6 +84,9 @@ def register():
         # create user setting instance / database record
         user_settings = UserSettings(new_user.id)
         user_settings.insert()
+
+        # create fake sub
+        PremiumSubscription.create_fake(new_user.id)
 
         send_registration_email(new_user)
 

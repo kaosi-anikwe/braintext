@@ -2,31 +2,24 @@ import os
 import ssl
 import smtplib
 from email.mime.text import MIMEText
+from email.header import Header
 from flask import url_for, render_template
 from email.mime.multipart import MIMEMultipart
 from app.modules.verification import generate_confirmation_token
 
 
-# Common email sending function
-def send_email(
-    receiver_email,
-    subject,
-    plaintext,
-    html=None,
-    sender_email=os.environ.get("SMTP_SERVER"),
-):
+def send_email(receiver_email, subject, plaintext, html=None):
     # Connection configuration
     SMTP_SERVER = os.environ.get("SMTP_SERVER")
-    PORT = 587  # For starttls
+    PORT = 465  # For starttls
     USERNAME = os.environ.get("SENDER_EMAIL")
-    SENDER_EMAIL = sender_email
     PASSWORD = os.environ.get("PASSWORD")
 
     # Message setup
-    message = MIMEMultipart("alternative")
-    message["Subject"] = subject
-    message["From"] = SENDER_EMAIL
-    message["To"] = receiver_email
+    message = MIMEMultipart()
+    message["Subject"] = Header(subject)
+    message["From"] = Header(f"{os.environ.get('SENDER_NAME')}")
+    message["To"] = Header(receiver_email)
 
     # Turn text into plain or HTML MIMEText objects
     part1 = MIMEText(plaintext, "plain")
@@ -42,21 +35,19 @@ def send_email(
     # Create a secure SSL context
     context = ssl.create_default_context()
 
+    success = False  # Initialize success variable
+
     # Try to log in to server and send email
     try:
-        server = smtplib.SMTP(SMTP_SERVER, PORT)
-        server.ehlo()
-        server.starttls(context=context)  # Secure the connection
-        server.ehlo()
-        server.login(USERNAME, PASSWORD)
-        server.send_message(message)
+        with smtplib.SMTP_SSL(SMTP_SERVER, PORT, context=context) as server:
+            server.login(USERNAME, PASSWORD)
+            server.sendmail(USERNAME, receiver_email, message.as_string())
+            success = True  # Set success to True on successful send
     except Exception as e:
         # Print error messages to stdout
         print(e)
-        return False
     finally:
-        server.quit()
-        return True
+        return success  # Return success value
 
 
 # Convenience function - registration / verification email

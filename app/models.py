@@ -385,3 +385,48 @@ class PremiumSubscription(db.Model, TimestampMixin, DatabaseHelperMixin):
             print(
                 f"Failed to renew basic sub for user: {user.display_name()} with user ID: {user.id}"
             )
+
+    @staticmethod
+    def create_fake(user_id):
+        user = Users.query.get(user_id)
+        tx_ref = "0000000000000000"
+        subscription = PremiumSubscription(tx_ref=tx_ref, user_id=user_id)
+        subscription.flw_ref = "################"
+        subscription.payment_status = "completed"
+        subscription.sub_status = "active"
+        subscription.tx_id = "$$$$$$$$$$$$$"
+        subscription.expire_date = user.timenow() + timedelta(days=100)
+        # localize time
+        subscription.expire_date = subscription.expire_date.replace(
+            tzinfo=user.get_timezone()
+        )
+        subscription.insert()
+        # check for old sub
+        old_subs = (
+            StandardSubscription.query.filter(
+                StandardSubscription.sub_status == "active",
+                StandardSubscription.user_id == user.id,
+            )
+            .order_by(StandardSubscription.id.desc())
+            .all()
+        )
+        for old_sub in old_subs:
+            if not old_sub.expired():
+                old_sub.upgrade()
+        old_subs = (
+            PremiumSubscription.query.filter(
+                PremiumSubscription.id != subscription.id,
+                PremiumSubscription.sub_status == "active",
+                PremiumSubscription.user_id == user.id,
+            )
+            .order_by(PremiumSubscription.id.desc())
+            .all()
+        )
+        for old_sub in old_subs:
+            if not old_sub.expired():
+                old_sub.upgrade()
+
+        user.account_type = "Premium"
+        user.update()
+
+        return subscription
