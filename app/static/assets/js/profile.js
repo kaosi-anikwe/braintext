@@ -43,6 +43,9 @@ const changesMadeEl = document.getElementById("changesMade");
 const newProductsEl = document.getElementById("newProducts");
 const voiceResponseEl = document.getElementById("voice_response");
 
+// set user ai voice
+aiVoiceEl.value = userAiVoice;
+
 const subExpiry = subExpiryEl.checked;
 const changesMade = changesMadeEl.checked;
 const newProducts = newProductsEl.checked;

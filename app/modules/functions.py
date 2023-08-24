@@ -12,22 +12,27 @@ from contextlib import closing
 
 # installed imports
 import openai
+import langid
 import tiktoken
-import timeout_decorator
+import pycountry
 from boto3 import Session
 from sqlalchemy import desc
 from dotenv import load_dotenv
 from twilio.rest import Client
-from botocore.exceptions import BotoCoreError, ClientError
+from google.cloud import texttospeech
+from google.oauth2 import service_account
 from google.cloud.speech_v2 import SpeechClient
 from google.cloud.speech_v2.types import cloud_speech
+from botocore.exceptions import BotoCoreError, ClientError
 
 # local imports
-from ..modules.messages import create_all, get_engine, Messages
+from ..models import Voices
 from ..twilio_chatbot.functions import (
     respond_text,
     get_original_message,
 )
+from ..modules.messages import create_all, get_engine, Messages
+
 
 load_dotenv()
 
@@ -47,6 +52,11 @@ HEADERS = {
     "Content-Type": "application/json",
     "Authorization": f"Bearer {TOKEN}",
 }
+# gcloud
+GOOGLE_APPLICATION_CREDENTIALS = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+GOOGLE_CREDENTIALS = service_account.Credentials.from_service_account_file(
+    GOOGLE_APPLICATION_CREDENTIALS
+)
 
 
 class TimeoutError(Exception):
@@ -144,6 +154,21 @@ def synthesize_speech(text: str, voice: str) -> str | None:
         # The response didn't contain audio data, exit gracefully
         print("Could not stream audio")
         return response
+
+
+def detect_language(text: str) -> str:
+    """
+    Detect language using `langid.py`
+    """
+    language, _ = langid.classify(text)
+    return language
+
+
+def get_country_code(language_code):
+    for country in pycountry.countries:
+        if hasattr(country, "languages") and language_code in country.languages:
+            return country.alpha_2
+    return None
 
 
 def log_location(name: str, number: str) -> str:
@@ -482,7 +507,7 @@ def transcribe_audio(
 ) -> cloud_speech.RecognizeResponse:
     """Transcribe an audio file."""
     # Instantiates a client
-    client = SpeechClient()
+    client = SpeechClient(credentials=GOOGLE_CREDENTIALS)
 
     # Reads a file as bytes
     with open(audio_file, "rb") as f:
@@ -508,6 +533,53 @@ def transcribe_audio(
         transcript += f"{result.alternatives[0].transcript}. "
 
     return transcript
+
+
+def text_to_speech(text: str, voice_name: str) -> str | None:
+    """Synthesizes speech from the input string of text or ssml.
+    Make sure to be working in a virtual environment.
+
+    Note: ssml must be well-formed according to:
+        https://www.w3.org/TR/speech-synthesis/
+    """
+    try:
+        # Instantiates a client
+        client = texttospeech.TextToSpeechClient(credentials=GOOGLE_CREDENTIALS)
+
+        # Set the text input to be synthesized
+        synthesis_input = texttospeech.SynthesisInput(text=text)
+
+        # Build the voice request, select the language code
+        # Get voice code from db
+        voice_code = Voices.query.filter(Voices.name == voice_name).first().code
+        print(voice_code)
+
+        voice = texttospeech.VoiceSelectionParams(
+            language_code="en-US",
+            name=voice_code,
+        )
+
+        # Select the type of audio file you want returned
+        audio_config = texttospeech.AudioConfig(
+            audio_encoding=texttospeech.AudioEncoding.OGG_OPUS
+        )
+
+        # Perform the text-to-speech request on the text input with the selected
+        # voice parameters and audio file type
+        response = client.synthesize_speech(
+            input=synthesis_input, voice=voice, audio_config=audio_config
+        )
+
+        # The response's audio_content is binary.
+        filename = f"{str(datetime.utcnow().strftime('%d-%m-%Y_%H-%M-%S'))}.ogg"
+        output = os.path.join(TEMP_FOLDER, filename)
+        with open(output, "wb") as out:
+            # Write the response to the output file.
+            out.write(response.audio_content)
+        return filename
+    except:
+        print(traceback.format_exc())
+        return None
 
 
 def contains_greeting(text):

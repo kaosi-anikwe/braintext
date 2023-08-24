@@ -16,6 +16,7 @@ from ..models import (
     OTP,
     get_otp,
     Users,
+    Voices,
 )
 
 load_dotenv()
@@ -80,7 +81,18 @@ def profile():
 
         current_user.days_left = days_left
 
-    return render_template("main/profile.html", settings=settings, title="Profile")
+    # get voices
+    voices = {}
+    male_voices = Voices.query.filter(Voices.gender == "male").all()
+    male_voices = [voice.name for voice in male_voices]
+    female_voices = Voices.query.filter(Voices.gender == "female").all()
+    female_voices = [voice.name for voice in female_voices]
+    voices["male"] = male_voices
+    voices["female"] = female_voices
+
+    return render_template(
+        "main/profile.html", settings=settings, voices=voices, title="Profile"
+    )
 
 
 # OTP AND VERIFICATION ---------------------------------

@@ -430,3 +430,20 @@ class PremiumSubscription(db.Model, TimestampMixin, DatabaseHelperMixin):
         user.update()
 
         return subscription
+
+
+class Voices(db.Model, TimestampMixin, DatabaseHelperMixin):
+    __tablename__ = "voice"
+
+    id = db.Column(db.Integer, primary_key=True)
+    code = db.Column(db.String(20), nullable=False)
+    name = db.Column(db.String(20), nullable=False)
+    gender = db.Column(db.String(20))
+    type = db.Column(db.String(20))
+
+    def __init__(self, code, name, gender, type):
+        self.code = code
+        self.name = name
+        self.gender = gender
+        self.type = type
+        self.insert()

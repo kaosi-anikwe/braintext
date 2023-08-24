@@ -560,30 +560,15 @@ def meta_split_and_respond(
 def speech_synthesis(text: str, voice_type: str, number: str):
     """Synthesize audio output and send to user."""
     try:
-        audio_filename = synthesize_speech(
+        audio_filename = text_to_speech(
             text=text,
-            voice=voice_type,
+            voice_name=voice_type,
         )
         if audio_filename == None:
-            text = "AWS session expired."
+            text = "Error synthesizing speech. Please try again later"
             return send_text(text, number)
-        audio_path = os.path.join(TEMP_FOLDER, audio_filename)
-        converted_filename = f"{audio_filename.split('.')[0]}.opus"
-        converted_path = os.path.join(TEMP_FOLDER, converted_filename)
 
-        # convert to ogg with ffmpeg
-        conversion = subprocess.Popen(
-            f"ffmpeg -i '{audio_path}' -c:a libopus '{converted_path}'",
-            shell=True,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-        ).wait()
-
-        # remove original audio
-        if os.path.exists(audio_path):
-            os.remove(audio_path)
-
-        media_url = f"{url_for('chatbot.send_voice_note', _external=True, _scheme='https')}?filename={converted_filename}"
+        media_url = f"{url_for('chatbot.send_voice_note', _external=True, _scheme='https')}?filename={audio_filename}"
 
         return send_audio(media_url, number)
     except BotoCoreError:
