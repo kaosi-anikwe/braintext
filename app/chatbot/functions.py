@@ -95,7 +95,7 @@ def is_old(data):
     Returns `True` if message is too old to reply to (more than 3 minutes old).
     """
     age = datetime.utcnow() - get_timestamp(data)
-    if age < timedelta(minutes=1):
+    if age < timedelta(minutes=0.5):
         return False
     print(f"Old message is {age}")
     return True
@@ -565,7 +565,7 @@ def speech_synthesis(text: str, voice_type: str, number: str):
             voice_name=voice_type,
         )
         if audio_filename == None:
-            text = "Error synthesizing speech. Please try again later"
+            text = "Error synthesizing speech. Please try again later or change the voice type in your settings. https://braintext.io/profile?settings=True"
             return send_text(text, number)
 
         media_url = f"{url_for('chatbot.send_voice_note', _external=True, _scheme='https')}?filename={audio_filename}"
@@ -765,7 +765,7 @@ def meta_audio_response(user: Users, data: Dict[Any, Any], anonymous: bool = Fal
             f"{datetime.utcnow().strftime('%M%S%f')}",
         )
         try:
-            transcript = transcribe_audio(audio_file)
+            transcript = transcribe_audio(audio_file, number)
             greeting = contains_greeting(transcript)
             thanks = contains_thanks(transcript)
         except:
@@ -821,17 +821,18 @@ def meta_audio_response(user: Users, data: Dict[Any, Any], anonymous: bool = Fal
                 return speech_synthesis(
                     text=text, voice_type=user_settings.ai_voice_type, number=number
                 )
-        elif anonymous:
-            return speech_synthesis(text=text, voice_type="Joanna", number=number)
-        else:
-            if len(text) < WHATSAPP_CHAR_LIMIT:
-                return send_text(text, number)
             else:
-                return meta_split_and_respond(
-                    text,
-                    number,
-                    get_message_id(data),
-                )
+                if len(text) < WHATSAPP_CHAR_LIMIT:
+                    return send_text(text, number)
+                else:
+                    return meta_split_and_respond(
+                        text,
+                        number,
+                        get_message_id(data),
+                    )
+        else:  # user is anonymous
+            return speech_synthesis(text=text, voice_type="Joanna", number=number)
+
     except:
         print(traceback.format_exc())
         text = "Sorry, I cannot respond to that at the moment, please try again later."
@@ -983,7 +984,7 @@ def whatsapp_signup(
                     PremiumSubscription.create_fake(new_user.id)
 
                     send_registration_email(new_user)
-                    message = f"New sign up from {user.display_name()}.\nNumber: {user.phone_no}"
+                    message = f"New WhatsAppp sign up from {user.display_name()}.\nNumber: {user.phone_no}"
                     send_text(message=message, recipient="+2349016456964")
 
                     token = generate_confirmation_token(new_user.email)

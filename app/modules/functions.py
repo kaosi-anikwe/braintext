@@ -18,8 +18,9 @@ import pycountry
 from boto3 import Session
 from sqlalchemy import desc
 from dotenv import load_dotenv
+from pydub import AudioSegment
 from twilio.rest import Client
-from google.cloud import texttospeech
+from google.cloud import texttospeech, storage
 from google.oauth2 import service_account
 from google.cloud.speech_v2 import SpeechClient
 from google.cloud.speech_v2.types import cloud_speech
@@ -369,7 +370,7 @@ def text_response(messages: list, number: str, message_id: str = None) -> tuple:
     completion = openai.ChatCompletion.create(
         model="gpt-3.5-turbo-0301",
         messages=messages,
-        temperature=0.8,
+        temperature=1,
         user=f"{str(number)}",
     )
 
@@ -496,13 +497,32 @@ def load_messages(prompt: str, db_path: str, original_message=None):
         {"role": message.role, "content": message.content}
         for message in reversed(get_messages)
     ]
+
     while num_tokens_from_messages(messages) > 4000:
         messages.pop(0)
+
+    # add system prompt
+    system = {
+        "role": "system",
+        "content": "You are a youthfull personal assistant. Never tell anyone that you're an AI language model or language model. You always give your opinion on things. You're conservative about your age. Your name is BrainText.",
+    }
+    messages.insert(0, system)
     return messages
+
+
+def get_audio_duration(file_path) -> float:
+    """
+    Determine duration of audio file with pydub.\n
+    Returns duration as a float in seconds.
+    """
+    audio_file = AudioSegment.from_file(file_path)
+    duration = audio_file.duration_seconds
+    return duration
 
 
 def transcribe_audio(
     audio_file: str,
+    number: str,
     project_id="braintext-394611",
 ) -> cloud_speech.RecognizeResponse:
     """Transcribe an audio file."""
@@ -519,20 +539,66 @@ def transcribe_audio(
         model="long",
     )
 
-    request = cloud_speech.RecognizeRequest(
-        recognizer=f"projects/{project_id}/locations/global/recognizers/_",
-        config=config,
-        content=content,
-    )
+    # determine audio duration
+    duration = get_audio_duration(audio_file)
+    if duration < 60:  # synchronous processing
+        request = cloud_speech.RecognizeRequest(
+            recognizer=f"projects/{project_id}/locations/global/recognizers/_",
+            config=config,
+            content=content,
+        )
 
-    # Transcribes the audio into text
-    response = client.recognize(request=request)
+        # Transcribes the audio into text
+        response = client.recognize(request=request)
 
-    transcript = ""
-    for result in response.results:
-        transcript += f"{result.alternatives[0].transcript}. "
+        transcript = ""
+        for result in response.results:
+            transcript += f"{result.alternatives[0].transcript} "
 
-    return transcript
+        return transcript
+    else:  # asynchronous processing
+        print(f"Processing {duration} sec long audio")
+        text = "Your audio is longer than a minute. Processing might take longer than usual, please hold on."
+        message_id = send_text(text, number)
+        # upload to google cloud storage
+        bucket_name = "braintext_audio"
+        destination_blob_name = f"{datetime.utcnow().strftime('%M%S%f')}"
+        storage_client = storage.Client(credentials=GOOGLE_CREDENTIALS)
+        bucket = storage_client.bucket(bucket_name)
+        blob = bucket.blob(destination_blob_name)
+
+        blob.upload_from_filename(audio_file)
+
+        # construct GS URI
+        gcs_uri = f"gs://{bucket_name}/{destination_blob_name}"
+
+        file_metadata = cloud_speech.BatchRecognizeFileMetadata(uri=gcs_uri)
+
+        request = cloud_speech.BatchRecognizeRequest(
+            recognizer=f"projects/{project_id}/locations/global/recognizers/_",
+            config=config,
+            files=[file_metadata],
+            recognition_output_config=cloud_speech.RecognitionOutputConfig(
+                inline_response_config=cloud_speech.InlineOutputConfig(),
+            ),
+        )
+
+        # Transcribes the audio into text
+        operation = client.batch_recognize(request=request)
+
+        response = operation.result(timeout=120)
+
+        transcript = ""
+        for result in response.results[gcs_uri].transcript.results:
+            transcript += f"{result.alternatives[0].transcript}"
+
+        # delete blob
+        blob.delete()
+
+        text = "Almost done."
+        reply_to_message(message_id, number, text)
+
+        return transcript
 
 
 def text_to_speech(text: str, voice_name: str) -> str | None:
@@ -552,7 +618,6 @@ def text_to_speech(text: str, voice_name: str) -> str | None:
         # Build the voice request, select the language code
         # Get voice code from db
         voice_code = Voices.query.filter(Voices.name == voice_name).first().code
-        print(voice_code)
 
         voice = texttospeech.VoiceSelectionParams(
             language_code="en-US",

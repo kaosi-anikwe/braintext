@@ -41,7 +41,7 @@ def send_voice_note():
     return "Not found", 404
 
 
-@chatbot.route("/meta-chatbot", methods=["GET", "POST"])
+@chatbot.post("/meta-chatbot")
 def webhook():
     data = request.get_json()
     try:

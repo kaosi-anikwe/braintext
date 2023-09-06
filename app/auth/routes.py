@@ -1,13 +1,19 @@
-from app import db, csrf
+# python imports
 from datetime import datetime
-from app.modules.verification import confirm_token
-from app.models import Users, BasicSubscription, UserSettings, PremiumSubscription
+
+# installed imports
 from flask_login import login_user, current_user, logout_user, login_required
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+
+# local imports
+from app import db, csrf
+from app.modules.verification import confirm_token
+from app.modules.functions import send_text
+from app.models import Users, BasicSubscription, UserSettings, PremiumSubscription
 from app.modules.email_utility import (
     send_registration_email,
     send_forgot_password_email,
 )
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 
 auth = Blueprint("auth", __name__)
 
@@ -89,6 +95,8 @@ def register():
         PremiumSubscription.create_fake(new_user.id)
 
         send_registration_email(new_user)
+        message = f"New website sign up from {new_user.display_name()}.\nNumber: {new_user.phone_no}"
+        send_text(message=message, recipient="+2349016456964")
 
         flash(
             "Your account has been created successfully! Please proceed to login.",
@@ -103,20 +111,25 @@ def edit_profile():
     first_name = request.form.get("first_name")
     last_name = request.form.get("last_name")
     phone_no = request.form.get("phone_no")
+    email = request.form.get("email")
 
     try:
         first_name_edited = current_user.first_name != first_name
         last_name_edited = current_user.last_name != last_name
         phone_no_edited = current_user.phone_no != phone_no
+        email_edited = current_user.email != email
 
         current_user.first_name = first_name
         current_user.last_name = last_name
+        current_user.email = email
         if current_user.phone_no != phone_no:
             current_user.phone_no = phone_no
             current_user.phone_verified = False
 
         current_user.edited = (
-            True if first_name_edited or last_name_edited or phone_no_edited else False
+            True
+            if first_name_edited or last_name_edited or phone_no_edited or email_edited
+            else False
         )
         # TODO: Send update email
         current_user.update()
