@@ -178,27 +178,33 @@ def resend_otp():
 @main.route("/verify-otp", methods=["POST"])
 @login_required
 def verify_otp():
-    data = request.get_json()
-    phone_no = data["phone_no"]
+    try:
+        data = request.get_json()
+        phone_no = data["phone_no"]
 
-    check_otp = OTP.query.filter(OTP.phone_no == phone_no).one_or_none()
-    if check_otp:
-        if check_otp.updated_at:
-            if int((datetime.utcnow() - check_otp.updated_at).total_seconds()) >= 180:
-                return jsonify({"expired": True})
-        elif check_otp.created_at:
-            if int((datetime.utcnow() - check_otp.created_at).total_seconds()) >= 180:
-                return jsonify({"expired": True})
+        check_otp = OTP.query.filter(OTP.phone_no == phone_no).one_or_none()
+        if check_otp:
+            if check_otp.updated_at:
+                if (
+                    int((datetime.utcnow() - check_otp.updated_at).total_seconds())
+                    >= 180
+                ):
+                    return jsonify({"expired": True})
+            elif check_otp.created_at:
+                if (
+                    int((datetime.utcnow() - check_otp.created_at).total_seconds())
+                    >= 180
+                ):
+                    return jsonify({"expired": True})
 
-    current_user.phone_no = phone_no
-    current_user.phone_verified = True
-    current_user.update()
-    check_otp.verified = True
-    check_otp.update()
-    flash("Phone number updated successfully", "success")
+        current_user.phone_no = phone_no
+        current_user.phone_verified = True
+        current_user.update()
+        check_otp.verified = True
+        check_otp.update()
+        flash("Phone number updated successfully", "success")
 
-    # send list of features
-    if not data["reverify"]:
+        # send list of features
         message = "Thank you for verifying your number. You're all set up and ready to use BrainText!"
         send_text(message, phone_no)
         with open(f"{TEMP_FOLDER}/features.txt") as f:
@@ -206,7 +212,10 @@ def verify_otp():
         features = "\n".join(get_features)
         send_text(features, phone_no)
 
-    return redirect(url_for("main.profile"))
+        return redirect(url_for("main.profile"))
+    except:
+        print(traceback.format_exc())
+        return jsonify({"error": True})
 
 
 @main.post("/send-email")

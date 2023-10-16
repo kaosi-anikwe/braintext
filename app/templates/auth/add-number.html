@@ -257,6 +257,8 @@
     numberInput.value = phoneInput.getNumber();
     submitBtn.click();
   };
-  send();
+  window.onload = () => {
+    send();
+  };
 </script>
 {% endif %} {% endblock %}

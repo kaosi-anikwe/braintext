@@ -31,12 +31,18 @@ TEMP_FOLDER = os.getenv("TEMP_FOLDER")
 
 sent = {"numbers": []}
 
+with open(f"{TEMP_FOLDER}/reminder.txt") as f:
+    get_features = f.readlines()
+
+
+features = "\n".join(get_features)
+
 try:
     app = create_app()
     with app.app_context():
         people = []
         anonymous_users = AnonymousUsers.query.filter(
-            AnonymousUsers.phone_no != None
+            AnonymousUsers.phone_no != None, AnonymousUsers.signup_stage != "completed"
         ).all()
         users = Users.query.filter(Users.phone_no != None).all()
         [people.append(user) for user in users]
@@ -50,6 +56,7 @@ try:
             response = None
             try:
                 response = send_text(message=text, recipient=user.phone_no)
+                response = send_text(message=features, recipient=user.phone_no)
             except:
                 pass
             if response:

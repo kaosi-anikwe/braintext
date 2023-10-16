@@ -95,7 +95,7 @@ def is_old(data):
     Returns `True` if message is too old to reply to (more than 3 minutes old).
     """
     age = datetime.utcnow() - get_timestamp(data)
-    if age < timedelta(minutes=0.5):
+    if age < timedelta(minutes=0.25):
         return False
     print(f"Old message is {age}")
     return True
@@ -885,115 +885,124 @@ def whatsapp_signup(
     message_id = get_message_id(data)
     number = f"+{get_number(data)}"
 
-    if interactive_reply:
-        response = get_interactive_response(data)
-        response_id = response["button_reply"][
-            "id"
-        ]  # to determind what what was replied to
-        text = response["button_reply"]["title"]  # actual response
+    try:
+        if interactive_reply:
+            response = get_interactive_response(data)
+            response_id = response["button_reply"][
+                "id"
+            ]  # to determind what what was replied to
+            text = response["button_reply"]["title"]  # actual response
 
-        if "register_now" in response_id:
-            if "Yes" in text:
-                body = "How would you like to register?"
-                header = "Register to continue"
-                button_texts = ["Our website", "Continue here"]
+            if "register_now" in response_id:
+                if "Yes" in text:
+                    body = "How would you like to register?"
+                    header = "Register to continue"
+                    button_texts = ["Our website", "Continue here"]
+                    button = generate_interactive_button(
+                        body=body, header=header, button_texts=button_texts
+                    )
+                    send_interactive_message(button=button, recipient=number)
+                elif "Maybe later" in text:
+                    message = "That's alright."
+                    send_text(message, number)
+            elif "register_to_continue" in response_id:
+                if "Our website" in text:
+                    message = "Follow this link to continue the registration process. https://braintext.io/register"
+                    send_text(message, number)
+                elif "Continue here" in text:
+                    user.signup_stage = "firstname_prompted"
+                    user.update()
+                    message = "Okay, let's get started. What's your first name?"
+                    send_text(message, number)
+            elif "confirm_name" in response_id:
+                if "Yes" in text:
+                    user.signup_stage = "firstname_prompted"
+                    user.update()
+                    message = "What is your first name?"
+                    send_text(message, number)
+                elif "No" in text:
+                    user.signup_stage = "email_prompted"
+                    user.update()
+                    message = (
+                        f"Alright {user.display_name()}, what is your email address?"
+                    )
+                    send_text(message, number)
+        else:
+            if user.signup_stage == "firstname_prompted":
+                first_name = get_message(data).strip()
+                user.first_name = first_name
+                user.signup_stage = "lastname_prompted"
+                user.update()
+                message = f"Okay {user.first_name}, what is your last name?"
+                send_text(message, number)
+            elif user.signup_stage == "lastname_prompted":
+                last_name = get_message(data).strip()
+                user.last_name = last_name
+                user.signup_stage = "confirm_name"
+                user.update()
+                # confirm name
+                header = "Confirm name"
+                body = f"Your name is registered as {user.display_name()}. Would you like to change that?"
+                button_texts = ["Yes", "No"]
                 button = generate_interactive_button(
                     body=body, header=header, button_texts=button_texts
                 )
                 send_interactive_message(button=button, recipient=number)
-            elif "Maybe later" in text:
-                message = "That's alright."
-                send_text(message, number)
-        elif "register_to_continue" in response_id:
-            if "Our website" in text:
-                message = "Follow this link to continue the registration process. https://braintext.io/register"
-                send_text(message, number)
-            elif "Continue here" in text:
-                user.signup_stage = "firstname_prompted"
-                user.update()
-                message = "Okay, let's get started. What's your first name?"
-                send_text(message, number)
-        elif "confirm_name" in response_id:
-            if "Yes" in text:
-                user.signup_stage = "firstname_prompted"
-                user.update()
-                message = "What is your first name?"
-                send_text(message, number)
-            elif "No" in text:
-                user.signup_stage = "email_prompted"
-                user.update()
-                message = f"Alright {user.display_name()}, what is your email address?"
-                send_text(message, number)
-    else:
-        if user.signup_stage == "firstname_prompted":
-            first_name = get_message(data).strip()
-            user.first_name = first_name
-            user.signup_stage = "lastname_prompted"
-            user.update()
-            message = f"Okay {user.first_name}, what is your last name?"
-            send_text(message, number)
-        elif user.signup_stage == "lastname_prompted":
-            last_name = get_message(data).strip()
-            user.last_name = last_name
-            user.signup_stage = "confirm_name"
-            user.update()
-            # confirm name
-            header = "Confirm name"
-            body = f"Your name is registered as {user.display_name()}. Would you like to change that?"
-            button_texts = ["Yes", "No"]
-            button = generate_interactive_button(
-                body=body, header=header, button_texts=button_texts
-            )
-            send_interactive_message(button=button, recipient=number)
-        elif user.signup_stage == "email_prompted":
-            email = get_message(data).strip()
-            if not is_valid_email(email):
-                message = "Please enter a valid email address."
-                send_text(message, number)
-            else:
-                check = Users.query.filter(Users.email == email).first()
-                if check:  # email already used
-                    message = "An account already exists with this email. Please use a different email address to continue."
+            elif user.signup_stage == "email_prompted":
+                email = get_message(data).strip()
+                if not is_valid_email(email):
+                    message = "Please enter a valid email address."
                     send_text(message, number)
                 else:
-                    user.email = email
-                    user.signup_stage = "completed"
-                    user.update()
-                    # setup account
-                    password = number
-                    new_user = Users(
-                        first_name=user.first_name,
-                        last_name=user.last_name,
-                        email=user.email,
-                        password=password,
-                        timezone_offset=0,
-                    )
-                    new_user.uid = user.uid
-                    new_user.phone_no = number
-                    new_user.phone_verified = True
-                    new_user.from_anonymous = True
-                    new_user.insert()
-                    # create basic sub instance
-                    basic_sub = BasicSubscription(new_user.id)
-                    basic_sub.insert()
-                    # create user setting instance
-                    user_settings = UserSettings(new_user.id)
-                    user_settings.insert()
+                    check = Users.query.filter(Users.email == email).first()
+                    if check:  # email already used
+                        message = "An account already exists with this email. Please use a different email address to continue."
+                        send_text(message, number)
+                    else:
+                        user.email = email
+                        user.signup_stage = "completed"
+                        user.update()
+                        # setup account
+                        password = number
+                        new_user = Users(
+                            first_name=user.first_name,
+                            last_name=user.last_name,
+                            email=user.email,
+                            password=password,
+                            timezone_offset=0,
+                        )
+                        new_user.uid = user.uid
+                        new_user.phone_no = number
+                        new_user.phone_verified = True
+                        new_user.from_anonymous = True
+                        # TODO: email sending not working
+                        new_user.email_verified = True
+                        new_user.insert()
+                        # create basic sub instance
+                        basic_sub = BasicSubscription(new_user.id)
+                        basic_sub.insert()
+                        # create user setting instance
+                        user_settings = UserSettings(new_user.id)
+                        user_settings.insert()
 
-                    # create fake premium sub
-                    PremiumSubscription.create_fake(new_user.id)
+                        # create fake premium sub
+                        PremiumSubscription.create_fake(new_user.id)
 
-                    send_registration_email(new_user)
-                    message = f"New WhatsAppp sign up from {user.display_name()}.\nNumber: {user.phone_no}"
-                    send_text(message=message, recipient="+2349016456964")
+                        send_registration_email(new_user)
+                        message = f"New WhatsAppp sign up from {user.display_name()}.\nNumber: {user.phone_no}"
+                        send_text(message=message, recipient="+2349016456964")
 
-                    token = generate_confirmation_token(new_user.email)
-                    change_url = url_for(
-                        "auth.change_password",
-                        token=token,
-                        _external=True,
-                        _scheme="https",
-                    )
+                        token = generate_confirmation_token(new_user.email)
+                        change_url = url_for(
+                            "auth.change_password",
+                            token=token,
+                            _external=True,
+                            _scheme="https",
+                        )
 
-                    message = f"Awesome! You're all set up.\nCheck your inbox for a verification link.\nLogin to edit your profile or change settings. https://braintext.io/profile?settings=True.\n*Your password the number you're texting with.*\nFollow this link to change your password.\n{change_url}\n\nThank you for choosing BrainText 💙."
-                    send_text(message, number)
+                        message = f"Awesome! You're all set up.\nCheck your inbox for a verification link.\nLogin to edit your profile or change settings. https://braintext.io/profile?settings=True.\n*Your password the number you're texting with.*\nFollow this link to change your password.\n{change_url}\n\nThank you for choosing BrainText 💙."
+                        send_text(message, number)
+    except:
+        print(traceback.format_exc())
+        text = "Something went wrong. Please try again later."
+        send_text(text, number)

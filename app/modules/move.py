@@ -23,5 +23,6 @@ for day in daterange(date(2023, 3, 1), date(2023, 5, 13)):
                     month_path = os.path.join(log_dir, users_folder, user, month)
                     if not os.path.exists(month_path):
                         os.mkdir(month_path)
-                    shutil.move(os.path.join(log_dir, users_folder, user, day_log), month_path)
-
+                    shutil.move(
+                        os.path.join(log_dir, users_folder, user, day_log), month_path
+                    )

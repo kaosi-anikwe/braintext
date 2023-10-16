@@ -3,13 +3,13 @@
   <section id="hero" class="d-flex align-items-center">
     <div class="container">
       <div class="section-title">
-        <h2>Dear 🌟 {{user.first_name}} 🌟</h2>
+        <h2>Dear {{user.first_name}}</h2>
       </div>
 
       <div class="row content">
         <div class="col-lg-6 pt-4 pt-lg-0">
           {% for line in message %}
-          <p>{{ line }}</p>
+          <p>{{ line | safe }}</p>
           {% endfor %}
         </div>
       </div>

@@ -1,5 +1,6 @@
 # python imports
 from datetime import datetime
+import traceback
 
 # installed imports
 from flask_login import login_user, current_user, logout_user, login_required
@@ -79,6 +80,8 @@ def register():
 
         # create user class instance / database record
         new_user = Users(first_name, last_name, email, password, timezone_offset)
+        # TODO: email not sending
+        new_user.email_verified = True
         new_user.insert()
         # create basic sub instance / database record
         basic_sub = BasicSubscription(new_user.id)
@@ -197,10 +200,13 @@ def confirm_email(token):
 @auth.get("/send-verification-email")
 @login_required
 def verification_email():
-    if send_registration_email(current_user):
-        return jsonify({"success": True}), 200
-    else:
-        return jsonify({"success": False}), 500
+    try:
+        if send_registration_email(current_user):
+            return jsonify({"success": True}), 200
+        else:
+            return jsonify({"success": False}), 500
+    except:
+        print(traceback.format_exc())
 
 
 # Change password
@@ -224,12 +230,25 @@ def forgot_password():
     email = request.form.get("email")
     user = Users.query.filter(Users.email == email).one_or_none()
     if user:
-        flash("Follow the link we sent to reset your password.", "success")
-        send_forgot_password_email(user)
-        return render_template("auth/auth.html")
-    else:
-        flash("Your email was not found. Please proceed to create an account", "danger")
-        return render_template("auth/auth.html")
+        try:
+            send = send_forgot_password_email(user)
+            print(send, "SEND")
+            if send:
+                flash("Follow the linkbwe sent to reset your password.", "sucess")
+                return render_template("auth/auth.html")
+            flash(
+                "There was an error sending the email please try again later.", "danger"
+            )
+            return render_template("auth/auth.html")
+        except:
+            flash(
+                "There was an error sending the email, please try again later.",
+                "danger",
+            )
+            return render_template("auth/auth.html")
+    flash("Your account was not found. Please proceed to create an account.", "danger")
+    return render_template("auth/auth.html")
+    # if user:
 
 
 @auth.post("/confirm-new-password")

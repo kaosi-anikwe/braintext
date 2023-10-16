@@ -154,37 +154,45 @@ changeNumber.addEventListener("click", () => {
 // Get & verify OTP submitted
 const verifyForm = document.getElementById("verify-otp-form");
 verifyForm.onsubmit = async (e) => {
-  const submitBtn = document.getElementById("verify-otp-submit-btn");
-  submitBtn.classList.toggle("running");
-  submitBtn.disabled = true;
-  e.preventDefault();
-  const numbers = document.querySelectorAll(".ap-otp-input");
-  let getOtp = "";
-  numbers.forEach((item) => {
-    getOtp += item.value;
-  });
-  const otp = parseInt(getOtp);
-  invalid.hidden = otp === pin;
-  if (otp === pin) {
-    let response = await fetch("/verify-otp", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-CSRFToken": csrfToken,
-      },
-      body: JSON.stringify({ phone_no: phoneNumber, reverify: reverify }),
+  try {
+    const submitBtn = document.getElementById("verify-otp-submit-btn");
+    submitBtn.classList.toggle("running");
+    submitBtn.disabled = true;
+    e.preventDefault();
+    const numbers = document.querySelectorAll(".ap-otp-input");
+    let getOtp = "";
+    numbers.forEach((item) => {
+      getOtp += item.value;
     });
-    if (response.redirected) {
-      window.location.href = response.url;
-    } else {
-      let data = await response.json();
-      if (data.expired) {
-        expired.hidden = false;
-        submitBtn.classList.toggle("running");
-        submitBtn.disabled = false;
+    const otp = parseInt(getOtp);
+    invalid.hidden = otp === pin;
+    if (otp === pin) {
+      let response = await fetch("/verify-otp", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRFToken": csrfToken,
+        },
+        body: JSON.stringify({ phone_no: phoneNumber, reverify: reverify }),
+      });
+      if (response.redirected) {
+        window.location.href = response.url;
+      } else {
+        let data = await response.json();
+        if (data.expired) {
+          expired.innerText = "OTP has expired, please request another.";
+          expired.hidden = false;
+        } else if (data.error) {
+          expired.innerText =
+            "There was an error verifying your number, please try again later.";
+          expired.hidden = false;
+        }
       }
     }
-  } else {
+  } catch (error) {
+    expired.innerText = error;
+    expired.hidden = false;
+  } finally {
     submitBtn.classList.toggle("running");
     submitBtn.disabled = false;
   }
