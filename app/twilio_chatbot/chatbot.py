@@ -73,7 +73,7 @@ def webhook():
                             return respond_text(text=text)
                         if subscription.respond():
                             # chat response
-                            return chat_reponse(
+                            return twilio_chat_reponse(
                                 client=client,
                                 request_values=request.values,
                                 name=name,
@@ -154,7 +154,7 @@ def webhook():
                                     return respond_text(text)
                             else:
                                 # chat response
-                                return chat_reponse(
+                                return twilio_chat_reponse(
                                     client=client,
                                     request_values=request.values,
                                     name=name,
@@ -269,7 +269,7 @@ def webhook():
                                     return respond_text(text)
                             else:
                                 # chat response
-                                return chat_reponse(
+                                return twilio_chat_reponse(
                                     client=client,
                                     request_values=request.values,
                                     name=name,
@@ -330,7 +330,9 @@ def fallback():
                         if isreply
                         else load_messages(prompt=prompt, db_path=user_db_path)
                     )
-                    text, tokens, role = text_response(messages=messages, number=number)
+                    text, tokens, role = chatgpt_response(
+                        messages=messages, number=number
+                    )
                 except TimeoutError:
                     text = "Sorry, your response is taking too long. Try rephrasing your question or breaking it into sections."
                     return respond_text(text)

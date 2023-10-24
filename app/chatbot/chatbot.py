@@ -67,7 +67,7 @@ def webhook():
                                     if subscription.respond():
                                         if message_type == "image":
                                             # Image editing/variation
-                                            meta_image_response(data=data)
+                                            meta_image_response(user=user, data=data)
                                         if message_type == "text":
                                             # Chat/Dalle response
                                             meta_chat_response(
@@ -105,12 +105,12 @@ def webhook():
                                             reply_to_message(message_id, number, text)
                                         elif message_type == "image":
                                             # Image editing/variation
-                                            meta_image_response(data)
+                                            meta_image_response(user=user, data=data)
                                         elif message_type == "text":
                                             # Chat/Dalle response
                                             meta_chat_response(
-                                                data=data,
                                                 user=user,
+                                                data=data,
                                                 subscription=subscription,
                                             )
                                     else:
@@ -136,12 +136,12 @@ def webhook():
                                             meta_audio_response(user=user, data=data)
                                         if message_type == "image":
                                             # Image editing/variation
-                                            meta_image_response(data)
+                                            meta_image_response(user=user, data=data)
                                         if message_type == "text":
                                             # Chat/Dalle response
                                             meta_chat_response(
-                                                data=data,
                                                 user=user,
+                                                data=data,
                                                 subscription=subscription,
                                             )
                                     else:
@@ -210,12 +210,12 @@ def webhook():
                         user.update()
                         if message_type == "image":
                             # Image editing/variation
-                            meta_image_response(data=data)
+                            meta_image_response(user=user, data=data, anonymous=True)
                         if message_type == "text":
                             # Chat/Dalle response
                             meta_chat_response(
-                                data=data,
                                 user=user,
+                                data=data,
                                 anonymous=True,
                             )
                         elif message_type == "audio":

@@ -581,12 +581,11 @@ def speech_synthesis(text: str, voice_type: str, number: str):
         return send_text(text, number)
 
 
-def speech_response(data: Dict[Any, Any], voice_type: str):
+def speech_response(data: Dict[Any, Any], voice_type: str, message: str):
     """Respond with audio from WhatsApp text."""
     try:
         name = get_name(data)
         number = f"+{get_number(data)}"
-        message = get_message(data)
         prompt = message.lower().replace("whysper", "")
         message_id = get_message_id(data)
         greeting = contains_greeting(message)
@@ -598,7 +597,7 @@ def speech_response(data: Dict[Any, Any], voice_type: str):
                 prompt=prompt,
                 db_path=user_db_path,
             )
-            text, tokens, role = text_response(
+            text, tokens, role = chatgpt_response(
                 messages=messages,
                 number=number,
                 message_id=message_id,
@@ -642,6 +641,7 @@ def speech_response(data: Dict[Any, Any], voice_type: str):
 def meta_chat_response(
     data: Dict[Any, Any],
     user: Users,
+    message: str = None,
     subscription: Union[
         BasicSubscription, StandardSubscription, PremiumSubscription
     ] = None,
@@ -652,7 +652,6 @@ def meta_chat_response(
     """
     name = get_name(data)
     number = f"+{get_number(data)}"
-    message = get_message(data)
     message_id = get_message_id(data)
     greeting = contains_greeting(message)
     thanks = contains_thanks(message)
@@ -660,6 +659,8 @@ def meta_chat_response(
     image = False
     audio = False
     user_db_path = get_user_db(name=name, number=number)
+    if not message:
+        message = get_message(data)
     messages = load_messages(
         prompt=message,
         db_path=user_db_path,
@@ -703,11 +704,10 @@ def meta_chat_response(
                 )
 
                 return speech_response(
-                    data=data,
-                    voice_type=voice_type,
+                    data=data, voice_type=voice_type, message=message
                 )
             else:
-                text, tokens, role = text_response(
+                text, tokens, role = chatgpt_response(
                     messages=messages, number=number, message_id=message_id
                 )
                 log_response(
@@ -782,7 +782,7 @@ def meta_audio_response(user: Users, data: Dict[Any, Any], anonymous: bool = Fal
                 prompt=transcript,
                 db_path=user_db_path,
             )
-            text, tokens, role = text_response(
+            text, tokens, role = chatgpt_response(
                 messages=messages,
                 number=number,
                 message_id=message_id,
@@ -839,14 +839,13 @@ def meta_audio_response(user: Users, data: Dict[Any, Any], anonymous: bool = Fal
         return send_text(text, number)
 
 
-def meta_image_response(data: Dict[Any, Any]):
+def meta_image_response(user: Users, data: Dict[Any, Any], anonymous: bool = False):
     """WhatsApp image response wtih Meta functions."""
     name = get_name(data)
     number = f"+{get_number(data)}"
     try:
         image = get_image(data)
         image_url = get_media_url(image["id"])
-        prompt = ""
         image_path = download_media(
             image_url,
             f"{datetime.utcnow().strftime('%M%S%f')}.jpg",
@@ -857,22 +856,38 @@ def meta_image_response(data: Dict[Any, Any]):
             "RGBA"
         )  # If the image has an alpha channel (transparency)
         image_content.save(image_path, format="PNG")
+        # get image prompt
+        prompt = ""
         if "caption" in image:
             prompt = image["caption"]
-            if "variation" in prompt.lower():
-                image_url = image_variation(image_path)
+        # check for text in image
+        text = image_to_string(image_path)
+        if text:  # ChatGPT response
+            if prompt:
+                user_message = f"{prompt}:\n{text}"
             else:
-                image_url = image_edit(image_path, prompt)
+                user_message = text
+            meta_chat_response(
+                user=user, data=data, anonymous=anonymous, message=user_message
+            )
+            if os.path.exists(image_path):
+                os.remove(image_path)
         else:
-            # Image variation
-            image_url = image_variation(image_path)
+            if prompt:
+                if "variation" in prompt.lower():
+                    image_url = image_variation(image_path)
+                else:
+                    image_url = image_edit(image_path, prompt)
+            else:
+                # Image variation
+                image_url = image_variation(image_path)
 
-        log_response(
-            name=name,
-            number=number,
-            message=prompt,
-        )
-        send_image(image_url, number)
+            log_response(
+                name=name,
+                number=number,
+                message=prompt,
+            )
+            send_image(image_url, number)
     except:
         print(traceback.format_exc())
         text = "Something went wrong. Please try again later."

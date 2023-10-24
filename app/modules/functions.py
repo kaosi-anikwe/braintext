@@ -15,6 +15,8 @@ import openai
 import langid
 import tiktoken
 import pycountry
+import pytesseract
+from PIL import Image
 from boto3 import Session
 from sqlalchemy import desc
 from dotenv import load_dotenv
@@ -172,6 +174,18 @@ def get_country_code(language_code):
     return None
 
 
+def image_to_string(image_path: str):
+    try:
+        image = Image.open(image_path)
+        text = pytesseract.image_to_string(image)
+        if text:
+            return text
+        return None
+    except:
+        print(traceback.format_exc())
+        return None
+
+
 def log_location(name: str, number: str) -> str:
     """Create directory matching first letter of display name.
     \nTo organise logs in alphabetical order.
@@ -209,86 +223,6 @@ def log_location(name: str, number: str) -> str:
             os.mkdir(month_log)
         day_log = f"{month_log}/{datetime.utcnow().strftime('%d-%m-%Y')}.log"
         return day_log
-
-
-def check_and_respond_text(client: Client, text: str, number: str) -> str:
-    print(f"Text is {len(text)} characters long.")
-    text_length = len(text)
-    while text_length >= 3200:
-        first
-    # check if response is too long
-    if len(text) >= 3200:
-        # too long even if halved
-        text = "Your response is too long. Please rephrase your question."
-        return respond_text(text)
-    elif len(text) >= 1600:
-        print(f"Text was split.")
-        # split message into 2. Send first half and return second half
-        sentences = text.split(". ")
-        sentence_count = len(sentences)
-        print(f"Number of sentences: {sentence_count}")
-        first = int(sentence_count / 2)
-        second = sentence_count - first
-        first_part = ""
-        second_part = ""
-        for index, sentence in enumerate(sentences):
-            if index <= first:
-                if index == 0:
-                    first_part += f"{sentence}"
-                first_part += f". {sentence}"
-            elif index >= second:
-                if index == second:
-                    second_part += f"{sentence}"
-                second_part += f". {sentence}"
-        print(f"Length of first part: {len(first_part)}")
-        print(f"Lenght of second part: {len(second_part)}")
-        if len(first_part) >= 1600:
-            # further divide into 2 and send individually
-            sentences = first_part.split(". ")
-            sentence_count = len(sentences)
-            first = int(sentence_count / 2)
-            second = sentence_count - first
-            part_one = ""
-            part_two = ""
-            for index, sentence in enumerate(sentences):
-                if index <= first:
-                    part_one += f". {sentence}"
-                elif index >= second:
-                    part_two += f". {sentence}"
-
-            send_whatspp_message(client=client, message=part_one, phone_no=number)
-            send_whatspp_message(client=client, message=part_two, phone_no=number)
-
-            text = second_part
-            return respond_text(text)
-
-        elif len(second_part) >= 1600:
-            # further divide into 2 and send first part
-            sentences = first_part.split(". ")
-            sentence_count = len(sentences)
-            first = int(sentence_count / 2)
-            second = sentence_count - first
-            part_one = ""
-            part_two = ""
-            for index, sentence in enumerate(sentences):
-                if index <= first:
-                    part_one += f". {sentence}"
-                elif index >= second:
-                    part_two += f". {sentence}"
-
-            send_whatspp_message(client=client, message=first_part, phone_no=number)
-            send_whatspp_message(client=client, message=part_one, phone_no=number)
-
-            text = part_two
-            return respond_text(text)
-
-        # send message
-        send_whatspp_message(client=client, message=first_part, phone_no=number)
-
-        text = second_part
-        return respond_text(text)
-    else:
-        return respond_text(text)
 
 
 def image_response(prompt: str) -> str:
@@ -347,7 +281,7 @@ def delete_file(filename: str) -> None:
         os.remove(filename)
 
 
-def text_response(messages: list, number: str, message_id: str = None) -> tuple:
+def chatgpt_response(messages: list, number: str, message_id: str = None) -> tuple:
     """Get response from ChatGPT"""
 
     # Event to signal the status update function to stop if OpenAI responds on time
@@ -368,7 +302,7 @@ def text_response(messages: list, number: str, message_id: str = None) -> tuple:
     thread.start()
 
     completion = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo-0301",
+        model="gpt-3.5-turbo-0613",
         messages=messages,
         temperature=1,
         user=f"{str(number)}",
@@ -387,77 +321,43 @@ def text_response(messages: list, number: str, message_id: str = None) -> tuple:
     return text, tokens, role
 
 
-def chat_reponse(
-    client, request_values, name, number, incoming_msg, user, subscription=None
-):
-    """Typical WhatsApp text response"""
+def user_dir(number: str, name: str = None) -> str:
+    """Returns the user's folder"""
     try:
-        if subscription:
-            if subscription.expired():
-                subscription.update_account(user.id)
-                text = "It seems your subscription has expired. Plese renew your subscription to continue to enjoy your services. \nhttps://braintext.io/profile"
-                return respond_text(text)
-        try:
-            isreply = False
-            if request_values.get("OriginalRepliedMessageSender"):
-                # message is a reply. Get original
-                original_message_sid = request_values.get("OriginalRepliedMessageSid")
-                original_message = get_original_message(client, original_message_sid)
-                isreply = True
-            user_db_path = get_user_db(name=name, number=number)
-            messages = (
-                load_messages(
-                    prompt=incoming_msg,
-                    db_path=user_db_path,
-                    original_message=original_message,
+        if name:
+            # get user folder with name and number
+            first_char = str(name[0]).upper()
+            if first_char.isalpha():
+                log_path = os.path.join(
+                    LOG_DIR,
+                    f"{first_char}{first_char}{first_char}",
+                    f"{name.replace(' ', '_').strip()}_{number}",
                 )
-                if isreply
-                else load_messages(prompt=incoming_msg, db_path=user_db_path)
-            )
-            text, tokens, role = text_response(messages=messages, number=number)
-        except TimeoutError:
-            text = "Sorry, your response is taking too long. Try rephrasing your question or breaking it into sections."
-            return respond_text(text)
+            else:
+                log_path = os.path.join(
+                    LOG_DIR,
+                    "###",
+                    f"{name.replace(' ', '_').strip()}_{number}",
+                )
+            if not os.path.exists(log_path):
+                os.makedirs(log_path, exist_ok=True)
+        else:
+            # get newest folder in log dir with number
+            log_path = None
+            newest_timestamp = 0
+            for root, dirs, _ in os.walk(LOG_DIR):
+                for dir_name in dirs:
+                    if number in dir_name:
+                        dir_path = os.path.join(root, dir_name)
+                        timestamp = os.path.getctime(dir_path)
+                        if timestamp > newest_timestamp:
+                            newest_timestamp = timestamp
+                            log_path = dir_path
+        return log_path
 
-        # record ChatGPT response
-        new_message = {"role": role, "content": text}
-        new_message = Messages(new_message, user_db_path)
-        new_message.insert()
-
-        log_response(
-            name=name,
-            number=number,
-            message=incoming_msg,
-            tokens=tokens,
-        )
-        if len(text) < WHATSAPP_CHAR_LIMIT:
-            return respond_text(text)
-        return split_and_respond(client, text, number)
     except:
         print(traceback.format_exc())
-        text = "Sorry, I cannot respond to that at the moment, please try again later."
-        return respond_text(text)
-
-
-def user_dir(name: str, number: str) -> str:
-    """Returns the user's folder"""
-    first_char = str(name[0]).upper()
-    if first_char.isalpha():
-        log_path = os.path.join(
-            LOG_DIR,
-            f"{first_char}{first_char}{first_char}",
-            f"{name.replace(' ', '_').strip()}_{number}",
-        )
-    else:
-        log_path = os.path.join(
-            LOG_DIR,
-            "###",
-            f"{name.replace(' ', '_').strip()}_{number}",
-        )
-    if not os.path.exists(log_path):
-        os.makedirs(log_path, exist_ok=True)
-
-    return log_path
+        return None
 
 
 def are_same_day(datetime_obj1, datetime_obj2):
@@ -470,7 +370,7 @@ def are_same_day(datetime_obj1, datetime_obj2):
 
 def get_user_db(name: str, number: str) -> str:
     """Returns the current user's message database"""
-    db_path = os.path.join(user_dir(name, number), "messages.db")
+    db_path = os.path.join(user_dir(name=name, number=number), "messages.db")
     if os.path.exists(db_path):
         dp_mtime = datetime.fromtimestamp(os.path.getmtime(db_path))
         if not are_same_day(dp_mtime, datetime.utcnow()):
@@ -478,6 +378,47 @@ def get_user_db(name: str, number: str) -> str:
             os.remove(db_path)
     create_all(get_engine(db_path))
     return db_path
+
+
+def get_last_message_time(user_dir: str) -> datetime | None:
+    """Get user's last message time."""
+    try:
+        # get newest log file in user folder
+        newest_file = None
+        newest_timestamp = 0
+
+        for root, _, files in os.walk(user_dir):
+            for file in files:
+                file_path = os.path.join(root, file)
+                if not file_path.endswith(".db"):
+                    file_timestamp = os.path.getctime(file_path)
+                    if file_timestamp > newest_timestamp:
+                        newest_timestamp = file_timestamp
+                        newest_file = file_path
+        if not newest_file:
+            return newest_file
+        message_date = str(os.path.basename(newest_file)).replace(".log", "")
+        # get last message time from file
+        message_time = None
+        # use re to match time format (HH:MM)
+        timestamp_pattern = r" -- (\d{2}:\d{2})$"
+        # read last line of log file
+        with open(newest_file, "r") as log_file:
+            last_line = log_file.readlines()[-1]
+            match = re.search(timestamp_pattern, last_line)
+            if match:
+                message_time = match.group(1)
+            else:
+                print(f"No log time found in {newest_file}")
+                return None
+        # construct last message time
+        last_message_time = datetime.strptime(
+            f"{message_date} {message_time}", "%d-%m-%Y %H:%M"
+        )
+        return last_message_time
+    except:
+        print(traceback.format_exc())
+        return None
 
 
 def load_messages(prompt: str, db_path: str, original_message=None):
@@ -649,10 +590,10 @@ def text_to_speech(text: str, voice_name: str) -> str | None:
 
 def contains_greeting(text):
     # Convert the input text to lowercase to make the comparison case-insensitive
-    text = text.lower()
+    text = str(text).lower()
 
     # Define a regular expression pattern to match different greetings
-    greeting_pattern = r"\b(hello|hi|hey|good morning|good afternoon|good evening)\b"
+    greeting_pattern = r"\b(hello|hi|yo|hey|good morning|good afternoon|good evening)\b"
 
     # Use the re.search() function to find the pattern in the text
     match = re.search(greeting_pattern, text)
@@ -663,7 +604,7 @@ def contains_greeting(text):
 
 def contains_thanks(text):
     # Convert the input text to lowercase to make the comparison case-insensitive
-    text = text.lower()
+    text = str(text).lower()
 
     # Define a regular expression pattern to match greetings and thanks
     thanks_pattern = r"\b(thank|thanks)\b"
@@ -727,29 +668,3 @@ def split_text(text):
     first_half = text[:middle_index]
     second_half = text[middle_index:]
     return first_half, second_half
-
-
-def split_and_respond(client, text: str, number: str, max_length=WHATSAPP_CHAR_LIMIT):
-    """Recursively split and send response to user."""
-    # If the text is shorter than the maximum length, process it directly
-    if len(text) <= max_length:
-        return send_whatspp_message(client=client, message=text, phone_no=number)
-
-    # Otherwise, split the text into two parts and process each part recursively
-    middle_index = len(text) // 2
-
-    # Find the index of the nearest whitespace to the middle index
-    while middle_index < len(text) and not text[middle_index].isspace():
-        middle_index += 1
-
-    first_half = text[:middle_index]
-    second_half = text[middle_index:]
-
-    # Process the first half recursively
-    split_and_respond(client, first_half, number, max_length)
-
-    # Process the second half recursively
-    split_and_respond(client, second_half, number, max_length)
-
-    # after splitting
-    return "200"
