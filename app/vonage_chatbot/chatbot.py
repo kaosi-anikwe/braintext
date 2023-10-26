@@ -23,7 +23,7 @@ from ..models import Users, StandardSubscription, PremiumSubscription, UserSetti
 from ..modules.functions import (
     delete_file,
     get_audio,
-    image_response,
+    generate_image,
     log_response,
     synthesize_speech,
 )
@@ -150,7 +150,7 @@ def webhook():
                     if "dalle" in incoming_msg.lower():
                         prompt = incoming_msg.lower().replace("dalle", "")
                         try:
-                            image_url = image_response(prompt)
+                            image_url = generate_image(prompt)
                             log_response(name=name, number=f"+{number}", message=prompt)
                             return send_image(client, image_url, number), "200"
                         except:

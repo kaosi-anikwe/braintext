@@ -557,87 +557,6 @@ def meta_split_and_respond(
     meta_split_and_respond(second_half, number, prev_mssg_id)
 
 
-def speech_synthesis(text: str, voice_type: str, number: str):
-    """Synthesize audio output and send to user."""
-    try:
-        audio_filename = text_to_speech(
-            text=text,
-            voice_name=voice_type,
-        )
-        if audio_filename == None:
-            text = "Error synthesizing speech. Please try again later or change the voice type in your settings. https://braintext.io/profile?settings=True"
-            return send_text(text, number)
-
-        media_url = f"{url_for('chatbot.send_voice_note', _external=True, _scheme='https')}?filename={audio_filename}"
-
-        return send_audio(media_url, number)
-    except BotoCoreError:
-        print(traceback.format_exc())
-        text = "Sorry, I cannot respond to that at the moment, please try again later."
-        return send_text(text, number)
-    except ClientError:
-        print(traceback.format_exc())
-        text = "Sorry, your response was too long. Please rephrase the question or break it into segments."
-        return send_text(text, number)
-
-
-def speech_response(data: Dict[Any, Any], voice_type: str, message: str):
-    """Respond with audio from WhatsApp text."""
-    try:
-        name = get_name(data)
-        number = f"+{get_number(data)}"
-        prompt = message.lower().replace("whysper", "")
-        message_id = get_message_id(data)
-        greeting = contains_greeting(message)
-        thanks = contains_thanks(message)
-
-        try:
-            user_db_path = get_user_db(name, number)
-            messages = load_messages(
-                prompt=prompt,
-                db_path=user_db_path,
-            )
-            text, tokens, role = chatgpt_response(
-                messages=messages,
-                number=number,
-                message_id=message_id,
-            )
-        except:
-            print(traceback.format_exc())
-            text = (
-                "Sorry I can't respond to that at the moment. Please try again later."
-            )
-            return reply_to_message(message_id, number, text)
-
-        # record ChatGPT response
-        new_message = {
-            "role": role,
-            "content": text,
-        }
-        new_message = Messages(new_message, user_db_path)
-        new_message.insert()
-
-        log_response(
-            name=name,
-            number=number,
-            message=message,
-            tokens=tokens,
-        )
-
-        send_reaction(
-            chr(128075), message_id, number
-        ) if greeting else None  # react waving hand
-        send_reaction(
-            chr(128153), message_id, number
-        ) if thanks else None  # react blue love emoji
-
-        return speech_synthesis(text=text, voice_type=voice_type, number=number)
-    except:
-        print(traceback.format_exc())
-        text = "Sorry I can't respond to that at the moment. Please try again later."
-        return reply_to_message(message_id, number, text)
-
-
 def meta_chat_response(
     data: Dict[Any, Any],
     user: Users,
@@ -656,66 +575,38 @@ def meta_chat_response(
     greeting = contains_greeting(message)
     thanks = contains_thanks(message)
     isreply = is_reply(data)
-    image = False
-    audio = False
     user_db_path = get_user_db(name=name, number=number)
     if not message:
         message = get_message(data)
     messages = load_messages(
+        user=user,
         prompt=message,
         db_path=user_db_path,
     )
     try:
+        # react to message
+        send_reaction(
+            chr(128075), message_id, number
+        ) if greeting else None  # react waving hand
+        send_reaction(
+            chr(128153), message_id, number
+        ) if thanks else None  # react blue love emoji
+
         if subscription:
             if subscription.expired():
                 subscription.update_account(user.id)
                 text = "It seems your subscription has expired. Plese renew your subscription to continue to enjoy your services. \nhttps://braintext.io/profile"
                 return reply_to_message(message_id, number, text)
         try:
-            if "dalle" in message.lower():
-                # Image generation
-                image = True
-                prompt = message.lower().replace("dalle", "")
-                image_url = image_response(prompt)
-                log_response(
-                    name=name,
-                    number=number,
-                    message=message,
-                )
-                return send_image(image_url, number)  # function ends here
-            elif "voicegen" in message.lower():
-                # Speech synthesis
-                audio = True
-                text = message.lower().replace("voicegen", "")
-                voice_type = (
-                    user.user_settings().ai_voice_type if not anonymous else "Joanna"
-                )
-                log_response(
-                    name=name,
-                    number=number,
-                    message=message,
-                )
-                return speech_synthesis(text=text, voice_type=voice_type, number=number)
-            elif "whysper" in message.lower():
-                # Audio response
-                audio = True
-                voice_type = (
-                    user.user_settings().ai_voice_type if not anonymous else "Joanna"
-                )
-
-                return speech_response(
-                    data=data, voice_type=voice_type, message=message
-                )
-            else:
-                text, tokens, role = chatgpt_response(
-                    messages=messages, number=number, message_id=message_id
-                )
-                log_response(
-                    name=name,
-                    number=number,
-                    message=message,
-                    tokens=tokens,
-                )
+            response = chatgpt_response(
+                data=data,
+                messages=messages,
+                number=number,
+                message_id=message_id,
+            )
+            if not response:  # function called from ChatGPT response
+                return
+            text, tokens, role = response[0], response[1], response[2]
         except:
             print(traceback.format_exc())
             text = (
@@ -723,18 +614,17 @@ def meta_chat_response(
             )
             return reply_to_message(message_id, number, text)
 
-        if not image and not audio:
-            # record ChatGPT response
-            new_message = {"role": role, "content": text}
-            new_message = Messages(new_message, user_db_path)
-            new_message.insert()
+        log_response(
+            name=name,
+            number=number,
+            message=message,
+            tokens=tokens,
+        )
+        # record ChatGPT response
+        new_message = {"role": role, "content": text}
+        new_message = Messages(new_message, user_db_path)
+        new_message.insert()
 
-        send_reaction(
-            chr(128075), message_id, number
-        ) if greeting else None  # react waving hand
-        send_reaction(
-            chr(128153), message_id, number
-        ) if thanks else None  # react blue love emoji
         if len(text) < WHATSAPP_CHAR_LIMIT:
             return (
                 send_text(text, number)
@@ -772,42 +662,7 @@ def meta_audio_response(user: Users, data: Dict[Any, Any], anonymous: bool = Fal
             print(traceback.format_exc())
             text = "Error transcribing audio. Please try again later."
             return send_text(text, number)
-
-        # delete audio file
-        if os.path.exists(audio_file):
-            os.remove(audio_file)
-        try:
-            user_db_path = get_user_db(name, number)
-            messages = load_messages(
-                prompt=transcript,
-                db_path=user_db_path,
-            )
-            text, tokens, role = chatgpt_response(
-                messages=messages,
-                number=number,
-                message_id=message_id,
-            )
-        except:
-            print(traceback.format_exc())
-            text = (
-                "Sorry I can't respond to that at the moment. Please try again later."
-            )
-            return send_text(text, number)
-
-        # record ChatGPT response
-        new_message = {
-            "role": role,
-            "content": text,
-        }
-        new_message = Messages(new_message, user_db_path)
-        new_message.insert()
-
-        log_response(
-            name=name,
-            number=number,
-            message=transcript,
-            tokens=tokens,
-        )
+        # reactions
         send_reaction(
             chr(128075), message_id, number
         ) if greeting else None  # react waving hand
@@ -815,13 +670,34 @@ def meta_audio_response(user: Users, data: Dict[Any, Any], anonymous: bool = Fal
             chr(128153), message_id, number
         ) if thanks else None  # react blue love emoji
 
+        # delete audio file
+        delete_file(audio_file)
+        try:
+            user_db_path = get_user_db(name, number)
+            messages = load_messages(
+                user=user,
+                prompt=transcript,
+                db_path=user_db_path,
+            )
+            response = chatgpt_response(
+                data=data,
+                messages=messages,
+                number=number,
+                message_id=message_id,
+            )
+            if not response:  # function called from ChatGPT response
+                return
+            text, tokens, role = response[0], response[1], response[2]
+        except:
+            print(traceback.format_exc())
+            text = (
+                "Sorry I can't respond to that at the moment. Please try again later."
+            )
+            return send_text(text, number)
+
         user_settings = user.user_settings() if not anonymous else None
         if user_settings:
-            if user_settings.voice_response:
-                return speech_synthesis(
-                    text=text, voice_type=user_settings.ai_voice_type, number=number
-                )
-            else:
+            if not user_settings.voice_response:
                 if len(text) < WHATSAPP_CHAR_LIMIT:
                     return send_text(text, number)
                 else:
@@ -830,8 +706,7 @@ def meta_audio_response(user: Users, data: Dict[Any, Any], anonymous: bool = Fal
                         number,
                         get_message_id(data),
                     )
-        else:  # user is anonymous
-            return speech_synthesis(text=text, voice_type="Joanna", number=number)
+        return speech_synthesis(data=data, text=text, tokens=tokens, message=transcript)
 
     except:
         print(traceback.format_exc())
@@ -870,17 +745,16 @@ def meta_image_response(user: Users, data: Dict[Any, Any], anonymous: bool = Fal
             meta_chat_response(
                 user=user, data=data, anonymous=anonymous, message=user_message
             )
-            if os.path.exists(image_path):
-                os.remove(image_path)
+            delete_file(image_path)
         else:
             if prompt:
                 if "variation" in prompt.lower():
-                    image_url = image_variation(image_path)
+                    image_url = create_image_variation(image_path)
                 else:
-                    image_url = image_edit(image_path, prompt)
+                    image_url = edit_image(image_path, prompt)
             else:
                 # Image variation
-                image_url = image_variation(image_path)
+                image_url = create_image_variation(image_path)
 
             log_response(
                 name=name,

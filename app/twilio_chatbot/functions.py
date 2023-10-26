@@ -14,6 +14,8 @@ from ..modules.functions import *
 
 load_dotenv()
 
+WHATSAPP_CHAR_LIMIT = int(os.getenv("WHATSAPP_CHAR_LIMIT"))
+
 
 class TimeoutError(Exception):
     # custom timeout class to handle ChatGPT timeout

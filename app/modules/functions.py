@@ -1,12 +1,12 @@
 # python imports
 import os
 import re
-import time
+import json
 import requests
 import traceback
 import threading
 import subprocess
-from typing import Union
+from typing import Union, Dict, Any
 from datetime import datetime
 from contextlib import closing
 
@@ -18,6 +18,7 @@ import pycountry
 import pytesseract
 from PIL import Image
 from boto3 import Session
+from flask import url_for
 from sqlalchemy import desc
 from dotenv import load_dotenv
 from pydub import AudioSegment
@@ -29,11 +30,7 @@ from google.cloud.speech_v2.types import cloud_speech
 from botocore.exceptions import BotoCoreError, ClientError
 
 # local imports
-from ..models import Voices
-from ..twilio_chatbot.functions import (
-    respond_text,
-    get_original_message,
-)
+from ..models import Voices, Users
 from ..modules.messages import create_all, get_engine, Messages
 
 
@@ -225,13 +222,39 @@ def log_location(name: str, number: str) -> str:
         return day_log
 
 
-def image_response(prompt: str) -> str:
+def generate_image(data: Dict[Any, Any], tokens: int, message: str, prompt: str) -> str:
+    """Genereates an image with the given prompt and returns the URL to the image."""
+    from ..chatbot.functions import (
+        get_name,
+        get_number,
+        send_image,
+    )
+
     image_response = openai.Image.create(prompt=prompt, n=1, size="1024x1024")
     image_url = image_response.data[0].url
-    return image_url
+    # log response
+    name = get_name(data)
+    number = f"+{get_number(data)}"
+    log_response(
+        name=name,
+        number=number,
+        message=message,
+        tokens=tokens,
+    )
+    # record ChatGPT response
+    user_db_path = get_user_db(name=name, number=number)
+    new_message = {
+        "role": "assistant",
+        "content": f"```an AI generated image of {prompt}```",
+    }
+    new_message = Messages(new_message, user_db_path)
+    new_message.insert()
+
+    return send_image(image_url, number)
 
 
-def image_edit(image_path: str, prompt: str) -> str:
+def edit_image(image_path: str, prompt: str) -> str:
+    """Edit's a picture with a second picture acting as a mask."""
     image = open(image_path, "rb")
     image_response = openai.Image.create_edit(
         image=image, prompt=prompt, n=1, size="1024x1024"
@@ -242,13 +265,61 @@ def image_edit(image_path: str, prompt: str) -> str:
     return image_url
 
 
-def image_variation(image_path: str) -> str:
+def create_image_variation(image_path: str) -> str:
+    """Creates a variation of an image."""
     image = open(image_path, "rb")
-    image_response = openai.Image.create_variation(image=image, n=1, size="1024x1024")
+    image_response = openai.Image.create_variation(image=image, n=1, size="512x512")
     image_url = image_response.data[0].url
     if os.path.exists(image_path):
         os.remove(image_path)
     return image_url
+
+
+def speech_synthesis(data: Dict[Any, Any], tokens: int, text: str, message: str):
+    """Synthesize audio output and send to user."""
+    from ..chatbot.functions import (
+        send_audio,
+        get_number,
+        get_name,
+    )
+
+    try:
+        # get voice type
+        number = f"+{get_number(data)}"
+        user = Users.query.filter(Users.phone_no == number).one_or_none()
+        voice_type = user.user_settings().ai_voice_type if user else "Joanna"
+        # synthesize text
+        audio_filename = text_to_speech(
+            text=text,
+            voice_name=voice_type,
+        )
+        if audio_filename == None:
+            text = "Error synthesizing speech. Please try again later or change the voice type in your settings. https://braintext.io/profile?settings=True"
+            return send_text(text, number)
+        media_url = f"{url_for('chatbot.send_voice_note', _external=True, _scheme='https')}?filename={audio_filename}"
+        # log response
+        name = get_name(data)
+        log_response(
+            name=name,
+            number=number,
+            message=message,
+            tokens=tokens,
+        )
+        # record ChatGPT response
+        user_db_path = get_user_db(name=name, number=number)
+        new_message = {"role": "assistant", "content": text}
+        new_message = Messages(new_message, user_db_path)
+        new_message.insert()
+
+        return send_audio(media_url, number)
+    except BotoCoreError:
+        print(traceback.format_exc())
+        text = "Sorry, I cannot respond to that at the moment, please try again later."
+        return send_text(text, number)
+    except ClientError:
+        print(traceback.format_exc())
+        text = "Sorry, your response was too long. Please rephrase the question or break it into segments."
+        return send_text(text, number)
 
 
 def log_response(name: str, number: str, message: str, tokens: int = 0) -> None:
@@ -281,44 +352,68 @@ def delete_file(filename: str) -> None:
         os.remove(filename)
 
 
-def chatgpt_response(messages: list, number: str, message_id: str = None) -> tuple:
+def chatgpt_response(
+    data: Dict[Any, Any], messages: list, number: str, message_id: str = None
+) -> tuple | None:
     """Get response from ChatGPT"""
+    try:
+        # Event to signal the status update function to stop if OpenAI responds on time
+        stop_event = threading.Event()
 
-    # Event to signal the status update function to stop if OpenAI responds on time
-    stop_event = threading.Event()
+        def status_update():
+            """Wait ```n``` seconds and send status update."""
+            if not stop_event.wait(15):
+                text = "Sorry for the wait. I'm still working on your request. Thanks for your patience!"
+                send_text(
+                    message=text, recipient=number
+                ) if not message_id else reply_to_message(
+                    message_id=message_id, recipient=number, message=text
+                )
 
-    def status_update():
-        """Wait ```n``` seconds and send status update."""
-        if not stop_event.wait(15):
-            text = "Sorry for the wait. I'm still working on your request. Thanks for your patience!"
-            send_text(
-                message=text, recipient=number
-            ) if not message_id else reply_to_message(
-                message_id=message_id, recipient=number, message=text
+        # set timer
+        thread = threading.Thread(target=status_update)
+        thread.start()
+
+        completion = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo-0613",
+            messages=messages,
+            temperature=1,
+            user=f"{str(number)}",
+            functions=CHATGPT_FUNCTION_DESCRIPTIONS,
+            function_call="auto",
+        )
+        # check for function call
+        if completion.choices[0].message.get("function_call"):
+            # get function name and arguments
+            function_name = completion.choices[0].message.function_call.name
+            function_arguments = json.loads(
+                completion.choices[0].message.function_call.arguments
             )
+            # pass in the request data to the function to be called
+            function_arguments["data"] = data
+            # pass in the number of tokens used for logging
+            function_arguments["tokens"] = int(completion.usage.total_tokens)
+            # pass in current user message
+            function_arguments["message"] = messages[-1]["content"]
+            # call function with arguments as kwargs
+            CHATGPT_FUNCTIONS[function_name](**function_arguments)
+            return None
 
-    # set timer
-    thread = threading.Thread(target=status_update)
-    thread.start()
+        text = completion.choices[0].message.content
+        tokens = int(completion.usage.total_tokens)
+        role = completion.choices[0].message.role
 
-    completion = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo-0613",
-        messages=messages,
-        temperature=1,
-        user=f"{str(number)}",
-    )
+        return text, tokens, role
+    except:
+        print(traceback.format_exc())
+        text = "Sorry, I can't respond to that at the moment. Plese try again later."
+        return text, 0, "assistant"
+    finally:
+        # Signal the status update function to stop
+        stop_event.set()
 
-    text = completion.choices[0].message.content
-    tokens = int(completion.usage.total_tokens)
-    role = completion.choices[0].message.role
-
-    # Signal the status update function to stop
-    stop_event.set()
-
-    # Wait for status update thread to complete
-    thread.join()
-
-    return text, tokens, role
+        # Wait for status update thread to complete
+        thread.join()
 
 
 def user_dir(number: str, name: str = None) -> str:
@@ -421,7 +516,7 @@ def get_last_message_time(user_dir: str) -> datetime | None:
         return None
 
 
-def load_messages(prompt: str, db_path: str, original_message=None):
+def load_messages(user: Users, prompt: str, db_path: str, original_message=None):
     if original_message:
         assistant_mssg = {"role": "assistant", "content": original_message}
         new_assistant_mssg = Messages(assistant_mssg, db_path)
@@ -445,7 +540,16 @@ def load_messages(prompt: str, db_path: str, original_message=None):
     # add system prompt
     system = {
         "role": "system",
-        "content": "You are a youthfull personal assistant. Never tell anyone that you're an AI language model or language model. You always give your opinion on things. You're conservative about your age. Your name is BrainText.",
+        "content": f"""
+                    You are a youthfull personal assistant. 
+                    You always give your opinion on things. 
+                    You're conservative about your age. 
+                    Your name is BrainText. 
+                    Don't make assumptions about what values to plug into functions. 
+                    Ask for clarification if a user request is ambiguous.
+                    The user's first name is {user.first_name if user.first_name else 'not known'},
+                    and the user's last name is {user.last_name if user.last_name else 'not known'}.
+                """,
     }
     messages.insert(0, system)
     return messages
@@ -668,3 +772,54 @@ def split_text(text):
     first_half = text[:middle_index]
     second_half = text[middle_index:]
     return first_half, second_half
+
+
+CHATGPT_FUNCTION_DESCRIPTIONS = [
+    {
+        "name": "generate_image",
+        "description": "Generates an image from a user's prompt. Enhance prompt if necessary to give a more detailed prompt.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "prompt": {
+                    "type": "string",
+                    "description": "The image prompt or description to be used to generate the image.",
+                },
+            },
+            "required": ["prompt"],
+        },
+    },
+    {
+        "name": "speech_synthesis",
+        "description": "Synthesize text response of prompts to audio when user requests for an audio response.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "text": {
+                    "type": "string",
+                    "description": "Text prompt response to be synthesized",
+                },
+            },
+            "required": ["text"],
+        },
+    },
+    {
+        "name": "speech_synthesis",
+        "description": "Performs text-to-speech synthesis on user request.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "text": {
+                    "type": "string",
+                    "description": "Text to be synthesized into speech.",
+                },
+            },
+            "required": ["text"],
+        },
+    },
+]
+
+CHATGPT_FUNCTIONS = {
+    "generate_image": generate_image,
+    "speech_synthesis": speech_synthesis,
+}

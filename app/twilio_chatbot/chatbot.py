@@ -118,10 +118,12 @@ def webhook():
                                             or "variation" in incoming_msg.lower()
                                         ):
                                             # Image variation
-                                            image_url = image_variation(image_path)
+                                            image_url = create_image_variation(
+                                                image_path
+                                            )
                                         else:
                                             # Image editing
-                                            image_url = image_edit(
+                                            image_url = edit_image(
                                                 image_path, incoming_msg
                                             )
                                         log_response(
@@ -143,7 +145,7 @@ def webhook():
                                 # Image generation
                                 prompt = incoming_msg.lower().replace("dalle", "")
                                 try:
-                                    image_url = image_response(prompt)
+                                    image_url = generate_image(prompt)
                                     log_response(
                                         name=name, number=number, message=prompt
                                     )
@@ -233,10 +235,12 @@ def webhook():
                                             or "variation" in incoming_msg.lower()
                                         ):
                                             # Image variation
-                                            image_url = image_variation(image_path)
+                                            image_url = create_image_variation(
+                                                image_path
+                                            )
                                         else:
                                             # Image editing
-                                            image_url = image_edit(
+                                            image_url = edit_image(
                                                 image_path, incoming_msg
                                             )
                                         log_response(
@@ -258,7 +262,7 @@ def webhook():
                                 # Image generation
                                 prompt = incoming_msg.lower().replace("dalle", "")
                                 try:
-                                    image_url = image_response(prompt)
+                                    image_url = generate_image(prompt)
                                     log_response(
                                         name=name, number=number, message=prompt
                                     )
