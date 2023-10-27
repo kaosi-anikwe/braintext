@@ -1,4 +1,5 @@
 import os
+import logging
 from flask import Flask
 from flask_wtf import CSRFProtect
 from flask_login import LoginManager
@@ -23,6 +24,14 @@ login_manager = LoginManager()
 login_manager.login_view = "auth.login"
 csrf = CSRFProtect()
 migrate = Migrate()
+
+# configure logger
+logging.basicConfig(
+    filename=os.path.join("logs", "website", "debug.log"),
+    level=logging.INFO,
+    format="%(levelname)s - %(name)s - %(message)s",
+)
+logger = logging.getLogger("braintext")
 
 
 def create_app(config=Config):

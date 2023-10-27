@@ -30,6 +30,7 @@ from google.cloud.speech_v2.types import cloud_speech
 from botocore.exceptions import BotoCoreError, ClientError
 
 # local imports
+from .. import logger
 from ..models import Voices, Users
 from ..modules.messages import create_all, get_engine, Messages
 
@@ -104,7 +105,7 @@ def synthesize_speech(text: str, voice: str) -> str | None:
         )
     except (BotoCoreError, ClientError) as error:
         # The service returned an error, exit gracefully
-        print(error)
+        logger.error(error)
 
     # Access the audio stream from the response
     if response and "AudioStream" in response:
@@ -123,11 +124,11 @@ def synthesize_speech(text: str, voice: str) -> str | None:
                 return filename
             except IOError as error:
                 # Could not write to file, exit gracefully
-                print(error)
+                logger.error(error)
 
     else:
         # The response didn't contain audio data, exit gracefully
-        print("Could not stream audio")
+        logger.error("Could not stream audio")
         return response
 
 
@@ -154,7 +155,7 @@ def image_to_string(image_path: str):
             return text
         return None
     except:
-        print(traceback.format_exc())
+        logger.error(traceback.format_exc())
         return None
 
 
@@ -284,7 +285,7 @@ def user_dir(number: str, name: str = None) -> str:
         return log_path
 
     except:
-        print(traceback.format_exc())
+        logger.error(traceback.format_exc())
         return None
 
 
@@ -337,7 +338,7 @@ def get_last_message_time(user_dir: str) -> datetime | None:
             if match:
                 message_time = match.group(1)
             else:
-                print(f"No log time found in {newest_file}")
+                logger.warning(f"No log time found in {newest_file}")
                 return None
         # construct last message time
         last_message_time = datetime.strptime(
@@ -345,7 +346,7 @@ def get_last_message_time(user_dir: str) -> datetime | None:
         )
         return last_message_time
     except:
-        print(traceback.format_exc())
+        logger.error(traceback.format_exc())
         return None
 
 
@@ -435,7 +436,7 @@ def transcribe_audio(
 
         return transcript
     else:  # asynchronous processing
-        print(f"Processing {duration} sec long audio")
+        logger.info(f"Processing {duration} sec long audio")
         text = "Your audio is longer than a minute. Processing might take longer than usual, please hold on."
         message_id = send_text(text, number)
         # upload to google cloud storage
@@ -521,7 +522,7 @@ def text_to_speech(text: str, voice_name: str) -> str | None:
             out.write(response.audio_content)
         return filename
     except:
-        print(traceback.format_exc())
+        logger.error(traceback.format_exc())
         return None
 
 
@@ -571,15 +572,15 @@ def num_tokens_from_messages(messages, model="gpt-3.5-turbo-0301"):
     try:
         encoding = tiktoken.encoding_for_model(model)
     except KeyError:
-        print("Warning: model not found. Using cl100k_base encoding.")
+        logger.error("Warning: model not found. Using cl100k_base encoding.")
         encoding = tiktoken.get_encoding("cl100k_base")
     if model == "gpt-3.5-turbo":
-        print(
+        logger.warning(
             "Warning: gpt-3.5-turbo may change over time. Returning num tokens assuming gpt-3.5-turbo-0301."
         )
         return num_tokens_from_messages(messages, model="gpt-3.5-turbo-0301")
     elif model == "gpt-4":
-        print(
+        logger.warning(
             "Warning: gpt-4 may change over time. Returning num tokens assuming gpt-4-0314."
         )
         return num_tokens_from_messages(messages, model="gpt-4-0314")
@@ -603,7 +604,6 @@ def num_tokens_from_messages(messages, model="gpt-3.5-turbo-0301"):
             if key == "name":
                 num_tokens += tokens_per_name
     num_tokens += 3  # every reply is primed with <|start|>assistant<|message|>
-    # print(str(num_tokens))
     return num_tokens
 
 
@@ -641,7 +641,7 @@ def chatgpt_response(
         )
         # check for function call
         if completion.choices[0].message.get("function_call"):
-            print(completion.choices[0].message.function_call)
+            logger.info(completion.choices[0].message.function_call)
             # get function name and arguments
             function_name = completion.choices[0].message.function_call.name
             function_arguments = json.loads(
@@ -689,7 +689,7 @@ def chatgpt_response(
 
         return text, tokens, role
     except:
-        print(traceback.format_exc())
+        logger.error(traceback.format_exc())
         text = "Sorry, I can't respond to that at the moment. Plese try again later."
         return text, 0, "assistant"
     finally:
@@ -772,11 +772,11 @@ def speech_synthesis(data: Dict[Any, Any], tokens: int, message: str, text: str)
 
         return send_audio(media_url, number)
     except BotoCoreError:
-        print(traceback.format_exc())
+        logger.error(traceback.format_exc())
         text = "Sorry, I cannot respond to that at the moment, please try again later."
         return send_text(text, number)
     except ClientError:
-        print(traceback.format_exc())
+        logger.error(traceback.format_exc())
         text = "Sorry, your response was too long. Please rephrase the question or break it into segments."
         return send_text(text, number)
 
@@ -892,7 +892,7 @@ def google_search(
         return results
 
     except:
-        print(traceback.format_exc())
+        logger.error(traceback.format_exc())
         text = "Sorry, I cannot respond to that at the moment, please try again later."
         return send_text(text, number)
 

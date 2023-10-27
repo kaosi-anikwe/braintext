@@ -6,6 +6,7 @@ from email.header import Header
 from flask import url_for, render_template
 from email.mime.multipart import MIMEMultipart
 from app.modules.verification import generate_confirmation_token
+from app import logger
 
 
 def send_email(receiver_email, subject, plaintext, html=None):
@@ -14,8 +15,8 @@ def send_email(receiver_email, subject, plaintext, html=None):
     PORT = 465  # For starttls
     USERNAME = os.environ.get("SENDER_EMAIL")
     PASSWORD = os.environ.get("PASSWORD")
-    print(USERNAME)
-    print(PASSWORD)
+    logger.info(USERNAME)
+    logger.info(PASSWORD)
 
     # Message setup
     message = MIMEMultipart()
@@ -47,7 +48,7 @@ def send_email(receiver_email, subject, plaintext, html=None):
             success = True  # Set success to True on successful send
     except Exception as e:
         # Print error messages to stdout
-        print(e)
+        logger.error(e)
     finally:
         return success  # Return success value
 
@@ -58,7 +59,7 @@ def send_registration_email(user):
     confirm_url = url_for(
         "auth.confirm_email", token=token, _external=True, _scheme="https"
     )
-    print(confirm_url)
+    logger.info(confirm_url)
     # check if user already registered
     if user.edited:
         subject = "Confirm changes - Please verify the changes made to your account."

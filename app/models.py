@@ -3,7 +3,7 @@ import time
 import uuid
 import math
 import random
-from app import db, login_manager
+from app import db, login_manager, logger
 from datetime import datetime, timedelta, timezone
 from flask import current_app
 from flask_login import UserMixin
@@ -258,7 +258,7 @@ class BasicSubscription(db.Model, TimestampMixin, DatabaseHelperMixin):
             self.update()
             return True
         except Exception as e:
-            print(e)
+            logger.error(e)
             return False
 
     def respond(self) -> bool:
@@ -325,7 +325,7 @@ class StandardSubscription(db.Model, TimestampMixin, DatabaseHelperMixin):
             BasicSubscription.user_id == user_id
         ).one()
         if not basic_sub.renew():
-            print(
+            logger.warning(
                 f"Failed to renew basic sub for user: {user.display_name()} with user ID: {user.id}"
             )
 
@@ -382,7 +382,7 @@ class PremiumSubscription(db.Model, TimestampMixin, DatabaseHelperMixin):
             BasicSubscription.user_id == user_id
         ).one()
         if not basic_sub.renew():
-            print(
+            logger.warning(
                 f"Failed to renew basic sub for user: {user.display_name()} with user ID: {user.id}"
             )
 

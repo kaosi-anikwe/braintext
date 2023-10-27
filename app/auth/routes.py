@@ -7,7 +7,7 @@ from flask_login import login_user, current_user, logout_user, login_required
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 
 # local imports
-from app import db, csrf
+from app import db, csrf, logger
 from app.modules.verification import confirm_token
 from app.modules.functions import send_text
 from app.models import Users, BasicSubscription, UserSettings, PremiumSubscription
@@ -139,8 +139,8 @@ def edit_profile():
 
         flash("Profile updated successfully!", "success")
         return redirect(url_for("main.profile"))
-    except Exception as e:
-        print(e)
+    except:
+        logger.error(traceback.format_exc())
         db.session.rollback()
 
         flash("Failed to update profile. Please try again later.", "danger")
@@ -171,8 +171,8 @@ def edit_settings():
         user_settings.update()
         flash("Account settings updated successfully!", "success")
         return redirect(f"{url_for('main.profile')}?settings=True")
-    except Exception as e:
-        print(e)
+    except:
+        logger.error(traceback.format_exc())
         flash("Failed to update account settings. Please try again later.", "danger")
         return redirect(f"{url_for('main.profile')}?settings=True")
 
@@ -191,8 +191,8 @@ def confirm_email(token):
                 return render_template("thanks/verify-email.html", success=True)
         else:
             return render_template("thanks/verify-email.html", success=False)
-    except Exception as e:
-        print(e)
+    except:
+        logger.error(traceback.format_exc())
         return render_template("thanks/verify-email.html", success=False)
 
 
@@ -206,7 +206,8 @@ def verification_email():
         else:
             return jsonify({"success": False}), 500
     except:
-        print(traceback.format_exc())
+        logger.error(traceback.format_exc())
+        return jsonify({"success": False}), 500
 
 
 # Change password
@@ -232,7 +233,7 @@ def forgot_password():
     if user:
         try:
             send = send_forgot_password_email(user)
-            print(send, "SEND")
+            logger.warning(send, "SEND")
             if send:
                 flash("Follow the linkbwe sent to reset your password.", "sucess")
                 return render_template("auth/auth.html")
@@ -266,8 +267,8 @@ def confirm_new_password():
             return render_template("thanks/password_change.html", success=True)
         else:
             return render_template("thanks/password_change.html", success=False)
-    except Exception as e:
-        print(e)
+    except:
+        logger.error(traceback.format_exc())
         return render_template("thanks/password_change.html", success=False)
 
 

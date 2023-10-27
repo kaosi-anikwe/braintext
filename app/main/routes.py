@@ -10,6 +10,7 @@ from flask_login import login_required, current_user
 from flask import Blueprint, render_template, request, flash, jsonify, redirect, url_for
 
 # local imports
+from .. import logger
 from ..modules.email_utility import send_email
 from ..chatbot.functions import send_text, send_otp_message
 from ..models import (
@@ -147,7 +148,7 @@ def send_otp():
 
             return jsonify({"otp": otp.otp})
     except:
-        print(traceback.format_exc())
+        logger.error(traceback.format_exc())
         return jsonify({"error": True})
 
 
@@ -170,7 +171,7 @@ def resend_otp():
 
             return jsonify({"otp": check_otp.otp})
     except:
-        print(traceback.format_exc())
+        logger.error(traceback.format_exc())
         return jsonify({"error": True})
 
 
@@ -214,7 +215,7 @@ def verify_otp():
 
         return redirect(url_for("main.profile"))
     except:
-        print(traceback.format_exc())
+        logger.error(traceback.format_exc())
         return jsonify({"error": True})
 
 
@@ -242,7 +243,7 @@ def send_contact_email():
         ):
             return jsonify({"success": True}), 200
     except:
-        print(traceback.format_exc())
+        logger.error(traceback.format_exc())
         return jsonify({"success": False}), 400
 
 

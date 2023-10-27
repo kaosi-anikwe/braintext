@@ -10,6 +10,7 @@ from twilio.twiml.messaging_response import MessagingResponse
 
 # local imports
 from ..modules.functions import *
+from .. import logger
 
 
 load_dotenv()
@@ -22,13 +23,17 @@ class TimeoutError(Exception):
     pass
 
 
+def twilio_chat_reponse(*args, **kwargs):
+    pass
+
+
 def send_otp_message(client: Client, otp: int, name: str, phone_no: str) -> str:
     message = client.messages.create(
         body=f"Hi {name}! Here's your One Time Password to verify your number at Braintext. \n{otp} \nThe OTP will expire in 3 minutes.",
         from_="whatsapp:+15076094633",
         to=f"whatsapp:{phone_no}",
     )
-    print(f"{message.sid} -- {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')}")
+    logger.info(f"{message.sid} -- {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')}")
     return message.sid
 
 
@@ -38,7 +43,7 @@ def send_whatspp_message(client: Client, message: str, phone_no: str) -> str:
         from_="whatsapp:+15076094633",
         to=f"whatsapp:{phone_no}",
     )
-    print(f"{message.sid} -- {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')}")
+    logger.info(f"{message.sid} -- {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')}")
     return message.sid
 
 
@@ -110,13 +115,13 @@ def chat_reponse(
             return respond_text(text)
         return split_and_respond(client, text, number)
     except:
-        print(traceback.format_exc())
+        logger.error(traceback.format_exc())
         text = "Sorry, I cannot respond to that at the moment, please try again later."
         return respond_text(text)
 
 
 def check_and_respond_text(client: Client, text: str, number: str) -> str:
-    print(f"Text is {len(text)} characters long.")
+    logger.info(f"Text is {len(text)} characters long.")
     text_length = len(text)
     while text_length >= 3200:
         first
@@ -126,11 +131,11 @@ def check_and_respond_text(client: Client, text: str, number: str) -> str:
         text = "Your response is too long. Please rephrase your question."
         return respond_text(text)
     elif len(text) >= 1600:
-        print(f"Text was split.")
+        logger.info(f"Text was split.")
         # split message into 2. Send first half and return second half
         sentences = text.split(". ")
         sentence_count = len(sentences)
-        print(f"Number of sentences: {sentence_count}")
+        logger.info(f"Number of sentences: {sentence_count}")
         first = int(sentence_count / 2)
         second = sentence_count - first
         first_part = ""
@@ -144,8 +149,8 @@ def check_and_respond_text(client: Client, text: str, number: str) -> str:
                 if index == second:
                     second_part += f"{sentence}"
                 second_part += f". {sentence}"
-        print(f"Length of first part: {len(first_part)}")
-        print(f"Lenght of second part: {len(second_part)}")
+        logger.info(f"Length of first part: {len(first_part)}")
+        logger.info(f"Lenght of second part: {len(second_part)}")
         if len(first_part) >= 1600:
             # further divide into 2 and send individually
             sentences = first_part.split(". ")

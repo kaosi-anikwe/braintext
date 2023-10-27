@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 from flask import Blueprint, request, jsonify, send_file, after_this_request
 
 # local imports
+from .. import logger
 from .functions import *
 from ..modules.functions import *
 from ..models import (
@@ -48,7 +49,7 @@ def webhook():
         if is_message(data):
             if not is_old(data):
                 number = f"+{get_number(data)}"
-                subprocess.run(f"python3 -c 'print({number})'", shell=True)
+                logger.info(number)
                 message_id = get_message_id(data)
                 message_type = get_message_type(data)
                 mark_as_read(message_id)
@@ -235,7 +236,7 @@ def webhook():
                         )
                         send_interactive_message(button=button, recipient=number)
     except:
-        print(traceback.format_exc())
+        logger.error(traceback.format_exc())
         text = "Sorry, I can't respond to that at the moment. Plese try again later."
         reply_to_message(
             message_id, number, text

@@ -8,6 +8,7 @@ from flask import Blueprint, request, render_template, redirect, url_for, jsonif
 from flask_login import login_required, current_user
 from app.models import StandardSubscription, PremiumSubscription, Users
 from app.twilio_chatbot.functions import send_whatspp_message
+from app import logger
 from twilio.rest import Client
 
 
@@ -76,7 +77,7 @@ def create_transaction():
         if not check_pending:
             subscription = StandardSubscription(tx_ref, current_user.id)
             subscription.insert()
-        print(f"{tx_ref} - {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')}")
+        logger.info(f"{tx_ref} - {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')}")
     elif str(tx_ref).startswith("prmum"):
         # create premium account instance if not found
         check_pending = (
@@ -90,7 +91,7 @@ def create_transaction():
         if not check_pending:
             subscription = PremiumSubscription(tx_ref, current_user.id)
             subscription.insert()
-        print(f"{tx_ref} - {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')}")
+        logger.info(f"{tx_ref} - {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')}")
     return jsonify({"success": True})
 
 
@@ -130,7 +131,7 @@ def payment_callback():
             # update record as cancelled
             subscription.payment_status = "cancelled"
             subscription.update()
-            print(
+            logger.info(
                 f"Payment cancelled - {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')}"
             )
             return redirect(url_for("main.profile"))
@@ -209,7 +210,7 @@ def payment_callback():
                                 phone_no=current_user.phone_no,
                             )
 
-                        print(
+                        logger.info(
                             f"Payment successful - {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')}"
                         )
                         return render_template("thanks/thanks.html", premium=premium)
@@ -219,11 +220,11 @@ def payment_callback():
                     subscription.update()
                     return redirect(url_for("main.profile"))
             except:
-                print(traceback.format_exc())
+                logger.error(traceback.format_exc())
                 # update record as error
                 subscription.payment_status = "error"
                 subscription.update()
-                print(
+                logger.info(
                     f"Payment Failed - {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')}"
                 )
                 flash("Your payment failed. Please contact support", "danger")
@@ -373,7 +374,7 @@ def payment_webhook():
                             subscription.update()
                             return jsonify({"success": False}), 417
                     except:
-                        print(traceback.format_exc())
+                        logger.error(traceback.format_exc())
                         # update record as error
                         subscription.payment_status = "error"
                         subscription.update()

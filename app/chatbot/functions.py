@@ -20,6 +20,7 @@ from ..models import (
     AnonymousUsers,
     UserSettings,
 )
+from .. import logger
 from ..modules.email_utility import send_registration_email
 from ..modules.verification import generate_confirmation_token
 from ..modules.functions import *
@@ -97,7 +98,7 @@ def is_old(data):
     age = datetime.utcnow() - get_timestamp(data)
     if age < timedelta(minutes=0.25):
         return False
-    print(f"Old message is {age}")
+    logger.info(f"Old message is {age}")
     return True
 
 
@@ -391,7 +392,7 @@ def download_media(
                 f.write(response.content)
             return full_path
         except:
-            print(traceback.format_exc())
+            logger.error(traceback.format_exc())
             return None
     return None
 
@@ -518,7 +519,7 @@ def send_otp_message(otp: int, number: str):
         )
         return success
     except:
-        print(traceback.format_exc())
+        logger.error(traceback.format_exc())
         raise Exception
 
 
@@ -608,7 +609,7 @@ def meta_chat_response(
                 return
             text, tokens, role = response[0], response[1], response[2]
         except:
-            print(traceback.format_exc())
+            logger.error(traceback.format_exc())
             text = (
                 "Sorry, I can't respond to that at the moment. Please try again later."
             )
@@ -637,7 +638,7 @@ def meta_chat_response(
             else meta_split_and_respond(text, number, message_id, reply=True)
         )
     except:
-        print(traceback.format_exc())
+        logger.error(traceback.format_exc())
         text = "Sorry, I cannot respond to that at the moment, please try again later."
         return reply_to_message(message_id, number, text)
 
@@ -659,7 +660,7 @@ def meta_audio_response(user: Users, data: Dict[Any, Any], anonymous: bool = Fal
             greeting = contains_greeting(transcript)
             thanks = contains_thanks(transcript)
         except:
-            print(traceback.format_exc())
+            logger.error(traceback.format_exc())
             text = "Error transcribing audio. Please try again later."
             return send_text(text, number)
         # reactions
@@ -689,7 +690,7 @@ def meta_audio_response(user: Users, data: Dict[Any, Any], anonymous: bool = Fal
                 return
             text, tokens, role = response[0], response[1], response[2]
         except:
-            print(traceback.format_exc())
+            logger.error(traceback.format_exc())
             text = (
                 "Sorry I can't respond to that at the moment. Please try again later."
             )
@@ -709,7 +710,7 @@ def meta_audio_response(user: Users, data: Dict[Any, Any], anonymous: bool = Fal
         return speech_synthesis(data=data, text=text, tokens=tokens, message=transcript)
 
     except:
-        print(traceback.format_exc())
+        logger.error(traceback.format_exc())
         text = "Sorry, I cannot respond to that at the moment, please try again later."
         return send_text(text, number)
 
@@ -763,7 +764,7 @@ def meta_image_response(user: Users, data: Dict[Any, Any], anonymous: bool = Fal
             )
             send_image(image_url, number)
     except:
-        print(traceback.format_exc())
+        logger.error(traceback.format_exc())
         text = "Something went wrong. Please try again later."
         return send_text(text, number)
 
@@ -892,6 +893,6 @@ def whatsapp_signup(
                         message = f"Awesome! You're all set up.\nCheck your inbox for a verification link.\nLogin to edit your profile or change settings. https://braintext.io/profile?settings=True.\n*Your password the number you're texting with.*\nFollow this link to change your password.\n{change_url}\n\nThank you for choosing BrainText 💙."
                         send_text(message, number)
     except:
-        print(traceback.format_exc())
+        logger.error(traceback.format_exc())
         text = "Something went wrong. Please try again later."
         send_text(text, number)

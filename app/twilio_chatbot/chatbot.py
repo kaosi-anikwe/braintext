@@ -17,13 +17,14 @@ from botocore.exceptions import BotoCoreError, ClientError
 from flask import Blueprint, request, url_for, send_file, abort
 
 # local imports
-from .functions import respond_text, respond_media, get_original_message
+from .functions import *
 from ..modules.messages import Messages
 from ..models import (
     Users,
     BasicSubscription,
 )
 from ..modules.functions import *
+from .. import logger
 
 load_dotenv()
 
@@ -136,7 +137,7 @@ def webhook():
                                         text = "Something went wrong. Please try again later."
                                         return respond_text(text)
                                 except:
-                                    print(traceback.format_exc())
+                                    logger.error(traceback.format_exc())
                                     text = (
                                         "Something went wrong. Please try again later."
                                     )
@@ -151,7 +152,7 @@ def webhook():
                                     )
                                     return respond_media(image_url)
                                 except:
-                                    print(traceback.format_exc())
+                                    logger.error(traceback.format_exc())
                                     text = "Sorry, I cannot respond to that at the moment, please try again later."
                                     return respond_text(text)
                             else:
@@ -206,7 +207,7 @@ def webhook():
                                     #         "whisper-1", file
                                     #     )
                                 except:
-                                    print(traceback.format_exc())
+                                    logger.error(traceback.format_exc())
                                     text = "Error transcribing audio. Please try again later."
                                     return respond_text(text)
 
@@ -253,7 +254,7 @@ def webhook():
                                         text = "Something went wrong. Please try again later."
                                         return respond_text(text)
                                 except:
-                                    print(traceback.format_exc())
+                                    logger.error(traceback.format_exc())
                                     text = (
                                         "Something went wrong. Please try again later."
                                     )
@@ -268,7 +269,7 @@ def webhook():
                                     )
                                     return respond_media(image_url)
                                 except:
-                                    print(traceback.format_exc())
+                                    logger.error(traceback.format_exc())
                                     text = "Sorry, I cannot respond to that at the moment, please try again later."
                                     return respond_text(text)
                             else:
@@ -378,15 +379,15 @@ def fallback():
                             os.remove(audio_path)
 
                         media_url = f"{url_for('twilio_chatbot.send_voice_note', _external=True, _scheme='https')}?filename={audio_filename.split('.')[0]}.opus"
-                        print(media_url)
+                        logger.ingo(media_url)
 
                         return respond_media(media_url)
                     except BotoCoreError:
-                        print(traceback.format_exc())
+                        logger.error(traceback.format_exc())
                         text = "Sorry, I cannot respond to that at the moment, please try again later."
                         return respond_text(text)
                     except ClientError:
-                        print(traceback.format_exc())
+                        logger.error(traceback.format_exc())
                         text = "Sorry, you're response was too long. Please rephrase the question or break it into segments."
                         return respond_text(text)
                 else:
@@ -394,13 +395,13 @@ def fallback():
                         return respond_text(text)
                     return split_and_respond(client, text, number)
             except:
-                print(traceback.format_exc())
+                logger.error(traceback.format_exc())
                 text = "Sorry, I cannot respond to that at the moment, please try again later."
                 return respond_text(text)
         else:
             return webhook()
     except:
-        print(traceback.format_exc())
+        logger.error(traceback.format_exc())
         text = "Sorry, I cannot respond to that at the moment, please try again later."
         return respond_text(text)
 
@@ -408,7 +409,7 @@ def fallback():
 @chatbot.post("/receive-sms")
 def receive_sms():
     data = request.form
-    print(data)
+    logger.info(data)
     return "200"
 
 
@@ -432,7 +433,7 @@ def handle_incoming_call():
 @chatbot.route("/recording_complete", methods=["POST"])
 def recording_complete():
     data = f"RECORD COMPLETE\n{request.values}"
-    print(data)
+    logger.info(data)
     # This function will be called when the recording is complete
     # You can perform any necessary actions with the recording here
     return ""
@@ -441,7 +442,7 @@ def recording_complete():
 @chatbot.route("/recording_status", methods=["POST"])
 def recording_status():
     data = f"RECORD STATUS\n{request.values}"
-    print(data)
+    logger.info(data)
     # This function will be called with the recording status updates
     # You can use this to track the progress of the recording, if needed
     return ""
@@ -450,7 +451,7 @@ def recording_status():
 @chatbot.route("/transcription_status", methods=["POST"])
 def transcription_status():
     data = f"TRANSCRIBE STATUS\n{request.values}"
-    print(data)
+    logger.info(data)
     # This function will be called with the transcription status updates
     # You can use this to track the progress of the transcription, if enabled
     return ""

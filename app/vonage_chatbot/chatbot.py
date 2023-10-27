@@ -13,6 +13,7 @@ from flask import Blueprint, request, url_for
 from botocore.exceptions import BotoCoreError, ClientError
 
 # local imports
+from .. import logger
 from .functions import (
     send_audio,
     send_image,
@@ -64,7 +65,7 @@ if not os.path.exists(tmp_folder):
 def webhook():
     try:
         data = request.get_json()
-        print(data)
+        logger.info(data)
         number = data["from"]
         user = Users.query.filter(Users.phone_no == f"+{number}").one_or_none()
         name = data["profile"]["name"]
@@ -83,7 +84,7 @@ def webhook():
                             with open(f"{tmp_file}.mp3", "rb") as file:
                                 transcript = openai.Audio.transcribe("whisper-1", file)
                         except:
-                            print(traceback.format_exc())
+                            logger.error(traceback.format_exc())
                             text = "Error transcribing audio. Please try again later."
                             return send_text(client, text, number), "200"
 
@@ -129,18 +130,18 @@ def webhook():
                                     os.remove(audio_filename)
 
                                 media_url = f"{url_for('twilio_chatbot.send_voice_note', _external=True, _scheme='https')}?filename={voice_note}"
-                                print(media_url)
+                                logger.info(media_url)
 
                                 return (
                                     send_audio(client, media_url, number),
                                     "200",
                                 )
                             except BotoCoreError:
-                                print(traceback.format_exc())
+                                logger.error(traceback.format_exc())
                                 text = "Sorry, I cannot respond to that at the moment, please try again later."
                                 return send_text(client, text, number), "200"
                             except ClientError:
-                                print(traceback.format_exc())
+                                logger.error(traceback.format_exc())
                                 text = "Sorry, you're response was too long. Please rephrase the question or break it into segments."
                                 return send_text(client, text, number), "200"
                         else:
@@ -154,7 +155,7 @@ def webhook():
                             log_response(name=name, number=f"+{number}", message=prompt)
                             return send_image(client, image_url, number), "200"
                         except:
-                            print(traceback.format_exc())
+                            logger.error(traceback.format_exc())
                             text = "Sorry, I cannot respond to that at the moment, please try again later."
                             return send_text(client, text, number), "200"
                     else:
@@ -177,7 +178,7 @@ def webhook():
 
                             return send_text(client, text, number), "200"
                         except:
-                            print(traceback.format_exc())
+                            logger.error(traceback.format_exc())
                             text = "Sorry, I cannot respond to that at the moment, please try again later."
                             return send_text(client, text, number), "200"
                 else:
@@ -190,7 +191,7 @@ def webhook():
             text = "To use BrainText, please sign up for an account at https://braintext.io"
             return send_text(client, text, number), "200"
     except:
-        print(traceback.format_exc())
+        logger.error(traceback.format_exc())
         text = "Sorry, I cannot respond to that at the moment, please try again later."
         return send_text(client, text, number), "200"
 
