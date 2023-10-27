@@ -59,31 +59,6 @@ GOOGLE_CREDENTIALS = service_account.Credentials.from_service_account_file(
 )
 
 
-class TimeoutError(Exception):
-    # custom timeout class to handle ChatGPT timeout
-    pass
-
-
-def send_otp_message(client: Client, otp: int, name: str, phone_no: str) -> str:
-    message = client.messages.create(
-        body=f"Hi {name}! Here's your One Time Password to verify your number at Braintext. \n{otp} \nThe OTP will expire in 3 minutes.",
-        from_="whatsapp:+15076094633",
-        to=f"whatsapp:{phone_no}",
-    )
-    print(f"{message.sid} -- {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')}")
-    return message.sid
-
-
-def send_whatspp_message(client: Client, message: str, phone_no: str) -> str:
-    message = client.messages.create(
-        body=message,
-        from_="whatsapp:+15076094633",
-        to=f"whatsapp:{phone_no}",
-    )
-    print(f"{message.sid} -- {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')}")
-    return message.sid
-
-
 def send_text(message: str, recipient: str) -> Union[str, None]:
     data = {
         "messaging_product": "whatsapp",
@@ -222,37 +197,6 @@ def log_location(name: str, number: str) -> str:
         return day_log
 
 
-def generate_image(data: Dict[Any, Any], tokens: int, message: str, prompt: str) -> str:
-    """Genereates an image with the given prompt and returns the URL to the image."""
-    from ..chatbot.functions import (
-        get_name,
-        get_number,
-        send_image,
-    )
-
-    image_response = openai.Image.create(prompt=prompt, n=1, size="1024x1024")
-    image_url = image_response.data[0].url
-    # log response
-    name = get_name(data)
-    number = f"+{get_number(data)}"
-    log_response(
-        name=name,
-        number=number,
-        message=message,
-        tokens=tokens,
-    )
-    # record ChatGPT response
-    user_db_path = get_user_db(name=name, number=number)
-    new_message = {
-        "role": "assistant",
-        "content": f"```an AI generated image of {prompt}```",
-    }
-    new_message = Messages(new_message, user_db_path)
-    new_message.insert()
-
-    return send_image(image_url, number)
-
-
 def edit_image(image_path: str, prompt: str) -> str:
     """Edit's a picture with a second picture acting as a mask."""
     image = open(image_path, "rb")
@@ -273,53 +217,6 @@ def create_image_variation(image_path: str) -> str:
     if os.path.exists(image_path):
         os.remove(image_path)
     return image_url
-
-
-def speech_synthesis(data: Dict[Any, Any], tokens: int, text: str, message: str):
-    """Synthesize audio output and send to user."""
-    from ..chatbot.functions import (
-        send_audio,
-        get_number,
-        get_name,
-    )
-
-    try:
-        # get voice type
-        number = f"+{get_number(data)}"
-        user = Users.query.filter(Users.phone_no == number).one_or_none()
-        voice_type = user.user_settings().ai_voice_type if user else "Joanna"
-        # synthesize text
-        audio_filename = text_to_speech(
-            text=text,
-            voice_name=voice_type,
-        )
-        if audio_filename == None:
-            text = "Error synthesizing speech. Please try again later or change the voice type in your settings. https://braintext.io/profile?settings=True"
-            return send_text(text, number)
-        media_url = f"{url_for('chatbot.send_voice_note', _external=True, _scheme='https')}?filename={audio_filename}"
-        # log response
-        name = get_name(data)
-        log_response(
-            name=name,
-            number=number,
-            message=message,
-            tokens=tokens,
-        )
-        # record ChatGPT response
-        user_db_path = get_user_db(name=name, number=number)
-        new_message = {"role": "assistant", "content": text}
-        new_message = Messages(new_message, user_db_path)
-        new_message.insert()
-
-        return send_audio(media_url, number)
-    except BotoCoreError:
-        print(traceback.format_exc())
-        text = "Sorry, I cannot respond to that at the moment, please try again later."
-        return send_text(text, number)
-    except ClientError:
-        print(traceback.format_exc())
-        text = "Sorry, your response was too long. Please rephrase the question or break it into segments."
-        return send_text(text, number)
 
 
 def log_response(name: str, number: str, message: str, tokens: int = 0) -> None:
@@ -350,70 +247,6 @@ def get_audio(audio_url: str, file_name: str) -> None:
 def delete_file(filename: str) -> None:
     if os.path.exists(filename):
         os.remove(filename)
-
-
-def chatgpt_response(
-    data: Dict[Any, Any], messages: list, number: str, message_id: str = None
-) -> tuple | None:
-    """Get response from ChatGPT"""
-    try:
-        # Event to signal the status update function to stop if OpenAI responds on time
-        stop_event = threading.Event()
-
-        def status_update():
-            """Wait ```n``` seconds and send status update."""
-            if not stop_event.wait(15):
-                text = "Sorry for the wait. I'm still working on your request. Thanks for your patience!"
-                send_text(
-                    message=text, recipient=number
-                ) if not message_id else reply_to_message(
-                    message_id=message_id, recipient=number, message=text
-                )
-
-        # set timer
-        thread = threading.Thread(target=status_update)
-        thread.start()
-
-        completion = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo-0613",
-            messages=messages,
-            temperature=1,
-            user=f"{str(number)}",
-            functions=CHATGPT_FUNCTION_DESCRIPTIONS,
-            function_call="auto",
-        )
-        # check for function call
-        if completion.choices[0].message.get("function_call"):
-            # get function name and arguments
-            function_name = completion.choices[0].message.function_call.name
-            function_arguments = json.loads(
-                completion.choices[0].message.function_call.arguments
-            )
-            # pass in the request data to the function to be called
-            function_arguments["data"] = data
-            # pass in the number of tokens used for logging
-            function_arguments["tokens"] = int(completion.usage.total_tokens)
-            # pass in current user message
-            function_arguments["message"] = messages[-1]["content"]
-            # call function with arguments as kwargs
-            CHATGPT_FUNCTIONS[function_name](**function_arguments)
-            return None
-
-        text = completion.choices[0].message.content
-        tokens = int(completion.usage.total_tokens)
-        role = completion.choices[0].message.role
-
-        return text, tokens, role
-    except:
-        print(traceback.format_exc())
-        text = "Sorry, I can't respond to that at the moment. Plese try again later."
-        return text, 0, "assistant"
-    finally:
-        # Signal the status update function to stop
-        stop_event.set()
-
-        # Wait for status update thread to complete
-        thread.join()
 
 
 def user_dir(number: str, name: str = None) -> str:
@@ -530,7 +363,7 @@ def load_messages(user: Users, prompt: str, db_path: str, original_message=None)
         session.query(Messages).order_by(desc(Messages.id)).limit(CONTEXT_LIMIT).all()
     )
     messages = [
-        {"role": message.role, "content": message.content}
+        {"role": message.role, "content": message.content if message.content else ""}
         for message in reversed(get_messages)
     ]
 
@@ -720,6 +553,18 @@ def contains_thanks(text):
     return bool(thanks_match)
 
 
+def split_text(text):
+    middle_index = len(text) // 2
+
+    # Find the index of the nearest whitespace to the middle index
+    while middle_index < len(text) and not text[middle_index].isspace():
+        middle_index += 1
+
+    first_half = text[:middle_index]
+    second_half = text[middle_index:]
+    return first_half, second_half
+
+
 # ChatGPT ----------------------------------
 def num_tokens_from_messages(messages, model="gpt-3.5-turbo-0301"):
     """Returns the number of tokens used by a list of messages."""
@@ -754,7 +599,7 @@ def num_tokens_from_messages(messages, model="gpt-3.5-turbo-0301"):
     for message in messages:
         num_tokens += tokens_per_message
         for key, value in message.items():
-            num_tokens += len(encoding.encode(value))
+            num_tokens += len(encoding.encode(str(value)))
             if key == "name":
                 num_tokens += tokens_per_name
     num_tokens += 3  # every reply is primed with <|start|>assistant<|message|>
@@ -762,16 +607,294 @@ def num_tokens_from_messages(messages, model="gpt-3.5-turbo-0301"):
     return num_tokens
 
 
-def split_text(text):
-    middle_index = len(text) // 2
+def chatgpt_response(
+    data: Dict[Any, Any], messages: list, number: str, message_id: str = None
+) -> tuple | None:
+    """Get response from ChatGPT"""
+    try:
+        # Event to signal the status update function to stop if OpenAI responds on time
+        stop_event = threading.Event()
 
-    # Find the index of the nearest whitespace to the middle index
-    while middle_index < len(text) and not text[middle_index].isspace():
-        middle_index += 1
+        def status_update():
+            """Wait ```n``` seconds and send status update."""
+            if not stop_event.wait(15):
+                import random
 
-    first_half = text[:middle_index]
-    second_half = text[middle_index:]
-    return first_half, second_half
+                text = random.choice(WAIT_MESSAGES)
+                send_text(
+                    message=text, recipient=number
+                ) if not message_id else reply_to_message(
+                    message_id=message_id, recipient=number, message=text
+                )
+
+        # set timer
+        thread = threading.Thread(target=status_update)
+        thread.start()
+
+        completion = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo-0613",
+            messages=messages,
+            temperature=1,
+            user=f"{str(number)}",
+            functions=CHATGPT_FUNCTION_DESCRIPTIONS,
+            function_call="auto",
+        )
+        # check for function call
+        if completion.choices[0].message.get("function_call"):
+            print(completion.choices[0].message.function_call)
+            # get function name and arguments
+            function_name = completion.choices[0].message.function_call.name
+            function_arguments = json.loads(
+                completion.choices[0].message.function_call.arguments
+            )
+            # pass in the request data to the function to be called
+            function_arguments["data"] = data
+            # pass in the number of tokens used for logging
+            function_arguments["tokens"] = int(completion.usage.total_tokens)
+            # pass in current user message
+            function_arguments["message"] = messages[-1]["content"]
+            # call function with arguments as kwargs
+            if (
+                function_name == "google_search"
+                and not function_arguments.get("image_search")
+                and not function_arguments.get("file_type")
+            ):
+                # typical google search
+                results = CHATGPT_FUNCTIONS[function_name](**function_arguments)
+                messages.append(
+                    {"role": "function", "name": "google_search", "content": results}
+                )
+
+                completion = openai.ChatCompletion.create(
+                    model="gpt-3.5-turbo-0613",
+                    messages=messages,
+                    temperature=1,
+                    user=f"{str(number)}",
+                    functions=CHATGPT_FUNCTION_DESCRIPTIONS,
+                    function_call="auto",
+                )
+
+                text = completion.choices[0].message.content
+                tokens = int(completion.usage.total_tokens)
+                role = completion.choices[0].message.role
+
+                return text, tokens, role
+            else:
+                CHATGPT_FUNCTIONS[function_name](**function_arguments)
+                return None
+
+        text = completion.choices[0].message.content
+        tokens = int(completion.usage.total_tokens)
+        role = completion.choices[0].message.role
+
+        return text, tokens, role
+    except:
+        print(traceback.format_exc())
+        text = "Sorry, I can't respond to that at the moment. Plese try again later."
+        return text, 0, "assistant"
+    finally:
+        # Signal the status update function to stop
+        stop_event.set()
+
+        # Wait for status update thread to complete
+        thread.join()
+
+
+# ChatGPT Functions ----------------------------
+
+
+def generate_image(data: Dict[Any, Any], tokens: int, message: str, prompt: str) -> str:
+    """Genereates an image with the given prompt and returns the URL to the image."""
+    from ..chatbot.functions import (
+        get_name,
+        get_number,
+        send_image,
+    )
+
+    image_response = openai.Image.create(prompt=prompt, n=1, size="1024x1024")
+    image_url = image_response.data[0].url
+    # log response
+    name = get_name(data)
+    number = f"+{get_number(data)}"
+    log_response(
+        name=name,
+        number=number,
+        message=message,
+        tokens=tokens,
+    )
+    # record ChatGPT response
+    user_db_path = get_user_db(name=name, number=number)
+    new_message = {
+        "role": "assistant",
+        "content": f"```an AI generated image of {prompt}```",
+    }
+    new_message = Messages(new_message, user_db_path)
+    new_message.insert()
+
+    return send_image(image_url, number)
+
+
+def speech_synthesis(data: Dict[Any, Any], tokens: int, message: str, text: str):
+    """Synthesize audio output and send to user."""
+    from ..chatbot.functions import (
+        send_audio,
+        get_number,
+        get_name,
+    )
+
+    try:
+        name = get_name(data)
+        number = f"+{get_number(data)}"
+        # get voice type
+        user = Users.query.filter(Users.phone_no == number).one_or_none()
+        voice_type = user.user_settings().ai_voice_type if user else "Joanna"
+        # synthesize text
+        audio_filename = text_to_speech(
+            text=text,
+            voice_name=voice_type,
+        )
+        if audio_filename == None:
+            text = "Error synthesizing speech. Please try again later or change the voice type in your settings. https://braintext.io/profile?settings=True"
+            return send_text(text, number)
+        media_url = f"{url_for('chatbot.send_voice_note', _external=True, _scheme='https')}?filename={audio_filename}"
+        # log response
+        log_response(
+            name=name,
+            number=number,
+            message=message,
+            tokens=tokens,
+        )
+        # record ChatGPT response
+        user_db_path = get_user_db(name=name, number=number)
+        new_message = {"role": "assistant", "content": text}
+        new_message = Messages(new_message, user_db_path)
+        new_message.insert()
+
+        return send_audio(media_url, number)
+    except BotoCoreError:
+        print(traceback.format_exc())
+        text = "Sorry, I cannot respond to that at the moment, please try again later."
+        return send_text(text, number)
+    except ClientError:
+        print(traceback.format_exc())
+        text = "Sorry, your response was too long. Please rephrase the question or break it into segments."
+        return send_text(text, number)
+
+
+def google_search(
+    data: Dict[Any, Any],
+    tokens: int,
+    message: str,
+    query: str,
+    image_search: bool = False,
+    num: int = 0,
+    file_type: str = None,
+):
+    from bs4 import BeautifulSoup
+    from ..chatbot.functions import (
+        get_number,
+        get_name,
+    )
+
+    text = None
+    number = f"+{get_number(data)}"
+    name = get_name(data)
+    api_key = str(os.getenv("GOOGLE_SEARCH_API_KEY"))
+    cse_id = str(os.getenv("GOOGLE_SEARCH_ENGINE_ID"))
+    base_url = "https://www.googleapis.com/customsearch/v1"
+    params = {
+        "q": query,
+        "key": api_key,
+        "cx": cse_id,
+    }
+    if num > 0:
+        params["num"] = num
+    if file_type:
+        params["fileType"] = file_type
+    if image_search:
+        params["searchType"] = "image"
+
+    def extract_main_section(soup: BeautifulSoup):
+        main_section = soup.find("main")
+
+        if main_section:
+            # Exclude headers, footers and sidebars by selecting only the relevant content
+            for unwanted_tag in main_section.find_all(["header", "footer", "aside"]):
+                unwanted_tag.extract()
+
+            # Extract the remaining text content
+            main_content = main_section.get_text()
+            return main_content.strip()
+        else:
+            return False
+
+    try:
+        response = requests.get(base_url, params=params)
+        response_data = response.json()
+        results = ""
+
+        if "items" in response_data:
+            items = response_data["items"]
+            if items:
+                # image search
+                if image_search:
+                    text = f"{num} Google images of {query}"
+                    from ..chatbot.functions import send_image, download_media
+
+                    for image in items:
+                        image_name = f"{datetime.now().strftime('%M%S%f')}.png"
+                        download_media(image.get("link", ""), image_name)
+                        image_url = f"{url_for('chatbot.send_voice_note', _external=True, _scheme='https')}?filename={image_name}"
+                        send_image(image_link=image_url, recipient=number)
+                    return
+                # document search
+                if file_type:
+                    text = f"{num} {file_type}'s from Google on {query}"
+                    from ..chatbot.functions import send_document, download_media
+
+                    for i, document in enumerate(items):
+                        document_name = f"{i}_{query}.{file_type}"
+                        download_media(document.get("link", ""), document_name)
+                        document_url = f"{url_for('chatbot.send_voice_note', _external=True, _scheme='https')}?filename={document_name}"
+                        send_document(document_link=document_url, recipient=number)
+                    return
+                # typical google search
+                for item in items:
+                    if results:
+                        break
+                    # Extract the search result link
+                    results = item.get("snippet", "")
+                    # link = item.get("link", "")
+                    # # Scrape content from page
+                    # page = requests.get(link)
+                    # soup = BeautifulSoup(page.text, "html.parser")
+                    # results = extract_main_section(soup)
+
+            else:
+                results = f"No results found for: '{query}'"
+        else:
+            results = f"No results found for: '{query}'"
+
+        # log response
+        log_response(
+            name=name,
+            number=number,
+            message=message,
+            tokens=tokens,
+        )
+        # record ChatGPT response
+        if text:
+            user_db_path = get_user_db(name=name, number=number)
+            new_message = {"role": "assistant", "content": text}
+            new_message = Messages(new_message, user_db_path)
+            new_message.insert()
+
+        return results
+
+    except:
+        print(traceback.format_exc())
+        text = "Sorry, I cannot respond to that at the moment, please try again later."
+        return send_text(text, number)
 
 
 CHATGPT_FUNCTION_DESCRIPTIONS = [
@@ -817,9 +940,51 @@ CHATGPT_FUNCTION_DESCRIPTIONS = [
             "required": ["text"],
         },
     },
+    {
+        "name": "google_search",
+        "description": "Searches online for latest information only when it is not already known. Searches for images and documents as requested by the user with the specfied type for document search and number for image and document search.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "query": {
+                    "type": "string",
+                    "description": "Query to be searched online.",
+                },
+                "image_search": {
+                    "type": "boolean",
+                    "description": "Wether or not the user requested for an image in the query.",
+                },
+                "file_type": {
+                    "type": "string",
+                    "description": "The type of file requested by the user in the query.",
+                },
+                "num": {
+                    "type": "integer",
+                    "description": "Number of images or files requested by the user. Only required if image_search is true or file_type is not empty.",
+                },
+            },
+            "required": ["query"],
+        },
+    },
 ]
 
 CHATGPT_FUNCTIONS = {
     "generate_image": generate_image,
     "speech_synthesis": speech_synthesis,
+    "google_search": google_search,
 }
+
+
+WAIT_MESSAGES = [
+    "Sorry for making you wait. I'm still on it, thanks for being patient!",
+    "My bad for the delay. I'm still working on your request. Thanks for hanging in there!",
+    "Oops, sorry it's taking a bit longer. I'm still working on it though. Thanks for bearing with me!",
+    "Apologies for the wait. I'm still on the case. Thanks for your patience!",
+    "My apologies for the holdup. I'm still working on it. Thanks for being cool about it!",
+    "Sorry for the delay. I'm still working on your request.",
+    "Hey, sorry it's taking a bit longer than expected. I'm still on it, thanks for waiting!",
+    "Sorry for keeping you waiting. Just wanted to let you know I'm still working on it. Thanks for being understanding!",
+    "Oops, sorry for the wait. I'm still working on your request. Thanks for being patient with me!",
+    "My bad for the delay. I'm still on it, thanks for waiting!",
+    "Sorry for the wait. I'm still working on your request. Thanks for your patience!",
+]
