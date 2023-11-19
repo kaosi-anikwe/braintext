@@ -41,11 +41,14 @@ def login():
 
         login_user(user)
         next_page = request.args.get("next")
+        text = "You are now signed in!"
+        if not user.phone_no:
+            text += " Please add your phone number."
         if next_page:
-            flash("You are now signed in!", "success")
+            flash(text, "success")
             return redirect(next_page)
         else:
-            flash("You are now signed in!", "success")
+            flash(text, "success")
             return redirect(url_for("main.profile"))
 
 

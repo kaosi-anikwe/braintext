@@ -572,10 +572,6 @@ def meta_chat_response(
     """
     name = get_name(data)
     number = f"+{get_number(data)}"
-    message_id = get_message_id(data)
-    greeting = contains_greeting(message)
-    thanks = contains_thanks(message)
-    isreply = is_reply(data)
     user_db_path = get_user_db(name=name, number=number)
     if not message:
         message = get_message(data)
@@ -584,6 +580,10 @@ def meta_chat_response(
         prompt=message,
         db_path=user_db_path,
     )
+    message_id = get_message_id(data)
+    isreply = is_reply(data)
+    greeting = contains_greeting(message)
+    thanks = contains_thanks(message)
     try:
         # react to message
         send_reaction(
@@ -661,7 +661,9 @@ def meta_audio_response(user: Users, data: Dict[Any, Any], anonymous: bool = Fal
             thanks = contains_thanks(transcript)
         except:
             logger.error(traceback.format_exc())
-            text = "Error transcribing audio. Please try again later."
+            # text = "Error transcribing audio. Please try again later."
+            text = "Our speech-to-text services are unavailable at the moment. We are working on restoring it. Please bear with us and enjoy the rest of our services."
+
             return send_text(text, number)
         # reactions
         send_reaction(

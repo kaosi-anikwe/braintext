@@ -69,38 +69,6 @@
                 </div>
 
                 <div class="row">
-                  <div class="col-lg-3 col-md-4 label">Account Type</div>
-                  <div class="col-lg-9 col-md-8">
-                    <p style="margin: 5px 0">{{ current_user.account_type }}</p>
-                    {% if current_user.account_type == "Standard" %}
-                    <a
-                      href="{{ url_for('payment.checkout', package='prmum') }}"
-                    >
-                      <button
-                        style="font-size: small; height: 2rem"
-                        type="button"
-                        class="btn btn-outline-primary"
-                      >
-                        Upgrade Account
-                      </button>
-                    </a>
-                    {% endif %} {% if current_user.account_type == "Basic" %}
-                    <a
-                      href="{{ url_for('payment.checkout', package='stnrd') }}"
-                    >
-                      <button
-                        style="font-size: small; height: 2rem"
-                        type="button"
-                        class="btn btn-outline-primary"
-                      >
-                        Upgrade Account
-                      </button>
-                    </a>
-                    {% endif %}
-                  </div>
-                </div>
-
-                <div class="row">
                   <div class="col-lg-3 col-md-4 label">Phone</div>
                   <div class="col-lg-9 col-md-8">
                     {% if not current_user.phone_no %}
@@ -148,6 +116,39 @@
                     {% else %} {{ current_user.email }} {% endif %}
                   </div>
                 </div>
+
+                <div class="row">
+                  <div class="col-lg-3 col-md-4 label">Account Type</div>
+                  <div class="col-lg-9 col-md-8">
+                    <p style="margin: 5px 0">{{ current_user.account_type }}</p>
+                    {% if current_user.account_type == "Standard" %}
+                    <a
+                      href="{{ url_for('payment.checkout', package='prmum') }}"
+                    >
+                      <button
+                        style="font-size: small; height: 2rem"
+                        type="button"
+                        class="btn btn-outline-primary"
+                      >
+                        Upgrade Account
+                      </button>
+                    </a>
+                    {% endif %} {% if current_user.account_type == "Basic" %}
+                    <a
+                      href="{{ url_for('payment.checkout', package='stnrd') }}"
+                    >
+                      <button
+                        style="font-size: small; height: 2rem"
+                        type="button"
+                        class="btn btn-outline-primary"
+                      >
+                        Upgrade Account
+                      </button>
+                    </a>
+                    {% endif %}
+                  </div>
+                </div>
+
                 <div class="row">
                   <div class="col-lg-3 col-md-4 label">User ID</div>
                   <div class="col-lg-9 col-md-8">{{ current_user.uid }}</div>

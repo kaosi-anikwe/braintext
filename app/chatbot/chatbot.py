@@ -1,7 +1,7 @@
 # python imports
 import os
+import time
 import traceback
-import subprocess
 
 # installed imports
 from dotenv import load_dotenv
@@ -33,6 +33,25 @@ def send_voice_note():
 
             @after_this_request
             def delete_file(response):
+                os.remove(file_)
+                return response
+
+            return send_file(file_)
+        else:
+            return "Not found", 404
+    return "Not found", 404
+
+
+@chatbot.get("/send-media")
+def send_media():
+    filename = request.args.get("filename") or None
+    if filename:
+        file_ = os.path.join(TEMP_FOLDER, filename)
+        if os.path.exists(file_):
+
+            @after_this_request
+            def delete_file(response):
+                time.sleep(10)
                 os.remove(file_)
                 return response
 

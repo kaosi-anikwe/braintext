@@ -11,15 +11,16 @@ from datetime import datetime
 from contextlib import closing
 
 # installed imports
-import openai
 import langid
 import tiktoken
 import pycountry
 import pytesseract
 from PIL import Image
 from boto3 import Session
+from openai import OpenAI
 from flask import url_for
 from sqlalchemy import desc
+from datetime import timedelta
 from dotenv import load_dotenv
 from pydub import AudioSegment
 from twilio.rest import Client
@@ -58,6 +59,9 @@ GOOGLE_APPLICATION_CREDENTIALS = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
 GOOGLE_CREDENTIALS = service_account.Credentials.from_service_account_file(
     GOOGLE_APPLICATION_CREDENTIALS
 )
+
+# openai
+openai_client = OpenAI()
 
 
 def send_text(message: str, recipient: str) -> Union[str, None]:
@@ -201,8 +205,11 @@ def log_location(name: str, number: str) -> str:
 def edit_image(image_path: str, prompt: str) -> str:
     """Edit's a picture with a second picture acting as a mask."""
     image = open(image_path, "rb")
-    image_response = openai.Image.create_edit(
-        image=image, prompt=prompt, n=1, size="1024x1024"
+    image_response = openai_client.images.edit(
+        image=image,
+        prompt=prompt,
+        size="512x512",
+        n=1,
     )
     image_url = image_response.data[0].url
     if os.path.exists(image_path):
@@ -213,7 +220,11 @@ def edit_image(image_path: str, prompt: str) -> str:
 def create_image_variation(image_path: str) -> str:
     """Creates a variation of an image."""
     image = open(image_path, "rb")
-    image_response = openai.Image.create_variation(image=image, n=1, size="512x512")
+    image_response = openai_client.images.create_variation(
+        image=image,
+        size="512x512",
+        n=1,
+    )
     image_url = image_response.data[0].url
     if os.path.exists(image_path):
         os.remove(image_path)
@@ -368,7 +379,7 @@ def load_messages(user: Users, prompt: str, db_path: str, original_message=None)
         for message in reversed(get_messages)
     ]
 
-    while num_tokens_from_messages(messages) > 4000:
+    while num_tokens_from_messages(messages) > 16000:
         messages.pop(0)
 
     # add system prompt
@@ -566,6 +577,52 @@ def split_text(text):
     return first_half, second_half
 
 
+def get_active_users(timeframe=24):
+    from app import create_app
+    from app.models import AnonymousUsers
+
+    try:
+        app = create_app()
+        with app.app_context():
+            users = Users.query.filter(Users.phone_no != None).all()
+            anonymous_users = AnonymousUsers.query.filter(
+                AnonymousUsers.phone_no != None,
+                AnonymousUsers.signup_stage != "completed",
+            ).all()
+            people = [*users, *anonymous_users]
+            print(len(users), "users")
+            print(len(anonymous_users), "anonymous_users")
+            print(len(people), "numbers")
+            active = 0
+            inactive = 0
+            print("Calculating active users.")
+            for user in people:
+                try:
+                    user_folder = user_dir(user.phone_no)
+                    if user_folder:
+                        last_message = get_last_message_time(user_folder)
+                        if not last_message:
+                            print(
+                                f"Couldn't get last message time for {user.display_name()}"
+                            )
+                            continue
+                        if datetime.now() - last_message > timedelta(hours=timeframe):
+                            inactive += 1
+                        else:
+                            active += 1
+                except:
+                    print(user_dir(user.phone_no))
+                    print(user.display_name())
+                    pass
+            print("Done")
+            print(f"There are about {inactive} inactive users.")
+            print(f"There are about {active} active users.")
+            return
+    except:
+        print(traceback.format_exc())
+        return
+
+
 # ChatGPT ----------------------------------
 def num_tokens_from_messages(messages, model="gpt-3.5-turbo-0301"):
     """Returns the number of tokens used by a list of messages."""
@@ -631,16 +688,15 @@ def chatgpt_response(
         thread = threading.Thread(target=status_update)
         thread.start()
 
-        completion = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo-0613",
+        completion = openai_client.chat.completions.create(
+            model="gpt-3.5-turbo-1106",
             messages=messages,
             temperature=1,
-            user=f"{str(number)}",
             functions=CHATGPT_FUNCTION_DESCRIPTIONS,
             function_call="auto",
         )
         # check for function call
-        if completion.choices[0].message.get("function_call"):
+        if completion.choices[0].message.function_call:
             logger.info(completion.choices[0].message.function_call)
             # get function name and arguments
             function_name = completion.choices[0].message.function_call.name
@@ -665,11 +721,10 @@ def chatgpt_response(
                     {"role": "function", "name": "google_search", "content": results}
                 )
 
-                completion = openai.ChatCompletion.create(
-                    model="gpt-3.5-turbo-0613",
+                completion = openai_client.chat.completions.create(
+                    model="gpt-3.5-turbo-1106",
                     messages=messages,
                     temperature=1,
-                    user=f"{str(number)}",
                     functions=CHATGPT_FUNCTION_DESCRIPTIONS,
                     function_call="auto",
                 )
@@ -682,12 +737,12 @@ def chatgpt_response(
             else:
                 CHATGPT_FUNCTIONS[function_name](**function_arguments)
                 return None
+        else:
+            text = completion.choices[0].message.content
+            tokens = int(completion.usage.total_tokens)
+            role = completion.choices[0].message.role
 
-        text = completion.choices[0].message.content
-        tokens = int(completion.usage.total_tokens)
-        role = completion.choices[0].message.role
-
-        return text, tokens, role
+            return text, tokens, role
     except:
         logger.error(traceback.format_exc())
         text = "Sorry, I can't respond to that at the moment. Plese try again later."
@@ -711,8 +766,16 @@ def generate_image(data: Dict[Any, Any], tokens: int, message: str, prompt: str)
         send_image,
     )
 
-    image_response = openai.Image.create(prompt=prompt, n=1, size="1024x1024")
+    image_response = openai_client.images.generate(
+        model="dall-e-3",
+        prompt=prompt,
+        size="1024x1024",
+        quality="standard",
+        style="natural",
+        n=1,
+    )
     image_url = image_response.data[0].url
+    logger.info(f"Revised image input prompt: {image_response.data[0].revised_prompt}")
     # log response
     name = get_name(data)
     number = f"+{get_number(data)}"
@@ -754,7 +817,8 @@ def speech_synthesis(data: Dict[Any, Any], tokens: int, message: str, text: str)
             voice_name=voice_type,
         )
         if audio_filename == None:
-            text = "Error synthesizing speech. Please try again later or change the voice type in your settings. https://braintext.io/profile?settings=True"
+            # text = "Error synthesizing speech. Please try again later or change the voice type in your settings. https://braintext.io/profile?settings=True"
+            text = "Our text-to-speech services are unavailable at the moment. We are working on restoring it. Please bear with us and enjoy the rest of our services."
             return send_text(text, number)
         media_url = f"{url_for('chatbot.send_voice_note', _external=True, _scheme='https')}?filename={audio_filename}"
         # log response
@@ -787,7 +851,7 @@ def google_search(
     message: str,
     query: str,
     image_search: bool = False,
-    num: int = 0,
+    num: int = 1,
     file_type: str = None,
 ):
     from bs4 import BeautifulSoup
@@ -836,6 +900,7 @@ def google_search(
         if "items" in response_data:
             items = response_data["items"]
             if items:
+                logger.info(items)
                 # image search
                 if image_search:
                     text = f"{num} Google images of {query}"
@@ -844,7 +909,8 @@ def google_search(
                     for image in items:
                         image_name = f"{datetime.now().strftime('%M%S%f')}.png"
                         download_media(image.get("link", ""), image_name)
-                        image_url = f"{url_for('chatbot.send_voice_note', _external=True, _scheme='https')}?filename={image_name}"
+                        image_url = f"{url_for('chatbot.send_media', _external=True, _scheme='https')}?filename={image_name}"
+                        logger.info(image_url)
                         send_image(image_link=image_url, recipient=number)
                     return
                 # document search
@@ -855,7 +921,8 @@ def google_search(
                     for i, document in enumerate(items):
                         document_name = f"{i}_{query}.{file_type}"
                         download_media(document.get("link", ""), document_name)
-                        document_url = f"{url_for('chatbot.send_voice_note', _external=True, _scheme='https')}?filename={document_name}"
+                        document_url = f"{url_for('chatbot.send_media', _external=True, _scheme='https')}?filename={document_name}"
+                        logger.info(document_url)
                         send_document(document_link=document_url, recipient=number)
                     return
                 # typical google search
@@ -864,11 +931,13 @@ def google_search(
                         break
                     # Extract the search result link
                     results = item.get("snippet", "")
-                    # link = item.get("link", "")
-                    # # Scrape content from page
-                    # page = requests.get(link)
-                    # soup = BeautifulSoup(page.text, "html.parser")
-                    # results = extract_main_section(soup)
+                    link = item.get("link", "")
+                    # Scrape content from page
+                    page = requests.get(link)
+                    soup = BeautifulSoup(page.text, "html.parser")
+                    results = extract_main_section(soup)
+                    if not results:
+                        results = f"No results found for: '{query}'"
 
             else:
                 results = f"No results found for: '{query}'"
@@ -894,7 +963,7 @@ def google_search(
     except:
         logger.error(traceback.format_exc())
         text = "Sorry, I cannot respond to that at the moment, please try again later."
-        return send_text(text, number)
+        return text
 
 
 CHATGPT_FUNCTION_DESCRIPTIONS = [
@@ -942,7 +1011,7 @@ CHATGPT_FUNCTION_DESCRIPTIONS = [
     },
     {
         "name": "google_search",
-        "description": "Searches online for latest information only when it is not already known. Searches for images and documents as requested by the user with the specfied type for document search and number for image and document search.",
+        "description": "Searches online for images and documents as requested by the user with the specfied type for document search only and number for image and document search. Be very strict with the number of images or documents requested.",
         "parameters": {
             "type": "object",
             "properties": {
@@ -976,15 +1045,15 @@ CHATGPT_FUNCTIONS = {
 
 
 WAIT_MESSAGES = [
-    "Sorry for making you wait. I'm still on it, thanks for being patient!",
-    "My bad for the delay. I'm still working on your request. Thanks for hanging in there!",
-    "Oops, sorry it's taking a bit longer. I'm still working on it though. Thanks for bearing with me!",
-    "Apologies for the wait. I'm still on the case. Thanks for your patience!",
-    "My apologies for the holdup. I'm still working on it. Thanks for being cool about it!",
-    "Sorry for the delay. I'm still working on your request.",
-    "Hey, sorry it's taking a bit longer than expected. I'm still on it, thanks for waiting!",
-    "Sorry for keeping you waiting. Just wanted to let you know I'm still working on it. Thanks for being understanding!",
-    "Oops, sorry for the wait. I'm still working on your request. Thanks for being patient with me!",
-    "My bad for the delay. I'm still on it, thanks for waiting!",
-    "Sorry for the wait. I'm still working on your request. Thanks for your patience!",
+    "Sorry for making you wait.",
+    "My bad for the delay.",
+    "Oops, sorry it's taking a bit longer.",
+    "Apologies for the wait.",
+    "My apologies for the holdup.",
+    "Sorry for the delay.",
+    "Hey, sorry it's taking a bit longer than expected.",
+    "Sorry for keeping you waiting.",
+    "Oops, sorry for the wait.",
+    "My bad for the delay.",
+    "Sorry for the wait.",
 ]
