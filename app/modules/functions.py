@@ -2,6 +2,7 @@
 import os
 import re
 import json
+import base64
 import requests
 import traceback
 import threading
@@ -361,7 +362,13 @@ def get_last_message_time(user_dir: str) -> datetime | None:
         return None
 
 
-def load_messages(user: Users, prompt: str, db_path: str, original_message=None):
+def load_messages(
+    user: Users,
+    db_path: str,
+    prompt: str = None,
+    message_list: list = [],
+    original_message=None,
+):
     if original_message:
         assistant_mssg = {"role": "assistant", "content": original_message}
         new_assistant_mssg = Messages(assistant_mssg, db_path)
@@ -378,6 +385,9 @@ def load_messages(user: Users, prompt: str, db_path: str, original_message=None)
         {"role": message.role, "content": message.content if message.content else ""}
         for message in reversed(get_messages)
     ]
+
+    if message_list:
+        messages.append(message_list[0])
 
     while num_tokens_from_messages(messages) > 16000:
         messages.pop(0)
@@ -410,7 +420,7 @@ def get_audio_duration(file_path) -> float:
     return duration
 
 
-def transcribe_audio(
+def google_transcribe_audio(
     audio_file: str,
     number: str,
     project_id="braintext-394611",
@@ -491,7 +501,7 @@ def transcribe_audio(
         return transcript
 
 
-def text_to_speech(text: str, voice_name: str) -> str | None:
+def google_text_to_speech(text: str, voice_name: str) -> str | None:
     """Synthesizes speech from the input string of text or ssml.
     Make sure to be working in a virtual environment.
 
@@ -534,6 +544,47 @@ def text_to_speech(text: str, voice_name: str) -> str | None:
         return filename
     except:
         logger.error(traceback.format_exc())
+        return None
+
+
+def openai_transcribe_audio(
+    audio_file: str,
+):
+    """Transcribes an audio file using OpenAI's Whisper"""
+    try:
+        audio_file = convert_audio(audio_file)
+        audio_file = open(audio_file, "rb")
+        transcript = openai_client.audio.transcriptions.create(
+            file=audio_file, model="whisper-1"
+        )
+        return transcript.text
+    except:
+        logger.error(traceback.format_exc())
+        if os.path.exists(audio_file):
+            os.remove(audio_file)
+        raise Exception("Failed to transcribe audio.")
+
+
+def openai_text_to_speech(text: str, voice_name: str, speed: float = 1.0):
+    """Performs TTS with the latest TTS model from OpenAI"""
+    try:
+        # Get voice code from db
+        voice_code = Voices.query.filter(Voices.name == voice_name).first().code
+        filename = f"{str(datetime.utcnow().strftime('%d-%m-%Y_%H-%M-%S'))}.ogg"
+        output = os.path.join(TEMP_FOLDER, filename)
+        response = openai_client.audio.speech.create(
+            input=text,
+            model="tts-1",
+            voice=voice_code,
+            response_format="opus",
+            speed=speed,
+        )
+        response.stream_to_file(output)
+        return filename
+    except:
+        logger.error(traceback.format_exc())
+        if os.path.exists(output):
+            os.remove(output)
         return None
 
 
@@ -621,6 +672,31 @@ def get_active_users(timeframe=24):
     except:
         print(traceback.format_exc())
         return
+
+
+def convert_audio(inputfile: str, outputfile: str = None, dst_format: str = "wav"):
+    try:
+        if not outputfile:
+            outputfile = inputfile
+        outputfile = f"{os.path.join(os.path.dirname(outputfile), os.path.basename(outputfile))}.{dst_format}"
+        conversion = subprocess.Popen(
+            f"ffmpeg -i {inputfile} {outputfile}",
+            shell=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.STDOUT,
+        ).wait()
+        if conversion == 0:
+            return outputfile
+        raise Exception(f"Failed to convert {inputfile} to {dst_format}")
+    except:
+        logger.error(traceback.format_exc())
+        return None
+
+
+def encode_image(image_path):
+    # Function to encode image for image recognition
+    with open(image_path, "rb") as image_file:
+        return base64.b64encode(image_file.read()).decode("utf-8")
 
 
 # ChatGPT ----------------------------------
@@ -797,7 +873,9 @@ def generate_image(data: Dict[Any, Any], tokens: int, message: str, prompt: str)
     return send_image(image_url, number)
 
 
-def speech_synthesis(data: Dict[Any, Any], tokens: int, message: str, text: str):
+def speech_synthesis(
+    data: Dict[Any, Any], tokens: int, message: str, text: str, speed: float = 1.0
+):
     """Synthesize audio output and send to user."""
     from ..chatbot.functions import (
         send_audio,
@@ -810,15 +888,13 @@ def speech_synthesis(data: Dict[Any, Any], tokens: int, message: str, text: str)
         number = f"+{get_number(data)}"
         # get voice type
         user = Users.query.filter(Users.phone_no == number).one_or_none()
-        voice_type = user.user_settings().ai_voice_type if user else "Joanna"
+        voice_type = user.user_settings().ai_voice_type if user else "Mia"
         # synthesize text
-        audio_filename = text_to_speech(
-            text=text,
-            voice_name=voice_type,
+        audio_filename = openai_text_to_speech(
+            text=text, voice_name=voice_type, speed=speed
         )
         if audio_filename == None:
-            # text = "Error synthesizing speech. Please try again later or change the voice type in your settings. https://braintext.io/profile?settings=True"
-            text = "Our text-to-speech services are unavailable at the moment. We are working on restoring it. Please bear with us and enjoy the rest of our services."
+            text = "Error synthesizing speech. Please try again later."
             return send_text(text, number)
         media_url = f"{url_for('chatbot.send_voice_note', _external=True, _scheme='https')}?filename={audio_filename}"
         # log response
@@ -969,7 +1045,7 @@ def google_search(
 CHATGPT_FUNCTION_DESCRIPTIONS = [
     {
         "name": "generate_image",
-        "description": "Generates an image from a user's prompt. Enhance prompt if necessary to give a more detailed prompt.",
+        "description": "Generates an image from a user's prompt strictly per user's request. Ask for clarification if request is vauge.",
         "parameters": {
             "type": "object",
             "properties": {
@@ -991,8 +1067,12 @@ CHATGPT_FUNCTION_DESCRIPTIONS = [
                     "type": "string",
                     "description": "Text prompt response to be synthesized",
                 },
+                "speed": {
+                    "type": "number",
+                    "description": "How fast or slow the audio response should be. Values range from 0.25 to 4.0. The default is 1.0",
+                },
             },
-            "required": ["text"],
+            "required": ["text", "speed"],
         },
     },
     {
@@ -1005,8 +1085,12 @@ CHATGPT_FUNCTION_DESCRIPTIONS = [
                     "type": "string",
                     "description": "Text to be synthesized into speech.",
                 },
+                "speed": {
+                    "type": "number",
+                    "description": "How fast or slow the synthesised speech should be. Values range from 0.25 to 4.0. The default is 1.0",
+                },
             },
-            "required": ["text"],
+            "required": ["text", "speed"],
         },
     },
     {

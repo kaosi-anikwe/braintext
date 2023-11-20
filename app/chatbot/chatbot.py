@@ -33,7 +33,7 @@ def send_voice_note():
 
             @after_this_request
             def delete_file(response):
-                os.remove(file_)
+                os.remove(file_) if filename != "welcome.ogg" else None
                 return response
 
             return send_file(file_)

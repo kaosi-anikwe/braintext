@@ -12,7 +12,7 @@ from flask import Blueprint, render_template, request, flash, jsonify, redirect,
 # local imports
 from .. import logger
 from ..modules.email_utility import send_email
-from ..chatbot.functions import send_text, send_otp_message
+from ..chatbot.functions import send_text, send_otp_message, send_audio
 from ..models import (
     OTP,
     get_otp,
@@ -84,9 +84,13 @@ def profile():
 
     # get voices
     voices = {}
-    male_voices = Voices.query.filter(Voices.gender == "male").all()
+    male_voices = Voices.query.filter(
+        Voices.gender == "male", Voices.type == "openai"
+    ).all()
     male_voices = [voice.name for voice in male_voices]
-    female_voices = Voices.query.filter(Voices.gender == "female").all()
+    female_voices = Voices.query.filter(
+        Voices.gender == "female", Voices.type == "openai"
+    ).all()
     female_voices = [voice.name for voice in female_voices]
     voices["male"] = male_voices
     voices["female"] = female_voices
@@ -212,6 +216,10 @@ def verify_otp():
             get_features = f.readlines()
         features = "\n".join(get_features)
         send_text(features, phone_no)
+
+        # send welcome audio
+        media_url = f"{url_for('chatbot.send_voice_note', _external=True, _scheme='https')}?filename=welcome.ogg"
+        send_audio(media_url, phone_no)
 
         return redirect(url_for("main.profile"))
     except:

@@ -201,7 +201,7 @@ def webhook():
                                 #     stderr=subprocess.STDOUT,
                                 # ).wait()
                                 try:
-                                    transcript = transcribe_audio(tmp_file)
+                                    transcript = google_transcribe_audio(tmp_file)
                                     # with open(tmp_file, "rb") as file:
                                     #     transcript = openai.Audio.transcribe(
                                     #         "whisper-1", file

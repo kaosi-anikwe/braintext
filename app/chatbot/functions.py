@@ -558,6 +558,61 @@ def meta_split_and_respond(
     meta_split_and_respond(second_half, number, prev_mssg_id)
 
 
+def image_recognition(
+    user: Users, data: Dict[Any, Any], prompt: str, message_list: list
+):
+    """Perform image recognition with OpenAI's GPT-4V"""
+    try:
+        name = get_name(data)
+        number = f"+{get_number(data)}"
+        message_id = get_message_id(data)
+        isreply = is_reply(data)
+        user_db_path = get_user_db(name=name, number=number)
+        messages = load_messages(
+            user=user,
+            db_path=user_db_path,
+            prompt=prompt,
+            message_list=message_list,
+        )
+        response = openai_client.chat.completions.create(
+            model="gpt-4-vision-preview",
+            messages=messages,
+            temperature=1,
+            max_tokens=4000,
+        )
+        text = response.choices[0].message.content
+        tokens = int(response.usage.total_tokens)
+        role = response.choices[0].message.role
+
+        log_response(
+            name=name,
+            number=number,
+            message=prompt,
+            tokens=tokens,
+        )
+
+        # record ChatGPT response
+        new_message = {"role": role, "content": text}
+        new_message = Messages(new_message, user_db_path)
+        new_message.insert()
+
+        if len(text) < WHATSAPP_CHAR_LIMIT:
+            return (
+                send_text(text, number)
+                if not isreply
+                else reply_to_message(message_id, number, text)
+            )
+        return (
+            meta_split_and_respond(text, number, message_id)
+            if not isreply
+            else meta_split_and_respond(text, number, message_id, reply=True)
+        )
+    except:
+        logger.error(traceback.format_exc())
+        text = "Sorry, I cannot respond to that at the moment, please try again later."
+        return reply_to_message(message_id, number, text)
+
+
 def meta_chat_response(
     data: Dict[Any, Any],
     user: Users,
@@ -656,15 +711,16 @@ def meta_audio_response(user: Users, data: Dict[Any, Any], anonymous: bool = Fal
             f"{datetime.utcnow().strftime('%M%S%f')}",
         )
         try:
-            transcript = transcribe_audio(audio_file, number)
+            transcript = openai_transcribe_audio(audio_file)
             greeting = contains_greeting(transcript)
             thanks = contains_thanks(transcript)
         except:
             logger.error(traceback.format_exc())
-            # text = "Error transcribing audio. Please try again later."
-            text = "Our speech-to-text services are unavailable at the moment. We are working on restoring it. Please bear with us and enjoy the rest of our services."
-
+            text = "Error transcribing audio. Please try again later."
             return send_text(text, number)
+        finally:
+            # delete audio file
+            delete_file(audio_file)
         # reactions
         send_reaction(
             chr(128075), message_id, number
@@ -673,8 +729,6 @@ def meta_audio_response(user: Users, data: Dict[Any, Any], anonymous: bool = Fal
             chr(128153), message_id, number
         ) if thanks else None  # react blue love emoji
 
-        # delete audio file
-        delete_file(audio_file)
         try:
             user_db_path = get_user_db(name, number)
             messages = load_messages(
@@ -750,21 +804,29 @@ def meta_image_response(user: Users, data: Dict[Any, Any], anonymous: bool = Fal
             )
             delete_file(image_path)
         else:
-            if prompt:
-                if "variation" in prompt.lower():
-                    image_url = create_image_variation(image_path)
-                else:
-                    image_url = edit_image(image_path, prompt)
-            else:
-                # Image variation
-                image_url = create_image_variation(image_path)
-
-            log_response(
-                name=name,
-                number=number,
-                message=prompt,
+            base64_image = encode_image(image_path)
+            if not prompt:
+                prompt = "What's in this image?"
+            message_list = [
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": prompt},
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": f"data:image/png;base64,{base64_image}"
+                            },
+                        },
+                    ],
+                }
+            ]
+            return image_recognition(
+                user=user,
+                data=data,
+                prompt=prompt,
+                message_list=message_list,
             )
-            send_image(image_url, number)
     except:
         logger.error(traceback.format_exc())
         text = "Something went wrong. Please try again later."
@@ -894,6 +956,9 @@ def whatsapp_signup(
 
                         message = f"Awesome! You're all set up.\nCheck your inbox for a verification link.\nLogin to edit your profile or change settings. https://braintext.io/profile?settings=True.\n*Your password the number you're texting with.*\nFollow this link to change your password.\n{change_url}\n\nThank you for choosing BrainText 💙."
                         send_text(message, number)
+                        # send welcome audio
+                        media_url = f"{url_for('chatbot.send_voice_note', _external=True, _scheme='https')}?filename=welcome.ogg"
+                        send_audio(media_url, number)
     except:
         logger.error(traceback.format_exc())
         text = "Something went wrong. Please try again later."
