@@ -548,21 +548,23 @@ def google_text_to_speech(text: str, voice_name: str) -> str | None:
 
 
 def openai_transcribe_audio(
-    audio_file: str,
+    audio_filepath: str,
 ):
     """Transcribes an audio file using OpenAI's Whisper"""
     try:
-        audio_file = convert_audio(audio_file)
-        audio_file = open(audio_file, "rb")
+        audio_filepath = convert_audio(audio_filepath)
+        audio_file = open(audio_filepath, "rb")
         transcript = openai_client.audio.transcriptions.create(
             file=audio_file, model="whisper-1"
         )
         return transcript.text
     except:
         logger.error(traceback.format_exc())
-        if os.path.exists(audio_file):
-            os.remove(audio_file)
+        if os.path.exists(audio_filepath):
+            os.remove(audio_filepath)
         raise Exception("Failed to transcribe audio.")
+    finally:
+        delete_file(audio_filepath)
 
 
 def openai_text_to_speech(text: str, voice_name: str, speed: float = 1.0):
@@ -995,7 +997,7 @@ def google_search(
                     from ..chatbot.functions import send_document, download_media
 
                     for i, document in enumerate(items):
-                        document_name = f"{i}_{query}.{file_type}"
+                        document_name = f"{i}_{query}.{file_type}".replace(" ", "_")
                         download_media(document.get("link", ""), document_name)
                         document_url = f"{url_for('chatbot.send_media', _external=True, _scheme='https')}?filename={document_name}"
                         logger.info(document_url)
@@ -1045,7 +1047,7 @@ def google_search(
 CHATGPT_FUNCTION_DESCRIPTIONS = [
     {
         "name": "generate_image",
-        "description": "Generates an image from a user's prompt strictly per user's request. Ask for clarification if request is vauge.",
+        "description": "Generates an image only when the user requests for one. Ask for clarification if request is vauge.",
         "parameters": {
             "type": "object",
             "properties": {

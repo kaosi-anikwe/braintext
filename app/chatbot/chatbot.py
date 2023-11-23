@@ -1,6 +1,5 @@
 # python imports
 import os
-import time
 import traceback
 
 # installed imports
@@ -51,7 +50,6 @@ def send_media():
 
             @after_this_request
             def delete_file(response):
-                time.sleep(10)
                 os.remove(file_)
                 return response
 

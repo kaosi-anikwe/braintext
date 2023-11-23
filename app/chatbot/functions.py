@@ -831,6 +831,8 @@ def meta_image_response(user: Users, data: Dict[Any, Any], anonymous: bool = Fal
         logger.error(traceback.format_exc())
         text = "Something went wrong. Please try again later."
         return send_text(text, number)
+    finally:
+        delete_file(image_path)
 
 
 def whatsapp_signup(
