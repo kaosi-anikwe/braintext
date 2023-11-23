@@ -769,7 +769,7 @@ def chatgpt_response(
         completion = openai_client.chat.completions.create(
             model="gpt-3.5-turbo-1106",
             messages=messages,
-            temperature=1,
+            temperature=0.7,
             functions=CHATGPT_FUNCTION_DESCRIPTIONS,
             function_call="auto",
         )
