@@ -657,6 +657,7 @@ def meta_chat_response(
             response = chatgpt_response(
                 data=data,
                 messages=messages,
+                message=message,
                 number=number,
                 message_id=message_id,
             )
@@ -739,6 +740,7 @@ def meta_audio_response(user: Users, data: Dict[Any, Any], anonymous: bool = Fal
             response = chatgpt_response(
                 data=data,
                 messages=messages,
+                message=transcript,
                 number=number,
                 message_id=message_id,
             )

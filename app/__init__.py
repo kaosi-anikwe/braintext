@@ -10,14 +10,14 @@ from flask_migrate import Migrate
 
 load_dotenv()
 
-log_dir = os.getenv("CHATBOT_LOG")
+chatlog_dir = os.getenv("CHATBOT_LOG")
+log_dir = os.getenv("LOG_DIR")
 tmp_folder = os.getenv("TEMP_FOLDER")
-# create log folder if not exists
-if not os.path.exists(log_dir):
-    os.makedirs(log_dir)
-# create tmp folder if not exists
-if not os.path.exists(tmp_folder):
-    os.makedirs(tmp_folder)
+
+# create folder if not exists
+os.makedirs(chatlog_dir, exist_ok=True)
+os.makedirs(log_dir, exist_ok=True)
+os.makedirs(tmp_folder, exist_ok=True)
 
 db = SQLAlchemy()
 login_manager = LoginManager()
@@ -27,7 +27,7 @@ migrate = Migrate()
 
 # configure logger
 logging.basicConfig(
-    filename=os.path.join("logs", "website", "debug.log"),
+    filename=os.path.join(log_dir, "website", "debug.log"),
     level=logging.INFO,
     format="%(levelname)s - %(name)s - %(message)s",
 )

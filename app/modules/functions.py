@@ -396,11 +396,12 @@ def load_messages(
     system = {
         "role": "system",
         "content": f"""
-                    You are a youthfull personal assistant. 
-                    You always give your opinion on things. 
-                    You're conservative about your age. 
-                    Your name is BrainText. 
-                    Don't make assumptions about what values to plug into functions. 
+                    You are a youthfull personal assistant.
+                    You always give your opinion on things.
+                    You're conservative about your age.
+                    You always give comprehensive answers unless asked not to.
+                    Your name is BrainText.
+                    Don't make assumptions about what values to plug into functions and never return an empty response.
                     Ask for clarification if a user request is ambiguous.
                     The user's first name is {user.first_name if user.first_name else 'not known'},
                     and the user's last name is {user.last_name if user.last_name else 'not known'}.
@@ -743,7 +744,11 @@ def num_tokens_from_messages(messages, model="gpt-3.5-turbo-0301"):
 
 
 def chatgpt_response(
-    data: Dict[Any, Any], messages: list, number: str, message_id: str = None
+    data: Dict[Any, Any],
+    messages: list,
+    message: str,
+    number: str,
+    message_id: str = None,
 ) -> tuple | None:
     """Get response from ChatGPT"""
     try:
@@ -769,7 +774,7 @@ def chatgpt_response(
         completion = openai_client.chat.completions.create(
             model="gpt-3.5-turbo-1106",
             messages=messages,
-            temperature=0.7,
+            temperature=1,
             functions=CHATGPT_FUNCTION_DESCRIPTIONS,
             function_call="auto",
         )
@@ -786,7 +791,7 @@ def chatgpt_response(
             # pass in the number of tokens used for logging
             function_arguments["tokens"] = int(completion.usage.total_tokens)
             # pass in current user message
-            function_arguments["message"] = messages[-1]["content"]
+            function_arguments["message"] = message
             # call function with arguments as kwargs
             if (
                 function_name == "google_search"
@@ -794,24 +799,29 @@ def chatgpt_response(
                 and not function_arguments.get("file_type")
             ):
                 # typical google search
-                results = CHATGPT_FUNCTIONS[function_name](**function_arguments)
+                success, results = CHATGPT_FUNCTIONS[function_name](
+                    **function_arguments
+                )
+                logger.info(f"Google search results: {results}")
                 messages.append(
                     {"role": "function", "name": "google_search", "content": results}
                 )
+                if success:
+                    completion = openai_client.chat.completions.create(
+                        model="gpt-3.5-turbo-1106",
+                        messages=messages,
+                        temperature=1,
+                        functions=CHATGPT_FUNCTION_DESCRIPTIONS,
+                        function_call="auto",
+                    )
 
-                completion = openai_client.chat.completions.create(
-                    model="gpt-3.5-turbo-1106",
-                    messages=messages,
-                    temperature=1,
-                    functions=CHATGPT_FUNCTION_DESCRIPTIONS,
-                    function_call="auto",
-                )
+                    text = completion.choices[0].message.content
+                    tokens = int(completion.usage.total_tokens)
+                    role = completion.choices[0].message.role
 
-                text = completion.choices[0].message.content
-                tokens = int(completion.usage.total_tokens)
-                role = completion.choices[0].message.role
-
-                return text, tokens, role
+                    return text, tokens, role
+                else:
+                    return results, 0, "assistant"
             else:
                 CHATGPT_FUNCTIONS[function_name](**function_arguments)
                 return None
@@ -938,7 +948,7 @@ def google_search(
         get_name,
     )
 
-    text = None
+    not_found = False
     number = f"+{get_number(data)}"
     name = get_name(data)
     api_key = str(os.getenv("GOOGLE_SEARCH_API_KEY"))
@@ -949,78 +959,96 @@ def google_search(
         "key": api_key,
         "cx": cse_id,
     }
-    if num > 0:
-        params["num"] = num
+    if file_type or image_search:  # not google search
+        if num > 0:
+            params["num"] = num
     if file_type:
         params["fileType"] = file_type
     if image_search:
         params["searchType"] = "image"
 
-    def extract_main_section(soup: BeautifulSoup):
-        main_section = soup.find("main")
+    def scrape_website(url, max_words=5000):
+        try:
+            # Send an HTTP request to the URL
+            response = requests.get(url)
+            response.raise_for_status()  # Raise an HTTPError for bad responses
 
-        if main_section:
-            # Exclude headers, footers and sidebars by selecting only the relevant content
-            for unwanted_tag in main_section.find_all(["header", "footer", "aside"]):
-                unwanted_tag.extract()
+            # Parse the HTML content of the page
+            soup = BeautifulSoup(response.text, "html.parser")
 
-            # Extract the remaining text content
-            main_content = main_section.get_text()
-            return main_content.strip()
-        else:
-            return False
+            # Extract text from the main section of the page
+            main_content = soup.find("main")  # You may need to customize this selector
+            if main_content:
+                text = main_content.get_text()
+
+                # Remove extra whitespaces
+                text = " ".join(text.split())
+
+                # If the text is less than the specified max_words, return the entire article
+                if len(text.split()) < max_words:
+                    return True, text
+
+                # Limit the text to the specified word count
+                text = " ".join(text.split())[:max_words]
+
+                return True, text
+
+            else:
+                return False, "Error: Main content not found on the page."
+
+        except requests.RequestException as e:
+            return False, f"Error: {e}"
+
+        except Exception as e:
+            return False, f"An unexpected error occurred: {e}"
 
     try:
         response = requests.get(base_url, params=params)
         response_data = response.json()
         results = ""
+        success = False
 
-        if "items" in response_data:
-            items = response_data["items"]
-            if items:
-                logger.info(items)
-                # image search
-                if image_search:
-                    text = f"{num} Google images of {query}"
-                    from ..chatbot.functions import send_image, download_media
+        items = response_data.get("items", [])
+        logger.info(f"Result items: {len(items)}")
+        if items:
+            # image search
+            if image_search:
+                results = f"{num} Google images of {query}"
+                from ..chatbot.functions import send_image, download_media
 
-                    for image in items:
-                        image_name = f"{datetime.now().strftime('%M%S%f')}.png"
-                        download_media(image.get("link", ""), image_name)
-                        image_url = f"{url_for('chatbot.send_media', _external=True, _scheme='https')}?filename={image_name}"
-                        logger.info(image_url)
-                        send_image(image_link=image_url, recipient=number)
-                    return
-                # document search
-                if file_type:
-                    text = f"{num} {file_type}'s from Google on {query}"
-                    from ..chatbot.functions import send_document, download_media
+                for image in items:
+                    image_name = f"{datetime.now().strftime('%M%S%f')}.png"
+                    download_media(image.get("link", ""), image_name)
+                    image_url = f"{url_for('chatbot.send_media', _external=True, _scheme='https')}?filename={image_name}"
+                    send_image(image_link=image_url, recipient=number)
+            # document search
+            if file_type:
+                results = f"{num} {file_type}'s from Google on {query}"
+                from ..chatbot.functions import send_document, download_media
 
-                    for i, document in enumerate(items):
-                        document_name = f"{i}_{query}.{file_type}".replace(" ", "_")
-                        download_media(document.get("link", ""), document_name)
-                        document_url = f"{url_for('chatbot.send_media', _external=True, _scheme='https')}?filename={document_name}"
-                        logger.info(document_url)
-                        send_document(document_link=document_url, recipient=number)
-                    return
-                # typical google search
-                for item in items:
-                    if results:
-                        break
-                    # Extract the search result link
-                    results = item.get("snippet", "")
-                    link = item.get("link", "")
+                for i, document in enumerate(items):
+                    document_name = f"{i}_{query}.{file_type}".replace(" ", "_")
+                    download_media(document.get("link", ""), document_name)
+                    document_url = f"{url_for('chatbot.send_media', _external=True, _scheme='https')}?filename={document_name}"
+                    send_document(document_link=document_url, recipient=number)
+            # typical google search
+            for item in items:
+                if success:
+                    break
+                # Extract the search result link
+                results = item.get("snippet", "")
+                url = item.get("link", "")
+                try:
                     # Scrape content from page
-                    page = requests.get(link)
-                    soup = BeautifulSoup(page.text, "html.parser")
-                    results = extract_main_section(soup)
-                    if not results:
-                        results = f"No results found for: '{query}'"
+                    success, results = scrape_website(url)
+                except Exception as e:
+                    logger.error(e)
+                if not results:
+                    results = f"No results found for: '{query}'"
 
-            else:
-                results = f"No results found for: '{query}'"
         else:
             results = f"No results found for: '{query}'"
+            not_found = True
 
         # log response
         log_response(
@@ -1029,25 +1057,28 @@ def google_search(
             message=message,
             tokens=tokens,
         )
-        # record ChatGPT response
-        if text:
-            user_db_path = get_user_db(name=name, number=number)
-            new_message = {"role": "assistant", "content": text}
-            new_message = Messages(new_message, user_db_path)
-            new_message.insert()
 
-        return results
+        if not image_search and not file_type:  # google search
+            return success, results  # to be returned to ChatGPT to format for user
+
+        # record ChatGPT response
+        user_db_path = get_user_db(name=name, number=number)
+        new_message = {"role": "assistant", "content": results}
+        new_message = Messages(new_message, user_db_path)
+        new_message.insert()
+
+        return send_text(results, number) if not_found else None
 
     except:
         logger.error(traceback.format_exc())
         text = "Sorry, I cannot respond to that at the moment, please try again later."
-        return text
+        return send_text(text, number)
 
 
 CHATGPT_FUNCTION_DESCRIPTIONS = [
     {
         "name": "generate_image",
-        "description": "Generates an image only when the user requests for one. Ask for clarification if request is vauge.",
+        "description": "This function generates an image in response to a user's explicit request for image generation. It is designed to be called only when the user specifically asks for an image to be generated.",
         "parameters": {
             "type": "object",
             "properties": {
@@ -1097,13 +1128,13 @@ CHATGPT_FUNCTION_DESCRIPTIONS = [
     },
     {
         "name": "google_search",
-        "description": "Searches online for images and documents as requested by the user with the specfied type for document search only and number for image and document search. Be very strict with the number of images or documents requested.",
+        "description": "This is a function that allows you to perform online searches. It is meant to be called only when the user explicity requests an online search. The input of the function is a search query coined from the user's prompt including parameters for image search, document search with file type, and the number of images of files to retrieve. The function returns the search results based on the specified query and parameters which includes text pulled from online articles to be formatted to a user-friendly output. By default, the number of results for image and document searches is set to 1.",
         "parameters": {
             "type": "object",
             "properties": {
                 "query": {
                     "type": "string",
-                    "description": "Query to be searched online.",
+                    "description": "Query to be searched online coined from user prompt.",
                 },
                 "image_search": {
                     "type": "boolean",
@@ -1115,7 +1146,7 @@ CHATGPT_FUNCTION_DESCRIPTIONS = [
                 },
                 "num": {
                     "type": "integer",
-                    "description": "Number of images or files requested by the user. Only required if image_search is true or file_type is not empty.",
+                    "description": "Number of results to be gotten. If not specified by the user, the default for image and file size is 1.",
                 },
             },
             "required": ["query"],
