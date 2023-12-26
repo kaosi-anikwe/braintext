@@ -4,7 +4,6 @@ import traceback
 from datetime import datetime, timedelta
 
 # installed imports
-from twilio.rest import Client
 from dotenv import load_dotenv
 from flask_login import login_required, current_user
 from flask import Blueprint, render_template, request, flash, jsonify, redirect, url_for
@@ -22,11 +21,7 @@ from ..models import (
 
 load_dotenv()
 
-account_sid = os.environ["TWILIO_ACCOUNT_SID"]
-auth_token = os.environ["TWILIO_AUTH_TOKEN"]
-client = Client(account_sid, auth_token)
 TEMP_FOLDER = os.getenv("TEMP_FOLDER")
-
 
 main = Blueprint("main", __name__)
 

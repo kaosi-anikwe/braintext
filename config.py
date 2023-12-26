@@ -19,4 +19,4 @@ class Config(object):
     SMTP_SERVER = os.environ.get("SMTP_SERVER")
     SENDER_EMAIL = os.environ.get("SENDER_EMAIL")
     PASSWORD = os.environ.get("PASSWORD")
-    SERVER_NAME = "braintext.io"
+    SERVER_NAME = os.environ.get("SERVER_NAME")

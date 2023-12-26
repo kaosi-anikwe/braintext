@@ -7,9 +7,8 @@ from dotenv import load_dotenv
 from flask import Blueprint, request, render_template, redirect, url_for, jsonify, flash
 from flask_login import login_required, current_user
 from app.models import StandardSubscription, PremiumSubscription, Users
-from app.twilio_chatbot.functions import send_whatspp_message
+from app.chatbot.functions import send_text
 from app import logger
-from twilio.rest import Client
 
 
 payment = Blueprint("payment", __name__)
@@ -18,10 +17,6 @@ load_dotenv()
 
 flw_pub_key = os.getenv("RAVE_PUBLIC_KEY")
 flw_sec_key = os.getenv("RAVE_SECRET_KEY")
-account_sid = os.getenv("TWILIO_ACCOUNT_SID")
-auth_token = os.getenv("TWILIO_AUTH_TOKEN")
-
-client = Client(account_sid, auth_token)
 
 
 # Checkout --------------------------------------
@@ -183,10 +178,9 @@ def payment_callback():
                             current_user.update()
                             # send thank you message
                             message = "*Thank you for upgrading your account!*\nYour Standard account has been activated.\nCheck your account settings to adjust preferences.\nhttps://braintext.io/profile?settings=True"
-                            send_whatspp_message(
-                                client=client,
+                            send_text(
                                 message=message,
-                                phone_no=current_user.phone_no,
+                                recipient=current_user.phone_no,
                             )
                         if premium:
                             old_sub = (
@@ -204,10 +198,9 @@ def payment_callback():
                             current_user.update()
                             # send thank you message
                             message = "*Thank you for upgrading your account!*\nYour account has been fully activated.\nCheck your account settings to adjust preferences.\nhttps://braintext.io/profile?settings=True"
-                            send_whatspp_message(
-                                client=client,
+                            send_text(
                                 message=message,
-                                phone_no=current_user.phone_no,
+                                recipient=current_user.phone_no,
                             )
 
                         logger.info(

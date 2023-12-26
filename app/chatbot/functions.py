@@ -7,7 +7,7 @@ from datetime import timedelta
 from typing import Any, Dict, Union, Literal
 
 # installed imports
-from flask import url_for, after_this_request
+from flask import url_for
 from dotenv import load_dotenv
 from PIL import Image
 
