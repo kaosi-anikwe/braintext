@@ -7,7 +7,7 @@ from datetime import timedelta
 from typing import Any, Dict, Union, Literal
 
 # installed imports
-from flask import url_for
+from flask import url_for, request
 from dotenv import load_dotenv
 from PIL import Image
 
@@ -659,7 +659,7 @@ def meta_chat_response(
         if subscription:
             if subscription.expired():
                 subscription.update_account(user.id)
-                text = "It seems your subscription has expired. Plese renew your subscription to continue to enjoy your services. \nhttps://braintext.io/profile"
+                text = f"It seems your subscription has expired. Plese renew your subscription to continue to enjoy your services. \n{request.host_url}profile"
                 return reply_to_message(message_id, number, text)
         try:
             response = chatgpt_response(
@@ -873,7 +873,7 @@ def whatsapp_signup(
                     send_text(message, number)
             elif "register_to_continue" in response_id:
                 if "Our website" in text:
-                    message = "Follow this link to continue the registration process. https://braintext.io/register"
+                    message = f"Follow this link to continue the registration process. {request.host_url}register"
                     send_text(message, number)
                 elif "Continue here" in text:
                     user.signup_stage = "firstname_prompted"
@@ -966,7 +966,7 @@ def whatsapp_signup(
                             _scheme="https",
                         )
 
-                        message = f"Awesome! You're all set up.\nCheck your inbox for a verification link.\nLogin to edit your profile or change settings. https://braintext.io/profile?settings=True.\n*Your password the number you're texting with.*\nFollow this link to change your password.\n{change_url}\n\nThank you for choosing BrainText 💙."
+                        message = f"Awesome! You're all set up.\nCheck your inbox for a verification link.\nLogin to edit your profile or change settings. {request.host_url}profile?settings=True.\n*Your password the number you're texting with.*\nFollow this link to change your password.\n{change_url}\n\nThank you for choosing BrainText 💙."
                         send_text(message, number)
                         # send welcome audio
                         media_url = f"{url_for('chatbot.send_voice_note', _external=True, _scheme='https')}?filename=welcome.ogg"
