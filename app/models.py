@@ -165,7 +165,7 @@ class UserSettings(db.Model, TimestampMixin, DatabaseHelperMixin):
         self.notify_on_profile_change = False
         self.product_updates = False
         self.subscription_expiry = True
-        self.ai_voice_type = "Joanna"
+        self.ai_voice_type = "Mia"
         self.user_id = user_id
 
 
