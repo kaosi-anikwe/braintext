@@ -102,6 +102,14 @@ def is_old(data):
     return True
 
 
+def get_phone_id(data: Dict[Any, Any]) -> Union[str, None]:
+    """
+    Extracts the WhatsApp phone number id of the recipeint.
+    """
+    data = _preprocess(data)
+    if "metadata" in data:
+        return data["metadata"]["phone_number_id"]
+
 def get_number(data: Dict[Any, Any]) -> Union[str, None]:
     """
     Extracts the mobile number of the sender.
