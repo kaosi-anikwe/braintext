@@ -118,6 +118,13 @@
                 </div>
 
                 <div class="row">
+                  <div class="col-lg-3 col-md-4 label">Account Balance</div>
+                  <div class="col-lg-9 col-md-8">
+                    {{ current_user.balance }}
+                  </div>
+                </div>
+
+                <div class="row">
                   <div class="col-lg-3 col-md-4 label">Account Type</div>
                   <div class="col-lg-9 col-md-8">
                     <p style="margin: 5px 0">{{ current_user.account_type }}</p>

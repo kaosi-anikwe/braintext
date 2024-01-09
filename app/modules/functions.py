@@ -24,7 +24,6 @@ from sqlalchemy import desc
 from datetime import timedelta
 from dotenv import load_dotenv
 from pydub import AudioSegment
-from twilio.rest import Client
 from google.cloud import texttospeech, storage
 from google.oauth2 import service_account
 from google.cloud.speech_v2 import SpeechClient
@@ -33,18 +32,24 @@ from botocore.exceptions import BotoCoreError, ClientError
 
 # local imports
 from .. import logger
-from ..models import Voices, Users
+from ..modules.calculate import *
+from ..payment.routes import BANK_CODES
+from ..models import Voices, Users, AnonymousUsers, MessageRequests
 from ..modules.messages import create_all, get_engine, Messages
+
+# chatgpt functions
+from .functions2 import account_settings
+from ..payment.functions import get_account_balance, recharge_account
 
 
 load_dotenv()
 
+USD2BT = int(os.getenv("USD2BT"))
 LOG_DIR = os.getenv("CHATBOT_LOG")
 TEMP_FOLDER = os.getenv("TEMP_FOLDER")
 WHATSAPP_NUMBER = os.getenv("WHATSAPP_NUMBER")
 WHATSAPP_TEMPLATE_NAMESPACE = os.getenv("WHATSAPP_TEMPLATE_NAMESPACE")
 WHATSAPP_TEMPLATE_NAME = os.getenv("WHATSAPP_TEMPLATE_NAME")
-CONTEXT_LIMIT = int(os.getenv("CONTEXT_LIMIT"))
 WHATSAPP_CHAR_LIMIT = int(os.getenv("WHATSAPP_CHAR_LIMIT"))
 # Meta
 TOKEN = os.getenv("META_VERIFY_TOKEN")
@@ -232,7 +237,7 @@ def create_image_variation(image_path: str) -> str:
     return image_url
 
 
-def log_response(name: str, number: str, message: str, tokens: int = 0) -> None:
+def log_response(name: str, number: str, message: str, tokens: tuple = 0) -> None:
     with open(log_location(name, number), "a") as file:
         message = message.replace("\n", " ")
         print(
@@ -378,8 +383,12 @@ def load_messages(
     message.insert()
     # load previous messages
     session = message.session()
+    if isinstance(user, Users):
+        context_limit = int(user.user_settings().context_messages) or 1
+    else:
+        context_limit = 10
     get_messages = (
-        session.query(Messages).order_by(desc(Messages.id)).limit(CONTEXT_LIMIT).all()
+        session.query(Messages).order_by(desc(Messages.id)).limit(context_limit).all()
     )
     messages = [
         {"role": message.role, "content": message.content if message.content else ""}
@@ -388,9 +397,9 @@ def load_messages(
 
     if message_list:
         messages.append(message_list[0])
-
-    while num_tokens_from_messages(messages) > 16000:
-        messages.pop(0)
+    else:
+        while num_tokens_from_messages(messages) > 16000:
+            messages.pop(0)
 
     # add system prompt
     system = {
@@ -398,9 +407,10 @@ def load_messages(
         "content": f"""
                     You are a youthfull personal assistant.
                     You always give your opinion on things.
-                    You're conservative about your age.
+                    You're conservative about your age, but don't mention that.
                     You always give comprehensive answers unless asked not to.
                     Your name is BrainText.
+                    You are in a WhatsApp environment, so format your responses accordingly.
                     Don't make assumptions about what values to plug into functions and never return an empty response.
                     Ask for clarification if a user request is ambiguous.
                     The user's first name is {user.first_name if user.first_name else 'not known'},
@@ -702,30 +712,38 @@ def encode_image(image_path):
         return base64.b64encode(image_file.read()).decode("utf-8")
 
 
+def debit_user(
+    user: Users, bt_cost: float, message_request: MessageRequests, reason: str = None
+):
+    """Debit user and check/alert low balance"""
+    user.balance -= bt_cost
+    user.update()
+    logger.info(
+        f"DEDUCTED {bt_cost} FROM USER #{user.id} {reason}. BALANCE IS {user.balance}"
+    )
+    if isinstance(user, Users):
+        if user.balance < user.user_settings().warn_low_balance:
+            if not message_request.alert_low:
+                text = f"Your balance is running low. Consider recharging your account.\nCurrent balance is {round(user.balance, 2)}."
+                send_text(text, user.phone_no)
+                message_request.alert_low = True
+                message_request.update()
+
+
 # ChatGPT ----------------------------------
-def num_tokens_from_messages(messages, model="gpt-3.5-turbo-0301"):
+def num_tokens_from_messages(messages, model="gpt-3.5-turbo-1106"):
     """Returns the number of tokens used by a list of messages."""
     try:
         encoding = tiktoken.encoding_for_model(model)
     except KeyError:
         logger.error("Warning: model not found. Using cl100k_base encoding.")
         encoding = tiktoken.get_encoding("cl100k_base")
-    if model == "gpt-3.5-turbo":
-        logger.warning(
-            "Warning: gpt-3.5-turbo may change over time. Returning num tokens assuming gpt-3.5-turbo-0301."
-        )
-        return num_tokens_from_messages(messages, model="gpt-3.5-turbo-0301")
-    elif model == "gpt-4":
-        logger.warning(
-            "Warning: gpt-4 may change over time. Returning num tokens assuming gpt-4-0314."
-        )
-        return num_tokens_from_messages(messages, model="gpt-4-0314")
-    elif model == "gpt-3.5-turbo-0301":
+    if "gpt-3.5-turbo" in model:
         tokens_per_message = (
             4  # every message follows <|start|>{role/name}\n{content}<|end|>\n
         )
         tokens_per_name = -1  # if there's a name, the role is omitted
-    elif model == "gpt-4-0314":
+    elif "gpt-4" in model:
         tokens_per_message = 3
         tokens_per_name = 1
     else:
@@ -745,9 +763,11 @@ def num_tokens_from_messages(messages, model="gpt-3.5-turbo-0301"):
 
 def chatgpt_response(
     data: Dict[Any, Any],
+    user: Users,
     messages: list,
     message: str,
     number: str,
+    message_request: MessageRequests,
     message_id: str = None,
 ) -> tuple | None:
     """Get response from ChatGPT"""
@@ -771,6 +791,9 @@ def chatgpt_response(
         thread = threading.Thread(target=status_update)
         thread.start()
 
+        # usage tokens
+        tokens = [0, 0]
+
         completion = openai_client.chat.completions.create(
             model="gpt-3.5-turbo-1106",
             messages=messages,
@@ -778,6 +801,9 @@ def chatgpt_response(
             functions=CHATGPT_FUNCTION_DESCRIPTIONS,
             function_call="auto",
         )
+        # update tokens
+        tokens[0] += int(completion.usage.prompt_tokens)
+        tokens[1] += int(completion.usage.completion_tokens)
         # check for function call
         if completion.choices[0].message.function_call:
             logger.info(completion.choices[0].message.function_call)
@@ -789,52 +815,72 @@ def chatgpt_response(
             # pass in the request data to the function to be called
             function_arguments["data"] = data
             # pass in the number of tokens used for logging
-            function_arguments["tokens"] = int(completion.usage.total_tokens)
+            function_arguments["tokens"] = tokens
             # pass in current user message
             function_arguments["message"] = message
+            # pass in current user message request
+            function_arguments["message_request"] = message_request
             # call function with arguments as kwargs
-            if (
-                function_name == "google_search"
-                and not function_arguments.get("image_search")
-                and not function_arguments.get("file_type")
-            ):
-                # typical google search
-                success, results = CHATGPT_FUNCTIONS[function_name](
+            if CHATGPT_FUNCTIONS[function_name]["type"] == "callback":
+                messages.append(
+                    completion.choices[0].message.dict(exclude={"tool_calls"})
+                )
+                logger.info(f"FUNCTION CALL: {messages[-1]}")
+                results = CHATGPT_FUNCTIONS[function_name]["function"](
                     **function_arguments
                 )
-                logger.info(f"Google search results: {results}")
+                logger.info(f"CALLBACK FUNCTION CALL RESULTS: {results}")
                 messages.append(
-                    {"role": "function", "name": "google_search", "content": results}
+                    {"role": "function", "name": function_name, "content": str(results)}
                 )
-                if success:
-                    completion = openai_client.chat.completions.create(
-                        model="gpt-3.5-turbo-1106",
-                        messages=messages,
-                        temperature=1,
-                        functions=CHATGPT_FUNCTION_DESCRIPTIONS,
-                        function_call="auto",
-                    )
+                completion = openai_client.chat.completions.create(
+                    model="gpt-3.5-turbo-1106",
+                    messages=messages,
+                    temperature=1,
+                    functions=CHATGPT_FUNCTION_DESCRIPTIONS,
+                    function_call="auto",
+                )
+                # update tokens
+                tokens[0] += int(completion.usage.prompt_tokens)
+                tokens[1] += int(completion.usage.completion_tokens)
 
-                    text = completion.choices[0].message.content
-                    tokens = int(completion.usage.total_tokens)
-                    role = completion.choices[0].message.role
-
-                    return text, tokens, role
-                else:
-                    return results, 0, "assistant"
+                text = completion.choices[0].message.content
+                role = completion.choices[0].message.role
+                return text, tokens, role
             else:
-                CHATGPT_FUNCTIONS[function_name](**function_arguments)
+                # update request records
+                message_request.gpt_3_input = completion.usage.prompt_tokens
+                message_request.gpt_3_output = completion.usage.completion_tokens
+                message_request.update()
+                # charge user
+                cost = gpt_3_5_cost(
+                    {
+                        "input": completion.usage.prompt_tokens,
+                        "output": completion.usage.completion_tokens,
+                    }
+                )
+                bt_cost = cost * USD2BT
+                # charge user
+                debit_user(
+                    user=user,
+                    bt_cost=bt_cost,
+                    message_request=message_request,
+                    reason="ChatGPT Function call",
+                )
+                logger.info(
+                    f"FUNCTION CALL TOKENS: {int(completion.usage.prompt_tokens), int(completion.usage.completion_tokens)}"
+                )
+                CHATGPT_FUNCTIONS[function_name]["function"](**function_arguments)
                 return None
         else:
             text = completion.choices[0].message.content
-            tokens = int(completion.usage.total_tokens)
             role = completion.choices[0].message.role
 
             return text, tokens, role
     except:
         logger.error(traceback.format_exc())
         text = "Sorry, I can't respond to that at the moment. Plese try again later."
-        return text, 0, "assistant"
+        return text, (0, 0), "assistant"
     finally:
         # Signal the status update function to stop
         stop_event.set()
@@ -846,7 +892,14 @@ def chatgpt_response(
 # ChatGPT Functions ----------------------------
 
 
-def generate_image(data: Dict[Any, Any], tokens: int, message: str, prompt: str) -> str:
+def generate_image(
+    data: Dict[Any, Any],
+    tokens: int,
+    message: str,
+    prompt: str,
+    message_request: MessageRequests,
+    **kwargs,
+) -> str:
     """Genereates an image with the given prompt and returns the URL to the image."""
     from ..chatbot.functions import (
         get_name,
@@ -854,19 +907,76 @@ def generate_image(data: Dict[Any, Any], tokens: int, message: str, prompt: str)
         send_image,
     )
 
-    image_response = openai_client.images.generate(
-        model="dall-e-3",
-        prompt=prompt,
-        size="1024x1024",
-        quality="standard",
-        style="natural",
-        n=1,
-    )
-    image_url = image_response.data[0].url
-    logger.info(f"Revised image input prompt: {image_response.data[0].revised_prompt}")
-    # log response
+    # get user
     name = get_name(data)
     number = f"+{get_number(data)}"
+    response = kwargs.get("response")
+    user = Users.query.filter(Users.phone_no == number).one_or_none()
+    image_confg = (
+        user.user_settings().image_confg
+        if user
+        else "dalle3.natural.standard-1024x1024"
+    )
+    image_type = image_confg.split(".")[0]
+    if not user:
+        user = AnonymousUsers.query.filter(
+            AnonymousUsers.phone_no == number
+        ).one_or_none()
+    logger.info(f"DALLE CONFG: {image_confg}")
+    if "dalle2" in image_type:
+        d2_res = image_confg.split(".")[1]
+        cost = dalle2_cost(image_confg.split(".")[1])
+        bt_cost = cost * USD2BT
+        if bt_cost > user.balance:
+            text = f"Insufficent balance. Cost is {bt_cost}"
+            logger.info(
+                f"INSUFFICIENT BALANCE - user: {user.phone_no}. BALANCE: {user.balance}"
+            )
+            return send_text(text, number)
+        image_response = openai_client.images.generate(
+            model="dall-e-2",
+            prompt=prompt,
+            size=d2_res,
+            n=1,
+        )
+        # update request records
+        message_request.dalle_2 = image_confg
+        message_request.update()
+        # charge user
+        debit_user(
+            user=user, bt_cost=bt_cost, message_request=message_request, reason="Dalle2"
+        )
+
+    elif "dalle3" in image_type:
+        d3_type = image_confg.split(".")[-1].split("-")[0]
+        d3_res = image_confg.split(".")[-1].split("-")[1]
+        d3_style = image_confg.split(".")[1]
+        img_confg = {"type": d3_type, "res": d3_res}
+        cost = dalle3_cost(img_confg)
+        bt_cost = cost * USD2BT
+        if bt_cost > user.balance:
+            text = f"Insufficent balance. Cost is {bt_cost}"
+            logger.info(
+                f"INSUFFICIENT BALANCE - user: {user.phone_no}. BALANCE: {user.balance}"
+            )
+            return send_text(text, number)
+        image_response = openai_client.images.generate(
+            model="dall-e-3",
+            prompt=prompt,
+            size=d3_res,
+            quality=d3_type,
+            style=d3_style,
+            n=1,
+        )
+        # update request records
+        message_request.dalle_3 = image_confg
+        message_request.update()
+        # charge user
+        debit_user(
+            user=user, bt_cost=bt_cost, message_request=message_request, reason="Dalle3"
+        )
+
+    image_url = image_response.data[0].url
     log_response(
         name=name,
         number=number,
@@ -882,11 +992,16 @@ def generate_image(data: Dict[Any, Any], tokens: int, message: str, prompt: str)
     new_message = Messages(new_message, user_db_path)
     new_message.insert()
 
-    return send_image(image_url, number)
+    return send_image(image_url, number, caption=response)
 
 
 def speech_synthesis(
-    data: Dict[Any, Any], tokens: int, message: str, text: str, speed: float = 1.0
+    data: Dict[Any, Any],
+    tokens: tuple,
+    message: str,
+    text: str,
+    message_request: MessageRequests,
+    speed: float = 1.0,
 ):
     """Synthesize audio output and send to user."""
     from ..chatbot.functions import (
@@ -895,12 +1010,29 @@ def speech_synthesis(
         get_name,
     )
 
+    anonymous = False
+    # get user
+    number = f"+{get_number(data)}"
+    user = Users.query.filter(Users.phone_no == number).one_or_none()
+    if not user:
+        anonymous = True
+        user = AnonymousUsers.query.filter(
+            AnonymousUsers.phone_no == number
+        ).one_or_none()
     try:
+        cost = tts_cost(len(text))
+        logger.info(f"TTS COST: {len(text)} CHARACTERS")
+        bt_cost = cost * USD2BT
+        if bt_cost > user.balance:
+            text = f"Insufficent balance. Cost is {bt_cost}"
+            logger.info(
+                f"INSUFFICIENT BALANCE - user: {user.phone_no}. BALANCE: {user.balance}"
+            )
+            return send_text(text, number)
         name = get_name(data)
         number = f"+{get_number(data)}"
         # get voice type
-        user = Users.query.filter(Users.phone_no == number).one_or_none()
-        voice_type = user.user_settings().ai_voice_type if user else "Mia"
+        voice_type = user.user_settings().audio_voice if not anonymous else "Mia"
         # synthesize text
         audio_filename = openai_text_to_speech(
             text=text, voice_name=voice_type, speed=speed
@@ -908,6 +1040,13 @@ def speech_synthesis(
         if audio_filename == None:
             text = "Error synthesizing speech. Please try again later."
             return send_text(text, number)
+        # update request records
+        message_request.tts = len(text)
+        message_request.update()
+        # charge user
+        debit_user(
+            user=user, bt_cost=bt_cost, message_request=message_request, reason="TTS"
+        )
         media_url = f"{url_for('chatbot.send_voice_note', _external=True, _scheme='https')}?filename={audio_filename}"
         # log response
         log_response(
@@ -935,22 +1074,15 @@ def speech_synthesis(
 
 def google_search(
     data: Dict[Any, Any],
-    tokens: int,
-    message: str,
     query: str,
-    image_search: bool = False,
-    num: int = 1,
-    file_type: str = None,
+    **kwargs,
 ):
     from bs4 import BeautifulSoup
     from ..chatbot.functions import (
         get_number,
-        get_name,
     )
 
-    not_found = False
     number = f"+{get_number(data)}"
-    name = get_name(data)
     api_key = str(os.getenv("GOOGLE_SEARCH_API_KEY"))
     cse_id = str(os.getenv("GOOGLE_SEARCH_ENGINE_ID"))
     base_url = "https://www.googleapis.com/customsearch/v1"
@@ -959,19 +1091,14 @@ def google_search(
         "key": api_key,
         "cx": cse_id,
     }
-    if file_type or image_search:  # not google search
-        if num > 0:
-            params["num"] = num
-    if file_type:
-        params["fileType"] = file_type
-    if image_search:
-        params["searchType"] = "image"
 
     def scrape_website(url, max_words=5000):
         try:
             # Send an HTTP request to the URL
-            response = requests.get(url)
+            logger.info(f"GOING TO: {url}")
+            response = requests.get(url, timeout=5)
             response.raise_for_status()  # Raise an HTTPError for bad responses
+            logger.info(f"RESPONSE: {response.status_code}")
 
             # Parse the HTML content of the page
             soup = BeautifulSoup(response.text, "html.parser")
@@ -1011,26 +1138,6 @@ def google_search(
         items = response_data.get("items", [])
         logger.info(f"Result items: {len(items)}")
         if items:
-            # image search
-            if image_search:
-                results = f"{num} Google images of {query}"
-                from ..chatbot.functions import send_image, download_media
-
-                for image in items:
-                    image_name = f"{datetime.now().strftime('%M%S%f')}.png"
-                    download_media(image.get("link", ""), image_name)
-                    image_url = f"{url_for('chatbot.send_media', _external=True, _scheme='https')}?filename={image_name}"
-                    send_image(image_link=image_url, recipient=number)
-            # document search
-            if file_type:
-                results = f"{num} {file_type}'s from Google on {query}"
-                from ..chatbot.functions import send_document, download_media
-
-                for i, document in enumerate(items):
-                    document_name = f"{i}_{query}.{file_type}".replace(" ", "_")
-                    download_media(document.get("link", ""), document_name)
-                    document_url = f"{url_for('chatbot.send_media', _external=True, _scheme='https')}?filename={document_name}"
-                    send_document(document_link=document_url, recipient=number)
             # typical google search
             for item in items:
                 if success:
@@ -1045,21 +1152,90 @@ def google_search(
                     logger.error(e)
                 if not results:
                     results = f"No results found for: '{query}'"
+        else:
+            results = f"No results found for: '{query}'"
 
+        return results  # to be returned to ChatGPT to format for user
+
+    except:
+        logger.error(traceback.format_exc())
+        text = "Sorry, I cannot respond to that at the moment, please try again later."
+        return send_text(text, number)
+
+
+def media_search(data: Dict[Any, Any], **kwargs):
+    from ..chatbot.functions import (
+        get_number,
+        get_name,
+    )
+
+    not_found = False
+    image_search = kwargs.get("image_search")
+    num = int(kwargs.get("num", 1))
+    file_type = kwargs.get("file_type")
+    message = kwargs.get("message")
+    tokens = kwargs.get("tokens")
+    number = f"+{get_number(data)}"
+    name = get_name(data)
+    query = kwargs.get("query")
+    api_key = str(os.getenv("GOOGLE_SEARCH_API_KEY"))
+    cse_id = str(os.getenv("GOOGLE_SEARCH_ENGINE_ID"))
+    base_url = "https://www.googleapis.com/customsearch/v1"
+    params = {
+        "q": query,
+        "key": api_key,
+        "cx": cse_id,
+        "num": num,
+    }
+    if file_type:
+        params["fileType"] = file_type
+    if image_search:
+        params["searchType"] = "image"
+    try:
+        response = requests.get(base_url, params=params)
+        response_data = response.json()
+        search_response = kwargs.get("response")
+        results = ""
+
+        items = response_data.get("items", [])
+        logger.info(f"Result items: {len(items)}")
+        if items:
+            # image search
+            if image_search:
+                send_text(search_response, number) if search_response else None
+                results = f"{num} Google images of {query}"
+                from ..chatbot.functions import send_image, download_media
+
+                for image in items:
+                    image_name = f"{datetime.now().strftime('%M%S%f')}.png"
+                    logger.info(f"IMAGE URL: {image.get('link', '')}")
+                    ok = download_media(image.get("link", ""), image_name)
+                    if ok:
+                        image_url = f"{url_for('chatbot.send_media', _external=True, _scheme='https')}?filename={image_name}"
+                        send_image(image_link=image_url, recipient=number)
+            # document search
+            if file_type:
+                send_text(search_response, number) if search_response else None
+                results = f"{num} {file_type}'s from Google on {query}"
+                from ..chatbot.functions import send_document, download_media
+
+                for i, document in enumerate(items):
+                    document_name = f"{i}_{query}.{file_type}".replace(" ", "_")
+                    logger.info(f"DOCUMENT URL: {document.get('link', '')}")
+                    ok = download_media(document.get("link", ""), document_name)
+                    if ok:
+                        document_url = f"{url_for('chatbot.send_media', _external=True, _scheme='https')}?filename={document_name}"
+                        send_document(document_link=document_url, recipient=number)
         else:
             results = f"No results found for: '{query}'"
             not_found = True
 
-        # log response
         log_response(
             name=name,
             number=number,
             message=message,
             tokens=tokens,
         )
-
-        if not image_search and not file_type:  # google search
-            return success, results  # to be returned to ChatGPT to format for user
 
         # record ChatGPT response
         user_db_path = get_user_db(name=name, number=number)
@@ -1068,7 +1244,6 @@ def google_search(
         new_message.insert()
 
         return send_text(results, number) if not_found else None
-
     except:
         logger.error(traceback.format_exc())
         text = "Sorry, I cannot respond to that at the moment, please try again later."
@@ -1078,7 +1253,7 @@ def google_search(
 CHATGPT_FUNCTION_DESCRIPTIONS = [
     {
         "name": "generate_image",
-        "description": "This function generates an image in response to a user's explicit request for image generation. It is designed to be called only when the user specifically asks for an image to be generated.",
+        "description": "Generates an image in response to a user's explicit request for image creation. Intended for use when the user specifically asks for image generation. Requires a user-friendly response to the prompt.",
         "parameters": {
             "type": "object",
             "properties": {
@@ -1086,8 +1261,12 @@ CHATGPT_FUNCTION_DESCRIPTIONS = [
                     "type": "string",
                     "description": "The image prompt or description to be used to generate the image.",
                 },
+                "response": {
+                    "type": "string",
+                    "description": "User friendly response to prompt.",
+                },
             },
-            "required": ["prompt"],
+            "required": ["prompt", "response"],
         },
     },
     {
@@ -1128,13 +1307,31 @@ CHATGPT_FUNCTION_DESCRIPTIONS = [
     },
     {
         "name": "google_search",
-        "description": "This is a function that allows you to perform online searches. It is meant to be called only when the user explicity requests an online search. The input of the function is a search query coined from the user's prompt including parameters for image search, document search with file type, and the number of images of files to retrieve. The function returns the search results based on the specified query and parameters which includes text pulled from online articles to be formatted to a user-friendly output. By default, the number of results for image and document searches is set to 1.",
+        "description": "The function enables users to access current information through online searches, returning user-friendly formatted text based on specified queries and parameters.",
         "parameters": {
             "type": "object",
             "properties": {
                 "query": {
                     "type": "string",
                     "description": "Query to be searched online coined from user prompt.",
+                },
+            },
+            "required": ["query"],
+        },
+    },
+    {
+        "name": "media_search",
+        "description": "This function performs online searches for images or documents based on user prompt, delivering a user-friendly response. Takes a search query, a boolean for image search, an optional file type for document search, and the desired number of results.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "query": {
+                    "type": "string",
+                    "description": "Query to be searched online coined from user prompt.",
+                },
+                "response": {
+                    "type": "string",
+                    "description": "User-friendly response to prompt for image and document search.",
                 },
                 "image_search": {
                     "type": "boolean",
@@ -1146,18 +1343,73 @@ CHATGPT_FUNCTION_DESCRIPTIONS = [
                 },
                 "num": {
                     "type": "integer",
-                    "description": "Number of results to be gotten. If not specified by the user, the default for image and file size is 1.",
+                    "description": "Number of results to be gotten. Default is 1.",
                 },
             },
-            "required": ["query"],
+            "required": ["query", "num", "response"],
         },
+    },
+    {
+        "name": "get_account_balance",
+        "description": "Returns the user's account balance on enquiry.",
+        "parameters": {},
+    },
+    {
+        "name": "recharge_account",
+        "description": f"Enables users to recharge their accounts and top-up their balance, always initiating a new request. The user provides the amount, currency, and bank from this list: {[bank for bank in BANK_CODES.keys()]}. Non-NGN requests are not accepted. Do not assume any values, make sure the user provides all neccessary information.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "number",
+                    "description": "The amount the user wishes to recharge.",
+                },
+                "currency": {
+                    "type": "string",
+                    "description": "The currency the user wishes to recharge (converted to the ISO 4217 code).",
+                },
+                "bank_name": {
+                    "type": "string",
+                    "description": "The user's bank code gotten from the list of banks provided.",
+                },
+            },
+            "required": ["amount", "currency", "bank_name"],
+        },
+    },
+    {
+        "name": "account_settings",
+        "description": "To be called when a user wishes to change their account settings.",
+        "parameters": {},
     },
 ]
 
+
 CHATGPT_FUNCTIONS = {
-    "generate_image": generate_image,
-    "speech_synthesis": speech_synthesis,
-    "google_search": google_search,
+    "generate_image": {
+        "type": "non-callback",
+        "function": generate_image,
+    },
+    "speech_synthesis": {
+        "type": "non-callback",
+        "function": speech_synthesis,
+    },
+    "google_search": {
+        "type": "callback",
+        "function": google_search,
+    },
+    "media_search": {
+        "type": "non-callback",
+        "function": media_search,
+    },
+    "get_account_balance": {
+        "type": "non-callback",
+        "function": get_account_balance,
+    },
+    "recharge_account": {
+        "type": "non-callback",
+        "function": recharge_account,
+    },
+    "account_settings": {"type": "non-callback", "function": account_settings},
 }
 
 

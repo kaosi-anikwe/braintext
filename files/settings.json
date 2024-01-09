@@ -1,0 +1,128 @@
+{
+  "userSettings": [
+    {
+      "title": "User Settings",
+      "rows": [
+        {
+          "id": "warn_low_balance",
+          "title": "Warn on Low Balance",
+          "description": "Receive a warning when your account balance is below a specified limit",
+          "default": 2,
+          "value": null
+        },
+        {
+          "id": "email_updates",
+          "title": "Email on Updates",
+          "description": "Opt to receive email notifications for account updates and new features",
+          "default": false,
+          "value": null
+        },
+        {
+          "id": "change_number",
+          "title": "Change Phone Number",
+          "description": "Update your registered phone number",
+          "default": false,
+          "value": null
+        },
+        {
+          "id": "change_first_name",
+          "title": "Change First Name",
+          "description": "Modify your first name in the account details",
+          "default": false,
+          "value": null
+        },
+        {
+          "id": "change_last_name",
+          "title": "Change Last Name",
+          "description": "Modify your last name in the account details",
+          "default": false,
+          "value": null
+        }
+      ]
+    }
+  ],
+  "chatbotSettings": [
+    {
+      "title": "Context",
+      "rows": [
+        {
+          "id": "context_messages",
+          "title": "Context length",
+          "description": "Set length of message context.",
+          "default": 10
+        },
+        {
+          "id": "max_response_length",
+          "title": "Max Length of Response",
+          "description": "Define the maximum length allowed for chatbot responses.",
+          "default": null
+        }
+      ]
+    },
+    {
+      "title": "Interaction",
+      "rows": [
+        {
+          "id": "image_generation",
+          "title": "Image Generation",
+          "description": "Enable or disable the generation of images in response to user queries.",
+          "default": true
+        },
+        {
+          "id": "online_search",
+          "title": "Online Search",
+          "description": "Toggle the capability to perform online searches for information.",
+          "default": true
+        },
+        {
+          "id": "media_search",
+          "title": "Media Search",
+          "description": "Allow chatbot to search for media, such as images or documents.",
+          "default": true
+        },
+        {
+          "id": "audio_responses",
+          "title": "Audio Responses",
+          "description": "Specify whether the chatbot can respond with audio messages.",
+          "default": true
+        },
+        {
+          "id": "image_recognition",
+          "title": "Image Recognition",
+          "description": "Enable or disable image recognition capabilities for the chatbot.",
+          "default": true
+        }
+      ]
+    },
+    {
+      "title": "Voice",
+      "rows": [
+        {
+          "id": "audio_voice",
+          "title": "Choose Audio Voice",
+          "description": "Select the preferred voice for audio responses.",
+          "default": "Mia",
+          "voices": [
+            { "name": "Michael", "gender": "male" },
+            { "name": "Benjamin", "gender": "male" },
+            { "name": "James", "gender": "male" },
+            { "name": "Hunter", "gender": "male" },
+            { "name": "Sophia", "gender": "female" },
+            { "name": "Mia", "gender": "female" }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Image Generation",
+      "rows": [
+        {
+          "id": "image_gen_settings",
+          "title": "Image Settings",
+          "description": "Customize image generation settings such as quality and size.",
+          "choices": null
+        }
+      ]
+    }
+  ]
+}

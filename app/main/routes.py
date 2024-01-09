@@ -6,7 +6,16 @@ from datetime import datetime, timedelta
 # installed imports
 from dotenv import load_dotenv
 from flask_login import login_required, current_user
-from flask import Blueprint, render_template, request, flash, jsonify, redirect, url_for
+from flask import (
+    Blueprint,
+    render_template,
+    request,
+    flash,
+    jsonify,
+    redirect,
+    url_for,
+    session,
+)
 
 # local imports
 from .. import logger
@@ -49,33 +58,6 @@ def profile():
     current_user.subscription_expiry = user_settings.subscription_expiry
     current_user.ai_voice_type = user_settings.ai_voice_type
     current_user.voice_response = user_settings.voice_response
-
-    # check account expiry
-    subscription = current_user.get_active_sub()
-
-    if not subscription:  # all subscriptions have expired
-        current_user.account_type = "Basic"
-        current_user.update()
-
-    if subscription:
-        # calculate expiry date
-        days_left = (subscription.get_expire_date() - current_user.timenow()).days
-        if days_left < 1:
-            hours_left = (
-                subscription.get_expire_date() - current_user.timenow()
-            ).total_seconds() / 3600
-            expire_time = current_user.timenow() + timedelta(hours=hours_left)
-            if expire_time.day > current_user.timenow().day:
-                # next day
-                days_left = f"tomorrow at {expire_time.strftime('%I:%M %p')}"
-            else:
-                days_left = f"expires today at {expire_time.strftime('%I:%M %p')}"
-        else:
-            days_left = (
-                f"{days_left} days left" if days_left > 1 else f"{days_left} day left"
-            )
-
-        current_user.days_left = days_left
 
     # get voices
     voices = {}

@@ -1,14 +1,23 @@
-import jwt
+# python imports
+import os
 import time
 import uuid
 import math
 import random
-from app import db, login_manager, logger
 from datetime import datetime, timedelta, timezone
+
+# installed imports
+import jwt
 from flask import current_app
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 
+# local imports
+from app import db, login_manager
+from app.modules.calculate import *
+
+
+BASE_COST = 0.3
 
 # generate 6 digit OTP
 def get_otp() -> int:
@@ -63,7 +72,8 @@ class Users(db.Model, TimestampMixin, UserMixin, DatabaseHelperMixin):
     first_name = db.Column(db.String(50), nullable=False)
     last_name = db.Column(db.String(50), nullable=False)
     email = db.Column(db.String(100), nullable=False)
-    account_type = db.Column(db.String(20), default="Basic")
+    account_type = db.Column(db.String(20), default="regular")
+    balance = db.Column(db.Float, default=5)
     timezone_offset = db.Column(db.Integer)
     phone_no = db.Column(db.String(20))
     phone_verified = db.Column(db.Boolean, default=False)
@@ -123,50 +133,43 @@ class Users(db.Model, TimestampMixin, UserMixin, DatabaseHelperMixin):
             return None
         return Users.query.get(id)
 
-    def get_active_sub(self):
-        subscription = None
-        if self.account_type == "Standard":
-            subscriptions = StandardSubscription.query.filter(
-                StandardSubscription.user_id == self.id,
-                StandardSubscription.payment_status == "completed",
-                StandardSubscription.sub_status == "active",
-            ).all()
-            for sub in subscriptions:
-                if not sub.expired():
-                    subscription = sub
-
-        elif self.account_type == "Premium":
-            subscriptions = PremiumSubscription.query.filter(
-                PremiumSubscription.user_id == self.id,
-                PremiumSubscription.payment_status == "completed",
-                PremiumSubscription.sub_status == "active",
-            ).all()
-            for sub in subscriptions:
-                if not sub.expired():
-                    subscription = sub
-        return subscription
-
     def user_settings(self):
-        return UserSettings.query.filter(UserSettings.user_id == self.id).one()
+        settings: UserSettings
+        settings = UserSettings.query.filter(UserSettings.user_id == self.id).one()
+        return settings
 
 
 class UserSettings(db.Model, TimestampMixin, DatabaseHelperMixin):
     __tablename__ = "user_setting"
 
     id = db.Column(db.Integer, primary_key=True)
-    notify_on_profile_change = db.Column(db.Boolean, default=False)
-    product_updates = db.Column(db.Boolean, default=False)
-    subscription_expiry = db.Column(db.Boolean, default=True)
-    ai_voice_type = db.Column(db.String(50))
-    voice_response = db.Column(db.Boolean, default=True)
+    context_messages = db.Column(db.Integer, default=int(os.getenv("CONTEXT_LIMIT")))
+    max_response_length = db.Column(db.Integer)
+    image_generation = db.Column(db.Boolean, default=True)
+    online_search = db.Column(db.Boolean, default=True)
+    media_search = db.Column(db.Boolean, default=True)
+    audio_responses = db.Column(db.Boolean, default=True)
+    image_recognition = db.Column(db.Boolean, default=True)
+    audio_voice = db.Column(db.String(50), default="Mia")
+    image_generation_model = db.Column(db.String(50), default="dalle3")
+    image_generation_style = db.Column(db.String(50), default="natural")
+    image_generation_quality = db.Column(db.String(50), default="standard")
+    image_generation_size = db.Column(db.String(50), default="1024x1024")
+    warn_low_balance = db.Column(db.Integer, default=2)
+    email_updates = db.Column(db.Boolean, default=True)
+    change_number = db.Column(db.Boolean, default=True)
+    change_first_name = db.Column(db.Boolean, default=True)
+    change_last_name = db.Column(db.Boolean, default=True)
     user_id = db.Column(db.ForeignKey("user.id"))
 
-    def __init__(self, user_id) -> None:
-        self.notify_on_profile_change = False
-        self.product_updates = False
-        self.subscription_expiry = True
-        self.ai_voice_type = "Mia"
+    def __init__(self, user_id):
         self.user_id = user_id
+
+    def image_confg(self):
+        if self.image_generation_model == "dalle2":
+            return f"{self.image_generation_model}.{self.image_generation_size}"
+        elif self.image_generation_model == "dalle3":
+            return f"{self.image_generation_model}.{self.image_generation_style}.{self.image_generation_quality}-{self.image_generation_size}"
 
 
 class AnonymousUsers(db.Model, TimestampMixin, DatabaseHelperMixin):
@@ -178,23 +181,122 @@ class AnonymousUsers(db.Model, TimestampMixin, DatabaseHelperMixin):
     last_name = db.Column(db.String(50))
     email = db.Column(db.String(100))
     phone_no = db.Column(db.String(20))
-    prompts = db.Column(db.Integer)
     signup_stage = db.Column(db.String(50))
+    balance = db.Column(db.Float, default=5)
 
     def __init__(self, phone_no) -> None:
         self.phone_no = phone_no
-        self.prompts = 0
         self.uid = uuid.uuid4().hex
         self.signup_stage = "anonymous"
 
     def respond(self) -> bool:
-        if self.prompts < 20:
+        if BASE_COST < self.balance:
             return True
         return False
 
     # return concatenated name
     def display_name(self):
         return f"{self.first_name} {self.last_name}"
+
+
+class MessageRequests(db.Model, TimestampMixin, DatabaseHelperMixin):
+    __tablename__ = "usage"
+
+    id = db.Column(db.Integer, primary_key=True)
+    gpt_3_input = db.Column(db.Integer, default=0)
+    gpt_3_output = db.Column(db.Integer, default=0)
+    gpt_4_input = db.Column(db.Integer, default=0)
+    gpt_4_output = db.Column(db.Integer, default=0)
+    dalle_2 = db.Column(db.String(50), default="")
+    dalle_3 = db.Column(db.String(50), default="")
+    tts = db.Column(db.Integer, default=0)
+    whisper = db.Column(db.Float, default=0)
+    anonymous = db.Column(db.Boolean, default=False)
+    alert_low = db.Column(db.Boolean, default=False)
+    interactive = db.Column(db.Boolean, default=False)
+    user_id = db.Column(db.Integer)
+
+    def __init__(self, user_id, anonymous: bool = None):
+        self.user_id = user_id
+        if anonymous:
+            self.anonymous = anonymous
+
+    def usage(self):
+        return {
+            "gpt_3_input": self.gpt_3_input,
+            "gpt_3_output": self.gpt_3_output,
+            "gpt_4_intput": self.gpt_4_input,
+            "gpt_4_output": self.gpt_4_output,
+            "dalle_2": self.dalle_2,
+            "dalle_3": self.dalle_3,
+            "tts": self.tts,
+            "whisper": self.whisper,
+        }
+
+    def cost(self):
+        gpt_3_tokens = {"input": self.gpt_3_input, "output": self.gpt_3_output}
+        gpt_4_tokens = {"input": self.gpt_3_input, "output": self.gpt_4_output}
+        dalle_3 = {
+            "type": self.dalle_3.split("-")[0],
+            "res": self.dalle_3.split("-")[1],
+        }
+        cost = {
+            "gpt_3": gpt_3_5_cost(gpt_3_tokens),
+            "gpt_4": gpt_4_vision_cost(gpt_4_tokens),
+            "dalle_2": dalle2_cost(self.dalle_2),
+            "dalle_3": dalle3_cost(dalle_3),
+            "tts": tts_cost(self.tts),
+            "whisper": whisper_cost(self.whisper),
+        }
+        cost["total"] = sum(price for price in cost.values())
+        return cost
+
+
+class Transactions(db.Model, TimestampMixin, DatabaseHelperMixin):
+    __tablename__ = "transaction"
+
+    id = db.Column(db.Integer, primary_key=True)
+    status = db.Column(db.String(20), default="pending")
+    currency = db.Column(db.String(10), default="NGN")
+    mode = db.Column(db.String(20), nullable=False)
+    amount = db.Column(db.Float, nullable=False)
+    usd_value = db.Column(db.Float)
+    notified = db.Column(db.Boolean, default=False)
+    message = db.Column(db.String(50))
+    tx_ref = db.Column(db.String(100), nullable=False)
+    flw_tx_id = db.Column(db.String(100), nullable=False)
+    flw_tx_ref = db.Column(db.String(100), nullable=False)
+    user_id = db.Column(db.ForeignKey("user.id"))
+
+    def __init__(
+        self,
+        message,
+        mode,
+        amount,
+        tx_ref,
+        flw_tx_id,
+        flw_tx_ref,
+        user_id,
+        currency=None,
+    ):
+        self.message = message
+        self.mode = mode
+        self.amount = amount
+        self.user_id = user_id
+        self.tx_ref = tx_ref
+        self.flw_tx_id = flw_tx_id
+        self.flw_tx_ref = flw_tx_ref
+        self.currency = currency if currency else "NGN"
+
+    def output(self, code: str = None, ussd_code: str = None):
+        return {
+            "message": self.message,
+            "status": self.status,
+            "amount": self.amount,
+            "currency": self.currency,
+            "code": code,
+            "ussd_code": ussd_code,
+        }
 
 
 class OTP(db.Model, TimestampMixin, DatabaseHelperMixin):
@@ -209,227 +311,6 @@ class OTP(db.Model, TimestampMixin, DatabaseHelperMixin):
         self.otp = get_otp()
         self.phone_no = phone_no
         self.verified = False
-
-
-# Subscription Types
-class BasicSubscription(db.Model, TimestampMixin, DatabaseHelperMixin):
-    __tablename__ = "basic_subscription"
-
-    id = db.Column(db.Integer, primary_key=True)
-    expire_date = db.Column(db.DateTime(timezone=True))
-    sub_status = db.Column(db.String(20))
-    prompts = db.Column(db.Integer)
-    user_id = db.Column(db.ForeignKey("user.id"), nullable=False)
-
-    def __init__(self, user_id) -> None:
-        self.prompts = 0
-        self.expire_date = datetime.utcnow() + timedelta(days=7)
-        self.sub_status = "active"
-        self.user_id = user_id
-
-    # helper functions
-    def upgrade(self) -> None:
-        if self.sub_status != "upgraded":
-            self.sub_status = "upgraded"
-            self.update()
-
-    # get localized expire_date
-    def get_expire_date(self):
-        user = Users.query.get(self.user_id)
-        return (
-            self.expire_date.replace(tzinfo=user.get_timezone())
-            if not user.from_anonymous
-            else self.expire_date
-        )
-
-    def expired(self) -> bool:
-        user = Users.query.get(self.user_id)
-        if user.timenow() > self.get_expire_date():
-            return True
-        else:
-            return False
-
-    def renew(self) -> bool:
-        try:
-            user = Users.query.get(self.user_id)
-            while self.get_expire_date() < user.timenow():
-                self.expire_date = self.expire_date + timedelta(days=7)
-            self.prompts = 0
-            self.update()
-            return True
-        except Exception as e:
-            logger.error(e)
-            return False
-
-    def respond(self) -> bool:
-        if self.expired():
-            self.renew()
-        if self.prompts < 10:
-            self.prompts += 1
-            self.update()
-            return True
-        else:
-            return False
-
-
-class StandardSubscription(db.Model, TimestampMixin, DatabaseHelperMixin):
-    __tablename__ = "standard_subscription"
-
-    id = db.Column(db.Integer, primary_key=True)
-    tx_ref = db.Column(db.String(100), nullable=False)
-    tx_id = db.Column(db.String(100))
-    flw_ref = db.Column(db.String(100))
-    payment_status = db.Column(db.String(20))
-    sub_status = db.Column(db.String(20))
-    expire_date = db.Column(db.DateTime(timezone=True))
-    user_id = db.Column(db.ForeignKey("user.id"), nullable=False)
-
-    def __init__(self, tx_ref, user_id) -> None:
-        self.tx_ref = tx_ref
-        self.payment_status = "pending"
-        self.user_id = user_id
-
-    # helper functions
-    def upgrade(self) -> None:
-        if self.sub_status != "upgraded":
-            self.sub_status = "upgraded"
-            self.update()
-
-    # get localized expire_date
-    def get_expire_date(self):
-        user = Users.query.get(self.user_id)
-        return (
-            self.expire_date.replace(tzinfo=user.get_timezone())
-            if not user.from_anonymous
-            else self.expire_date
-        )
-
-    def expired(self) -> bool:
-        # return False
-        user = Users.query.get(self.user_id)
-        if user.timenow() > self.get_expire_date():
-            if self.sub_status != "expired":
-                self.sub_status = "expired"
-                self.update()
-            return True
-        else:
-            return False
-
-    def update_account(self, user_id) -> None:
-        # updates account after expiry
-        user = Users.query.get(user_id)
-        user.account_type = "Basic"
-        user.update()
-        # renew basic sub
-        basic_sub = BasicSubscription.query.filter(
-            BasicSubscription.user_id == user_id
-        ).one()
-        if not basic_sub.renew():
-            logger.warning(
-                f"Failed to renew basic sub for user: {user.display_name()} with user ID: {user.id}"
-            )
-
-
-class PremiumSubscription(db.Model, TimestampMixin, DatabaseHelperMixin):
-    __tablename__ = "premium_subscription"
-
-    id = db.Column(db.Integer, primary_key=True)
-    tx_ref = db.Column(db.String(100), nullable=False)
-    tx_id = db.Column(db.String(100))
-    flw_ref = db.Column(db.String(100))
-    payment_status = db.Column(db.String(20))
-    sub_status = db.Column(db.String(20))
-    expire_date = db.Column(db.DateTime(timezone=True))
-    user_id = db.Column(db.ForeignKey("user.id"), nullable=False)
-
-    def __init__(self, tx_ref, user_id) -> None:
-        self.tx_ref = tx_ref
-        self.payment_status = "pending"
-        self.user_id = user_id
-
-    # helper functions
-    def upgrade(self) -> None:
-        if self.sub_status != "upgraded":
-            self.sub_status = "upgraded"
-            self.update()
-
-    # get localized expire_date
-    def get_expire_date(self):
-        user = Users.query.get(self.user_id)
-        return (
-            self.expire_date.replace(tzinfo=user.get_timezone())
-            if not user.from_anonymous
-            else self.expire_date
-        )
-
-    def expired(self) -> bool:
-        user = Users.query.get(self.user_id)
-        if user.timenow() > self.get_expire_date():
-            if self.sub_status != "expired":
-                self.sub_status = "expired"
-                self.update()
-            return True
-        else:
-            return False
-
-    def update_account(self, user_id) -> None:
-        # updates account after expiry
-        user = Users.query.get(user_id)
-        user.account_type = "Basic"
-        user.update()
-        # renew basic sub
-        basic_sub = BasicSubscription.query.filter(
-            BasicSubscription.user_id == user_id
-        ).one()
-        if not basic_sub.renew():
-            logger.warning(
-                f"Failed to renew basic sub for user: {user.display_name()} with user ID: {user.id}"
-            )
-
-    @staticmethod
-    def create_fake(user_id):
-        user = Users.query.get(user_id)
-        tx_ref = "0000000000000000"
-        subscription = PremiumSubscription(tx_ref=tx_ref, user_id=user_id)
-        subscription.flw_ref = "################"
-        subscription.payment_status = "completed"
-        subscription.sub_status = "active"
-        subscription.tx_id = "$$$$$$$$$$$$$"
-        subscription.expire_date = user.timenow() + timedelta(days=100)
-        # localize time
-        subscription.expire_date = subscription.expire_date.replace(
-            tzinfo=user.get_timezone()
-        )
-        subscription.insert()
-        # check for old sub
-        old_subs = (
-            StandardSubscription.query.filter(
-                StandardSubscription.sub_status == "active",
-                StandardSubscription.user_id == user.id,
-            )
-            .order_by(StandardSubscription.id.desc())
-            .all()
-        )
-        for old_sub in old_subs:
-            if not old_sub.expired():
-                old_sub.upgrade()
-        old_subs = (
-            PremiumSubscription.query.filter(
-                PremiumSubscription.id != subscription.id,
-                PremiumSubscription.sub_status == "active",
-                PremiumSubscription.user_id == user.id,
-            )
-            .order_by(PremiumSubscription.id.desc())
-            .all()
-        )
-        for old_sub in old_subs:
-            if not old_sub.expired():
-                old_sub.upgrade()
-
-        user.account_type = "Premium"
-        user.update()
-
-        return subscription
 
 
 class Voices(db.Model, TimestampMixin, DatabaseHelperMixin):
