@@ -171,6 +171,17 @@ class UserSettings(db.Model, TimestampMixin, DatabaseHelperMixin):
         elif self.image_generation_model == "dalle3":
             return f"{self.image_generation_model}.{self.image_generation_style}.{self.image_generation_quality}-{self.image_generation_size}"
 
+    def functions(self):
+        return [
+            {"name": "generate_image", "enabled": self.image_generation},
+            {"name": "google_search", "enabled": self.online_search},
+            {"name": "media_search", "enabled": self.media_search},
+            {"name": "speech_synthesis", "enabled": self.audio_responses},
+            {"name": "get_account_balance", "enabled": True},
+            {"name": "recharge_account", "enabled": True},
+            {"name": "account_settings", "enabled": True},
+        ]
+
 
 class AnonymousUsers(db.Model, TimestampMixin, DatabaseHelperMixin):
     __tablename__ = "anonymous_user"

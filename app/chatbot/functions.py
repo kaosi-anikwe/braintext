@@ -475,20 +475,17 @@ def generate_cta_action(
     body: str,
     button_text: str,
     button_url: str,
-    footer: str = "Learn through conversations, evolve with AI."
+    footer: str = "Learn through conversations, evolve with AI.",
 ):
     """Generate a CTA button to send to the user"""
     data = {
         "action": {
             "name": "cta_url",
-            "parameters": {
-                "display_text": button_text,
-                "url": button_url
-            }
+            "parameters": {"display_text": button_text, "url": button_url},
         },
         "header": header,
         "body": body,
-        "footer": footer
+        "footer": footer,
     }
     return data
 
@@ -917,7 +914,7 @@ def meta_audio_response(
 
         user_settings = user.user_settings() if not anonymous else None
         if user_settings:
-            if not user_settings.voice_response:
+            if not user_settings.audio_responses:
                 if len(text) < WHATSAPP_CHAR_LIMIT:
                     return send_text(text, number)
                 else:
@@ -949,46 +946,54 @@ def meta_image_response(
     """WhatsApp image response wtih Meta functions."""
     name = get_name(data)
     number = f"+{get_number(data)}"
-    try:
-        image = get_image(data)
-        image_url = get_media_url(image["id"])
-        image_path = download_media(
-            image_url,
-            f"{datetime.utcnow().strftime('%M%S%f')}.jpg",
-        )
-        # convert to png
-        image_content = Image.open(image_path)
-        image_content = image_content.convert(
-            "RGBA"
-        )  # If the image has an alpha channel (transparency)
-        image_content.save(image_path, format="PNG")
-        prompt = image.get("caption", "What's in this image?")
-        base64_image = encode_image(image_path)
-        message_list = [
-            {
-                "role": "user",
-                "content": [
-                    {"type": "text", "text": prompt},
-                    {
-                        "type": "image_url",
-                        "image_url": {"url": f"data:image/png;base64,{base64_image}"},
-                    },
-                ],
-            }
-        ]
-        return image_recognition(
-            user=user,
-            data=data,
-            prompt=prompt,
-            message_list=message_list,
-            message_request=message_request,
-        )
-    except:
-        logger.error(traceback.format_exc())
-        text = "Something went wrong. Please try again later."
-        return send_text(text, number)
-    finally:
-        delete_file(image_path)
+    run = False
+    if isinstance(user, Users):
+        if user.user_settings().image_recognition:
+            run = True
+    else:
+        run = True
+    
+    if run:
+        try:
+            image = get_image(data)
+            image_url = get_media_url(image["id"])
+            image_path = download_media(
+                image_url,
+                f"{datetime.utcnow().strftime('%M%S%f')}.jpg",
+            )
+            # convert to png
+            image_content = Image.open(image_path)
+            image_content = image_content.convert(
+                "RGBA"
+            )  # If the image has an alpha channel (transparency)
+            image_content.save(image_path, format="PNG")
+            prompt = image.get("caption", "What's in this image?")
+            base64_image = encode_image(image_path)
+            message_list = [
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": prompt},
+                        {
+                            "type": "image_url",
+                            "image_url": {"url": f"data:image/png;base64,{base64_image}"},
+                        },
+                    ],
+                }
+            ]
+            return image_recognition(
+                user=user,
+                data=data,
+                prompt=prompt,
+                message_list=message_list,
+                message_request=message_request,
+            )
+        except:
+            logger.error(traceback.format_exc())
+            text = "Something went wrong. Please try again later."
+            return send_text(text, number)
+        finally:
+            delete_file(image_path)
 
 
 def meta_interactive_response(
@@ -1307,7 +1312,7 @@ def meta_interactive_response(
                 logger.info(f"REPLY ID: {reply_id}")
                 button = generate_interactive_button(
                     header=f"Image Model",
-                    body=f"Choose your preferred image generation model. Current setting is {'*Dalle-2*.' if '2' in user_settings.image_generation_model else '*Dalle-3*.'}",
+                    body=f"Choose your preferred image generation model. Remember to adjust size settings too as there may be incompatibility issues with some sizes.\nCurrent setting is {'*Dalle-2*.' if '2' in user_settings.image_generation_model else '*Dalle-3*.'}",
                     button_texts=["Dalle-2", "Dalle-3"],
                 )
                 return send_interactive_message(interactive=button, recipient=number)
@@ -1391,10 +1396,10 @@ def meta_interactive_response(
                 header="User Settings",
                 body="Navigate to your profile to complete this action.",
                 button_text="Go to Profile",
-                button_url=f"{request.host_url}profile?settings=True"
+                button_url=f"{request.host_url}profile?settings=True",
             )
             return send_interactive_message(cta_action, number, "cta_url")
-            
+
 
 def whatsapp_signup(
     data: Dict[Any, Any], user: AnonymousUsers, interactive_reply: bool = False
@@ -1514,7 +1519,7 @@ def whatsapp_signup(
                             header="Account Created!",
                             body=message,
                             button_text="Change password",
-                            button_url=change_url
+                            button_url=change_url,
                         )
                         send_interactive_message(cta_action, number, "cta_url")
                         # send welcome audio

@@ -794,12 +794,28 @@ def chatgpt_response(
         # usage tokens
         tokens = [0, 0]
 
+        # get enabled functions
+        if isinstance(user, Users):
+            enabled_functions = [
+                description
+                for function in user.user_settings().functions()
+                for description in CHATGPT_FUNCTION_DESCRIPTIONS
+                if function["name"] == description["name"] and function["enabled"]
+            ]
+        else:
+            enabled_functions = CHATGPT_FUNCTION_DESCRIPTIONS
+
+        logger.info(f"Enabled functions: {[func['name'] for func in enabled_functions]}")
+
         completion = openai_client.chat.completions.create(
             model="gpt-3.5-turbo-1106",
             messages=messages,
             temperature=1,
-            functions=CHATGPT_FUNCTION_DESCRIPTIONS,
+            functions=enabled_functions,
             function_call="auto",
+            max_tokens=user.user_settings().max_response_length
+            if isinstance(user, Users)
+            else None,
         )
         # update tokens
         tokens[0] += int(completion.usage.prompt_tokens)
@@ -913,7 +929,7 @@ def generate_image(
     response = kwargs.get("response")
     user = Users.query.filter(Users.phone_no == number).one_or_none()
     image_confg = (
-        user.user_settings().image_confg
+        user.user_settings().image_confg()
         if user
         else "dalle3.natural.standard-1024x1024"
     )
