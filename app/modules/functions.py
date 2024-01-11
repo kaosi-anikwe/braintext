@@ -410,9 +410,9 @@ def load_messages(
                     You're conservative about your age, but don't mention that.
                     You always give comprehensive answers unless asked not to.
                     Your name is BrainText.
+                    Always give {user.user_settings().response_type if isinstance(user, Users) else 'elaborated'} answers.
                     You are in a WhatsApp environment, so format your responses accordingly.
                     Don't make assumptions about what values to plug into functions and never return an empty response.
-                    Ask for clarification if a user request is ambiguous.
                     The user's first name is {user.first_name if user.first_name else 'not known'},
                     and the user's last name is {user.last_name if user.last_name else 'not known'}.
                 """,
@@ -761,6 +761,46 @@ def num_tokens_from_messages(messages, model="gpt-3.5-turbo-1106"):
     return num_tokens
 
 
+def scrape_website(url, max_words=5000):
+    from bs4 import BeautifulSoup
+
+    try:
+        # Send an HTTP request to the URL
+        logger.info(f"GOING TO: {url}")
+        response = requests.get(url, timeout=5)
+        response.raise_for_status()  # Raise an HTTPError for bad responses
+        logger.info(f"RESPONSE: {response.status_code}")
+
+        # Parse the HTML content of the page
+        soup = BeautifulSoup(response.text, "html.parser")
+
+        # Extract text from the main section of the page
+        main_content = soup.find("main")  # You may need to customize this selector
+        if main_content:
+            text = main_content.get_text()
+
+            # Remove extra whitespaces
+            text = " ".join(text.split())
+
+            # If the text is less than the specified max_words, return the entire article
+            if len(text.split()) < max_words:
+                return True, text
+
+            # Limit the text to the specified word count
+            text = " ".join(text.split())[:max_words]
+
+            return True, text
+
+        else:
+            return False, "Error: Main content not found on the page."
+
+    except requests.RequestException as e:
+        return False, f"Error: {e}"
+
+    except Exception as e:
+        return False, f"An unexpected error occurred: {e}"
+
+
 def chatgpt_response(
     data: Dict[Any, Any],
     user: Users,
@@ -803,9 +843,11 @@ def chatgpt_response(
                 if function["name"] == description["name"] and function["enabled"]
             ]
         else:
-            enabled_functions = CHATGPT_FUNCTION_DESCRIPTIONS
+            enabled_functions = CHATGPT_FUNCTION_DESCRIPTIONS + ANONYMOUS_FUNCTIONS
 
-        logger.info(f"Enabled functions: {[func['name'] for func in enabled_functions]}")
+        logger.info(
+            f"Enabled functions: {[func['name'] for func in enabled_functions]}"
+        )
 
         completion = openai_client.chat.completions.create(
             model="gpt-3.5-turbo-1106",
@@ -1093,12 +1135,6 @@ def google_search(
     query: str,
     **kwargs,
 ):
-    from bs4 import BeautifulSoup
-    from ..chatbot.functions import (
-        get_number,
-    )
-
-    number = f"+{get_number(data)}"
     api_key = str(os.getenv("GOOGLE_SEARCH_API_KEY"))
     cse_id = str(os.getenv("GOOGLE_SEARCH_ENGINE_ID"))
     base_url = "https://www.googleapis.com/customsearch/v1"
@@ -1107,43 +1143,6 @@ def google_search(
         "key": api_key,
         "cx": cse_id,
     }
-
-    def scrape_website(url, max_words=5000):
-        try:
-            # Send an HTTP request to the URL
-            logger.info(f"GOING TO: {url}")
-            response = requests.get(url, timeout=5)
-            response.raise_for_status()  # Raise an HTTPError for bad responses
-            logger.info(f"RESPONSE: {response.status_code}")
-
-            # Parse the HTML content of the page
-            soup = BeautifulSoup(response.text, "html.parser")
-
-            # Extract text from the main section of the page
-            main_content = soup.find("main")  # You may need to customize this selector
-            if main_content:
-                text = main_content.get_text()
-
-                # Remove extra whitespaces
-                text = " ".join(text.split())
-
-                # If the text is less than the specified max_words, return the entire article
-                if len(text.split()) < max_words:
-                    return True, text
-
-                # Limit the text to the specified word count
-                text = " ".join(text.split())[:max_words]
-
-                return True, text
-
-            else:
-                return False, "Error: Main content not found on the page."
-
-        except requests.RequestException as e:
-            return False, f"Error: {e}"
-
-        except Exception as e:
-            return False, f"An unexpected error occurred: {e}"
 
     try:
         response = requests.get(base_url, params=params)
@@ -1176,7 +1175,7 @@ def google_search(
     except:
         logger.error(traceback.format_exc())
         text = "Sorry, I cannot respond to that at the moment, please try again later."
-        return send_text(text, number)
+        return text
 
 
 def media_search(data: Dict[Any, Any], **kwargs):
@@ -1264,6 +1263,35 @@ def media_search(data: Dict[Any, Any], **kwargs):
         logger.error(traceback.format_exc())
         text = "Sorry, I cannot respond to that at the moment, please try again later."
         return send_text(text, number)
+
+
+def web_scrapping(data: Dict[Any, Any], **kwargs):
+    url = kwargs.get("url")
+    instructions = kwargs.get("instruction", "Summarize this.")
+    try:
+        _, results = scrape_website(url)
+        text = f"{instructions}\n\n{results}"
+        return text
+    except:
+        logger.error(traceback.format_exc())
+        return "Error scrapping URL."
+
+
+def create_account(data: Dict[Any, Any], **kwargs):
+    from ..chatbot.functions import (
+        get_number,
+        generate_interactive_button,
+        send_interactive_message,
+    )
+
+    number = f"+{get_number(data)}"
+    body = "How would you like to register?"
+    header = "Register to Continue"
+    button_texts = ["Our website", "Continue here"]
+    button = generate_interactive_button(
+        body=body, header=header, button_texts=button_texts
+    )
+    return send_interactive_message(interactive=button, recipient=number)
 
 
 CHATGPT_FUNCTION_DESCRIPTIONS = [
@@ -1366,6 +1394,24 @@ CHATGPT_FUNCTION_DESCRIPTIONS = [
         },
     },
     {
+        "name": "web_scrapping",
+        "description": "Scrapes the URL provided by the user with the provided instruction.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "url": {
+                    "type": "string",
+                    "description": "The URL to be scrapped.",
+                },
+                "instruction": {
+                    "type": "string",
+                    "description": "Sentence instruction for formatting web scrapping results. The default is to summarize.",
+                },
+            },
+            "required": ["url", "instruction"],
+        },
+    },
+    {
         "name": "get_account_balance",
         "description": "Returns the user's account balance on enquiry.",
         "parameters": {},
@@ -1400,6 +1446,15 @@ CHATGPT_FUNCTION_DESCRIPTIONS = [
 ]
 
 
+ANONYMOUS_FUNCTIONS = [
+    {
+        "name": "create_account",
+        "description": "Enables the user to create an account.",
+        "parameters": {},
+    }
+]
+
+
 CHATGPT_FUNCTIONS = {
     "generate_image": {
         "type": "non-callback",
@@ -1417,6 +1472,10 @@ CHATGPT_FUNCTIONS = {
         "type": "non-callback",
         "function": media_search,
     },
+    "web_scrapping": {
+        "type": "callback",
+        "function": web_scrapping,
+    },
     "get_account_balance": {
         "type": "non-callback",
         "function": get_account_balance,
@@ -1426,6 +1485,7 @@ CHATGPT_FUNCTIONS = {
         "function": recharge_account,
     },
     "account_settings": {"type": "non-callback", "function": account_settings},
+    "create_account": {"type": "non-callback", "function": create_account},
 }
 
 

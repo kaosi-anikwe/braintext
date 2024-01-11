@@ -43,19 +43,13 @@
   ],
   "chatbotSettings": [
     {
-      "title": "Context",
+      "title": "Context and Responses",
       "rows": [
         {
-          "id": "context_messages",
-          "title": "Context length",
-          "description": "Set length of message context.",
-          "default": 10
-        },
-        {
-          "id": "max_response_length",
-          "title": "Max Length of Response",
-          "description": "Define the maximum length allowed for chatbot responses.",
-          "default": null
+          "id": "context_and_responses",
+          "title": "Context and Responses",
+          "description": "Edit context settings and response type",
+          "choices": null
         }
       ]
     },
@@ -90,6 +84,12 @@
           "id": "image_recognition",
           "title": "Image Recognition",
           "description": "Enable or disable image recognition capabilities for the chatbot.",
+          "default": true
+        },
+        {
+          "id": "accept_links",
+          "title": "Accept Links",
+          "description": "Enable or disable the ability to prompt with links.",
           "default": true
         }
       ]

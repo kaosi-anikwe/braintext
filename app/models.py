@@ -145,11 +145,13 @@ class UserSettings(db.Model, TimestampMixin, DatabaseHelperMixin):
     id = db.Column(db.Integer, primary_key=True)
     context_messages = db.Column(db.Integer, default=int(os.getenv("CONTEXT_LIMIT")))
     max_response_length = db.Column(db.Integer)
+    response_type = db.Column(db.String(20), default="elaborated")
     image_generation = db.Column(db.Boolean, default=True)
     online_search = db.Column(db.Boolean, default=True)
     media_search = db.Column(db.Boolean, default=True)
     audio_responses = db.Column(db.Boolean, default=True)
     image_recognition = db.Column(db.Boolean, default=True)
+    web_scrapping = db.Column(db.Boolean, default=True)
     audio_voice = db.Column(db.String(50), default="Mia")
     image_generation_model = db.Column(db.String(50), default="dalle3")
     image_generation_style = db.Column(db.String(50), default="natural")
@@ -177,6 +179,7 @@ class UserSettings(db.Model, TimestampMixin, DatabaseHelperMixin):
             {"name": "google_search", "enabled": self.online_search},
             {"name": "media_search", "enabled": self.media_search},
             {"name": "speech_synthesis", "enabled": self.audio_responses},
+            {"name": "web_scrapping", "enabled": self.web_scrapping},
             {"name": "get_account_balance", "enabled": True},
             {"name": "recharge_account", "enabled": True},
             {"name": "account_settings", "enabled": True},

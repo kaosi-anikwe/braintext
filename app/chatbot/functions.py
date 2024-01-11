@@ -952,7 +952,7 @@ def meta_image_response(
             run = True
     else:
         run = True
-    
+
     if run:
         try:
             image = get_image(data)
@@ -976,7 +976,9 @@ def meta_image_response(
                         {"type": "text", "text": prompt},
                         {
                             "type": "image_url",
-                            "image_url": {"url": f"data:image/png;base64,{base64_image}"},
+                            "image_url": {
+                                "url": f"data:image/png;base64,{base64_image}"
+                            },
                         },
                     ],
                 }
@@ -1034,6 +1036,15 @@ def meta_interactive_response(
                 )
                 return send_interactive_message(message_list, number, "list")
         # CHATBOT SETTINGS
+        if "response_type" in reply_id:
+            # handle response type
+            response_type = bool(int(reply_id.removeprefix("response_type_")))
+            response_type = "simplified" if not response_type else "elaborated"
+            logger.info(f"NEW RESPONSE TYPE: {response_type}")
+            user_settings.response_type = response_type
+            user_settings.update()
+            text = f"Response settings updated successfully!"
+            return send_text(text, number)
         if "image_generation" in reply_id:
             # handle image gen toggle
             image_gen = bool(int(reply_id.removeprefix("image_generation_")))
@@ -1073,6 +1084,14 @@ def meta_interactive_response(
             user_settings.image_recognition = image_recognition
             user_settings.update()
             text = f"Image recognition settings updated successfully!"
+            return send_text(text, number)
+        if "accept_links" in reply_id:
+            # handle web scrapping toggle
+            web_scrapping = bool(int(reply_id.removeprefix("accept_links_")))
+            logger.info(f"NEW WEB SCRAPE TOGGLE: {web_scrapping}")
+            user_settings.web_scrapping = web_scrapping
+            user_settings.update()
+            text = f"Chat settings updated successfully!"
             return send_text(text, number)
         if "image_model" in reply_id:
             # change image model settings
@@ -1127,6 +1146,47 @@ def meta_interactive_response(
     if type == "list_reply":
         reply_id = response[type]["id"]
         # CHATBOT SETTINGS
+        # Handle Context and Responses settings
+        if reply_id == "context_and_responses":
+            logger.info(f"REPLY ID: {reply_id}")
+            choices = [
+                {
+                    "title": "Context and Responses",
+                    "rows": [
+                        {
+                            "id": "context_messages",
+                            "title": "Context length",
+                            "description": "Set length of message context.",
+                        },
+                        {
+                            "id": "max_response_length",
+                            "title": "Max Length of Response",
+                            "description": "Define the maximum length allowed for chatbot responses.",
+                        },
+                        {
+                            "id": "response_type",
+                            "title": "Response Type",
+                            "description": "Choose the manner the chatbot response to prompts.",
+                        },
+                    ],
+                }
+            ]
+            message_list = generate_list_message(
+                header="Context and Responses",
+                body=f"Customize your context settings and response type.",
+                button_text="Choose setting",
+                sections=choices,
+            )
+            return send_interactive_message(message_list, number, "list")
+        # Handle response type
+        if reply_id == "response_type":
+            logger.info(f"REPLY ID: {reply_id}")
+            button = generate_interactive_button(
+                header=f"Response Type",
+                body=f"Set the nature of the responses to prompts. *Elaborated* tends to use more prompts which may increase cost.\nCurrent setting is *{user_settings.response_type}*.",
+                button_texts=["Simplified", "Elaborated"],
+            )
+            return send_interactive_message(interactive=button, recipient=number)
         # Handle Context length
         if reply_id == "context_messages":
             logger.info(f"REPLY ID: {reply_id}")
@@ -1192,7 +1252,7 @@ def meta_interactive_response(
         elif "response_len" in reply_id:
             # change max response length
             try:
-                max_response = int(reply_id.removeprefix("response_len"))
+                max_response = int(reply_id.removeprefix("response_len_"))
             except ValueError:
                 max_response = None
             logger.info(f"NEW MAX RESPONSE: {max_response}")
@@ -1241,7 +1301,16 @@ def meta_interactive_response(
             logger.info(f"REPLY ID: {reply_id}")
             button = generate_interactive_button(
                 header=f"Image Recognition",
-                body=f"Toggle the ability of the chatbot to recognize and respond to images. This setting is currently {'*enabled*.' if user_settings.audio_responses else '*disabled*.'}",
+                body=f"Toggle the ability of the chatbot to recognize and respond to images. This setting is currently {'*enabled*.' if user_settings.image_recognition else '*disabled*.'}",
+                button_texts=["Disable", "Enable"],
+            )
+            return send_interactive_message(interactive=button, recipient=number)
+        # Handle web scrapping toggle
+        if reply_id == "accept_links":
+            logger.info(f"REPLY ID: {reply_id}")
+            button = generate_interactive_button(
+                header=f"Accept Links",
+                body=f"Toggle the ability of the chatbot to be prompted with links.\n*Note that some websites cannot be scrapped and will cause an error.*\nThis setting is currently {'*enabled*.' if user_settings.web_scrapping else '*disabled*.'}",
                 button_texts=["Disable", "Enable"],
             )
             return send_interactive_message(interactive=button, recipient=number)
@@ -1514,7 +1583,7 @@ def whatsapp_signup(
                             _external=True,
                             _scheme="https",
                         )
-                        message = f"Awesome! You're all set up.\nCheck your inbox for a verification link.\nLogin to edit your profile or change settings. {request.host_url}profile?settings=True. Settings can also be changed from here.\n*Your password the number you're texting with in the international format.*\n\nFollow this link below to change your password.\nThank you for choosing BrainText 💙."
+                        message = f"Awesome! You're all set up.\nCheck your inbox for a verification link.\nLogin to edit your profile or change settings. {request.host_url}profile?settings=True. Settings can also be changed from here.\n*Your password the number you're texting with in the international format.*\nFollow the link below to change your password.\nThank you for choosing BrainText 💙."
                         cta_action = generate_cta_action(
                             header="Account Created!",
                             body=message,
