@@ -3,13 +3,15 @@ import os
 import re
 import json
 import base64
+import tempfile
 import requests
 import traceback
 import threading
 import subprocess
-from typing import Union, Dict, Any
 from datetime import datetime
+from bs4 import BeautifulSoup
 from contextlib import closing
+from typing import Union, Dict, Any
 
 # installed imports
 import langid
@@ -415,6 +417,8 @@ def load_messages(
                     Don't make assumptions about what values to plug into functions and never return an empty response.
                     The user's first name is {user.first_name if user.first_name else 'not known'},
                     and the user's last name is {user.last_name if user.last_name else 'not known'}.
+                    The current time is {user.timenow().strftime("%A, %Y-%m-%d %I:%M:%S %p")}\
+                    The user's timezone/location is {user.timezone().zone}
                 """,
     }
     messages.insert(0, system)
@@ -762,20 +766,25 @@ def num_tokens_from_messages(messages, model="gpt-3.5-turbo-1106"):
 
 
 def scrape_website(url, max_words=5000):
-    from bs4 import BeautifulSoup
-
     try:
-        # Send an HTTP request to the URL
-        logger.info(f"GOING TO: {url}")
-        response = requests.get(url, timeout=5)
-        response.raise_for_status()  # Raise an HTTPError for bad responses
-        logger.info(f"RESPONSE: {response.status_code}")
+        # Create a temporary file to store the downloaded HTML
+        with tempfile.NamedTemporaryFile(
+            mode="w+", delete=False, suffix=".html"
+        ) as temp_file:
+            temp_filename = temp_file.name
+
+            # Use wget to download the webpage
+            subprocess.run(["wget", "-O", temp_filename, url], check=True)
+
+        # Read the downloaded HTML file
+        with open(temp_filename, "r", encoding="utf-8") as html_file:
+            html_content = html_file.read()
 
         # Parse the HTML content of the page
-        soup = BeautifulSoup(response.text, "html.parser")
+        soup = BeautifulSoup(html_content, "html.parser")
 
         # Extract text from the main section of the page
-        main_content = soup.find("main")  # You may need to customize this selector
+        main_content = soup.find("main") or soup.find("body")
         if main_content:
             text = main_content.get_text()
 
@@ -794,11 +803,16 @@ def scrape_website(url, max_words=5000):
         else:
             return False, "Error: Main content not found on the page."
 
-    except requests.RequestException as e:
-        return False, f"Error: {e}"
+    except subprocess.CalledProcessError as e:
+        return False, f"Error: Failed to download the webpage using wget. {e}"
 
     except Exception as e:
         return False, f"An unexpected error occurred: {e}"
+
+    finally:
+        # Clean up temporary HTML file
+        if temp_filename and os.path.exists(temp_filename):
+            os.remove(temp_filename)
 
 
 def chatgpt_response(
@@ -850,7 +864,7 @@ def chatgpt_response(
         )
 
         completion = openai_client.chat.completions.create(
-            model="gpt-3.5-turbo-1106",
+            model="gpt-3.5-turbo-0125",
             messages=messages,
             temperature=1,
             functions=enabled_functions,
@@ -1297,7 +1311,7 @@ def create_account(data: Dict[Any, Any], **kwargs):
 CHATGPT_FUNCTION_DESCRIPTIONS = [
     {
         "name": "generate_image",
-        "description": "Generates an image in response to a user's explicit request for image creation. Intended for use when the user specifically asks for image generation. Requires a user-friendly response to the prompt.",
+        "description": "Generates an image with prompt extracted from user only on explicit request.",
         "parameters": {
             "type": "object",
             "properties": {
@@ -1351,7 +1365,7 @@ CHATGPT_FUNCTION_DESCRIPTIONS = [
     },
     {
         "name": "google_search",
-        "description": "The function enables users to access current information through online searches, returning user-friendly formatted text based on specified queries and parameters.",
+        "description": "Performs online searches to retrieve information only on explicit request.",
         "parameters": {
             "type": "object",
             "properties": {
@@ -1365,7 +1379,7 @@ CHATGPT_FUNCTION_DESCRIPTIONS = [
     },
     {
         "name": "media_search",
-        "description": "This function performs online searches for images or documents based on user prompt, delivering a user-friendly response. Takes a search query, a boolean for image search, an optional file type for document search, and the desired number of results.",
+        "description": "Performs media searches on the internet. Takes in a user-friendly response to the query, a boolean for if image search or not, the file type if a document was requested, and the number of results",
         "parameters": {
             "type": "object",
             "properties": {
@@ -1413,12 +1427,12 @@ CHATGPT_FUNCTION_DESCRIPTIONS = [
     },
     {
         "name": "get_account_balance",
-        "description": "Returns the user's account balance on enquiry.",
+        "description": "Returns the user's balance on enquiry.",
         "parameters": {},
     },
     {
         "name": "recharge_account",
-        "description": f"Enables users to recharge their accounts and top-up their balance, always initiating a new request. The user provides the amount, currency, and bank from this list: {[bank for bank in BANK_CODES.keys()]}. Non-NGN requests are not accepted. Do not assume any values, make sure the user provides all neccessary information.",
+        "description": f"Creates a new account recharge request. Verify with the user the amount, currency, and bank from this list of banks: {[bank for bank in BANK_CODES.keys()]}. Non NGN requests are not accepted.",
         "parameters": {
             "type": "object",
             "properties": {
@@ -1428,11 +1442,11 @@ CHATGPT_FUNCTION_DESCRIPTIONS = [
                 },
                 "currency": {
                     "type": "string",
-                    "description": "The currency the user wishes to recharge (converted to the ISO 4217 code).",
+                    "description": "The currency code the user wishes to recharge (eg NGN).",
                 },
                 "bank_name": {
                     "type": "string",
-                    "description": "The user's bank code gotten from the list of banks provided.",
+                    "description": "The selected bank from the list provided.",
                 },
             },
             "required": ["amount", "currency", "bank_name"],
@@ -1440,7 +1454,7 @@ CHATGPT_FUNCTION_DESCRIPTIONS = [
     },
     {
         "name": "account_settings",
-        "description": "To be called when a user wishes to change their account settings.",
+        "description": "Returns the user's settings",
         "parameters": {},
     },
 ]

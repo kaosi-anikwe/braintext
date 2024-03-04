@@ -26,7 +26,10 @@
       property="og:description"
       content="AI optimized WhatsApp chatbot for convenience"
     />
-
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="upgrade-insecure-requests"
+    />
     <link rel="canonical" href="https://www.braintext.io{{ request.path }}" />
     <!-- Favicons -->
     <link
@@ -74,7 +77,11 @@
       rel="stylesheet"
     />
 
-    <!-- NiceAdmin files  -->
+    <link
+      rel="stylesheet"
+      type="text/css"
+      href="//cdn.jsdelivr.net/gh/loadingio/ldbutton@v1.0.1/dist/ldbtn.min.css"
+    />
 
     <!-- Template Main CSS File -->
     <link
@@ -139,14 +146,14 @@
             <li>
               <a
                 class="nav-link scrollto"
-                href="{{ url_for('main.index') }}#pricing"
+                href="{{ url_for('payment.pricing') }}"
                 >Pricing</a
               >
             </li>
             {% if current_user.is_active %}
             <li class="dropdown">
               <a href="#"
-                ><span>{{ current_user.display_name() }}</span>
+                ><span>BT {{ current_user.balance | round(2) }}</span>
                 <i class="bi bi-chevron-down"></i
               ></a>
               <ul>
@@ -155,6 +162,9 @@
                   <a href="{{ url_for('main.profile') }}?settings=True"
                     >Account Settings</a
                   >
+                </li>
+                <li>
+                  <a href="{{ url_for('main.usage') }}">Usage</a>
                 </li>
                 <li><a href="{{ url_for('auth.logout') }}">Sign Out</a></li>
               </ul>
@@ -185,15 +195,17 @@
       <div class="row">
         {# application content needs to be provided in the app_content block #}
         <!-- Alerts -->
-        {% block alert_content %} {% with messages =
-        get_flashed_messages(with_categories=true) %} {% if messages %}
-
         <!-- Position it: -->
         <!-- - `.toast-container` for spacing between toasts -->
         <!-- - `.position-absolute`, `top-0` & `end-0` to position the toasts in the upper right corner -->
         <!-- - `.p-3` to prevent the toasts from sticking to the edge of the container  -->
-        <div class="toast-container position-absolute top-0 end-0 p-3">
-          {% for category, message in messages %}
+        <div
+          id="flash-container"
+          class="toast-container position-absolute top-0 end-0 p-3"
+        >
+          {% block alert_content %} {% with messages =
+          get_flashed_messages(with_categories=true) %} {% if messages %} {% for
+          category, message in messages %}
           <div
             class="toast align-items-center text-white {% if category == 'message' %} bg-info {% else %} bg-{{ category }} {% endif %} border-0"
             role="alert"
@@ -210,10 +222,33 @@
               ></button>
             </div>
           </div>
-          {% endfor %}
+          {% endfor %} {% endif %} {% endwith %} {% endblock %}
         </div>
 
-        {% endif %} {% endwith %} {% endblock %}
+        <script>
+          const flashMessage = (message, catetgory = "info") => {
+            const flashContainer = document.getElementById("flash-container");
+            let newToast = document.createElement("div");
+            newToast.setAttribute(
+              "class",
+              `toast align-items-center text-white bg-${catetgory} border-0`
+            );
+            newToast.innerHTML = `
+            <div class="d-flex">
+              <div class="toast-body">${message}</div>
+              <button
+                type="button"
+                class="btn-close btn-close-white me-2 m-auto"
+                data-bs-dismiss="toast"
+                aria-label="Close"
+              ></button>
+            </div>
+            `;
+            flashContainer.appendChild(newToast);
+            newToast = new bootstrap.Toast(newToast);
+            newToast.show();
+          };
+        </script>
         <div class="container" data-aos="fade-up">
           {% block app_content %} {% endblock %}
         </div>
@@ -270,6 +305,10 @@
                   <a href="{{ url_for('main.privacy_policy') }}"
                     >Privacy policy</a
                   >
+                </li>
+                <li>
+                  <i class="bx bx-chevron-right"></i>
+                  <a href="{{ url_for('payment.pricing') }}">Pricing</a>
                 </li>
               </ul>
             </div>
@@ -332,10 +371,14 @@
     <script src="../static/assets/vendor/purecounter/purecounter_vanilla.js"></script>
     <script src="../static/assets/vendor/aos/aos.js"></script>
     <script src="../static/assets/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
+    <script
+      src="https://cdn.jsdelivr.net/npm/popper.js@1.12.9/dist/umd/popper.min.js"
+      integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q"
+      crossorigin="anonymous"
+    ></script>
     <script src="../static/assets/vendor/glightbox/js/glightbox.min.js"></script>
     <script src="../static/assets/vendor/isotope-layout/isotope.pkgd.min.js"></script>
     <script src="../static/assets/vendor/swiper/swiper-bundle.min.js"></script>
-    <!-- <script src="../static/assets/vendor/php-email-form/validate.js"></script> -->
 
     <!-- Template Main JS File -->
     <script src="../static/assets/js/main.js"></script>

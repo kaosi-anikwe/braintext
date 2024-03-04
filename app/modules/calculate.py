@@ -1,9 +1,9 @@
 from decimal import Decimal
 
 # price constants
-PERCENTAGE = 1.15
-GPT_3_5_INPUT = Decimal("0.000001")  # per token
-GPT_3_5_OUTPUT = Decimal("0.000002")  # per token
+PERCENTAGE = 1.1
+GPT_3_5_INPUT = Decimal("0.0000005")  # per token
+GPT_3_5_OUTPUT = Decimal("0.0000015")  # per token
 GPT_4_VISION_INPUT = Decimal("0.00001")  # per token
 GPT_4_VISION_OUTPUT = Decimal("0.00003")  # per token
 WHISPER = Decimal("0.0001")  # per second
@@ -48,10 +48,14 @@ def tts_cost(characters: int):
 
 
 def dalle3_cost(confg: dict):
-    price = float(DALLE_3[confg.get("type", "standard")][confg.get("res", "1024x1024")])
+    price = (
+        float(DALLE_3[confg.get("type", "standard")][confg.get("res", "1024x1024")])
+        if confg.get("type")
+        else 0
+    )
     return price * PERCENTAGE
 
 
 def dalle2_cost(res: str):
-    price = float(DALLE_2[res])
+    price = float(DALLE_2[res]) if res else 0
     return price * PERCENTAGE

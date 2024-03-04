@@ -644,7 +644,7 @@ def image_recognition(
             message_list=message_list,
         )
         response = openai_client.chat.completions.create(
-            model="gpt-4-vision-preview",
+            model="gpt-4-0125-preview",
             messages=messages,
             temperature=1,
             max_tokens=4000,
@@ -1506,12 +1506,12 @@ def whatsapp_signup(
                     message = "Okay, let's get started. What's your first name?"
                     send_text(message, number)
             elif "confirm_name" in response_id:
-                if "Yes" in text:
+                if "No" in text:
                     user.signup_stage = "firstname_prompted"
                     user.update()
                     message = "What is your first name?"
                     send_text(message, number)
-                elif "No" in text:
+                elif "Yes" in text:
                     user.signup_stage = "email_prompted"
                     user.update()
                     message = (
@@ -1533,7 +1533,7 @@ def whatsapp_signup(
                 user.update()
                 # confirm name
                 header = "Confirm name"
-                body = f"Your name is registered as {user.display_name()}. Would you like to change that?"
+                body = f"Your name is registered as {user.display_name()}. Is that correct?"
                 button_texts = ["Yes", "No"]
                 button = generate_interactive_button(
                     body=body, header=header, button_texts=button_texts

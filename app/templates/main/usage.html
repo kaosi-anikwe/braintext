@@ -1,0 +1,104 @@
+{% extends "base.html" %} {% block app_content %}
+<link href="../static/niceadmin/css/style.css" rel="stylesheet" />
+<link href="../static/assets/css/usage.css" rel="stylesheet" />
+
+<link
+  rel="stylesheet"
+  type="text/css"
+  href="//cdn.jsdelivr.net/gh/loadingio/ldbutton@v1.0.1/dist/ldbtn.min.css"
+/>
+
+<section class="section profile">
+  <div class="center-title my-3">
+    <div class="pagetitle">
+      <h1>Usage</h1>
+    </div>
+  </div>
+  <div class="row" style="padding: 0 2rem 5rem 2rem">
+    <form action="/usage" method="post">
+      <input
+        type="hidden"
+        id="csrf_token"
+        name="csrf_token"
+        value="{{ csrf_token() }}"
+      />
+    </form>
+    <div class="col-md-9">
+      <div class="row mb-3 align-items-center">
+        <div class="col-md-9 col-lg-9">
+          <div id="month-div" class="text m-3 pb-3 ld-over">
+            <h4 id="month-heading" class="text-nowrap ld-over">
+              <div class="ld ld-ring ld-spin"></div>
+              Monthly Usage
+              <span id="month-span" class="text-secondary">90 BT</span>
+            </h4>
+          </div>
+        </div>
+        <div class="col-md-3 col-lg-3">
+          <div id="month-selector" class="input-group" style="height: 10%">
+            <button
+              class="btn btn-outline-primary"
+              type="button"
+              id="prev-month"
+            >
+              &lt;
+            </button>
+            <input
+              type="text"
+              class="form-control text-center border border-primary"
+              id="month-display"
+              readonly
+              value="February"
+            />
+            <button
+              class="btn btn-outline-primary"
+              type="button"
+              id="next-month"
+            >
+              &gt;
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="main-chart">
+        <canvas id="monthly-spend" aria-label="monthly spend chart" role="img">
+        </canvas>
+      </div>
+      <div class="row mb-3">
+        <div class="col-md-6">
+          <canvas id="gpt-3-chart"></canvas>
+        </div>
+        <div class="col-md-6">
+          <canvas id="gpt-4-chart"></canvas>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col-md-6">
+          <canvas id="audio-chart"></canvas>
+        </div>
+        <div class="col-md-6">
+          <canvas id="image-chart"></canvas>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="side-title my-4">
+        <h5>Recharge History</h5>
+      </div>
+      <div id="history-div" class="history-div ld-over">
+        <div class="ld ld-ring ld-spin" style="font-size: 2.5rem"></div>
+        <ul id="recharge-history" class="list-group list-group-flush ld-over">
+          <li class="list-group-item" style="background: inherit">
+            <div class="row">
+              <div class="col-md-9">13 Feb</div>
+              <div class="col-md-3 text-secondary">50 BT</div>
+            </div>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+<script src="{{ url_for('static', filename= 'assets/js/chart.js') }}"></script>
+<script src="{{ url_for('static', filename= 'assets/js/usage.js') }}"></script>
+{% endblock%}

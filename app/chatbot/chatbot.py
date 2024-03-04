@@ -21,7 +21,7 @@ load_dotenv()
 
 chatbot = Blueprint("chatbot", __name__)
 META_VERIFY_TOKEN = os.getenv("META_VERIFY_TOKEN")
-BASE_COST = 0.2
+BASE_COST = float(os.getenv("BASE_COST"))
 
 
 @chatbot.get("/send-voice-note")

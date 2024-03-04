@@ -73,6 +73,7 @@ def get_account_balance(data: Dict[Any, Any], **kwargs):
 def recharge_account(data, **kwargs):
     # get user
     from ..payment.routes import BANK_CODES
+    from ..payment.functions import exchange_rates
     from ..modules.functions import log_response, get_user_db
     from ..chatbot.functions import get_number, send_text, get_name
 
@@ -104,6 +105,10 @@ def recharge_account(data, **kwargs):
             "email": user.email,
             "fullname": user.display_name(),
             "tx_ref": tx_ref,
+            "meta": {
+                "bt_amount": round(float(amount) / exchange_rates("USD") * USD2BT, 2),
+                "user_id": user.uid,
+            },
         }
         try:
             response = requests.post(USSD_CHARGE_URL, headers=FLW_HEADERS, json=data)
@@ -117,17 +122,6 @@ def recharge_account(data, **kwargs):
                     flw_tx_ref = response_data["data"]["flw_ref"]
                     code = response_data["data"]["payment_code"]
                     ussd_code = response_data["meta"]["authorization"]["note"]
-                    tx = Transactions(
-                        message=response_data["message"],
-                        mode="ussd",
-                        amount=amount,
-                        user_id=user.id,
-                        tx_ref=tx_ref,
-                        flw_tx_id=flw_tx_id,
-                        flw_tx_ref=flw_tx_ref,
-                        currency=currency,
-                    )
-                    tx.insert()
                     text = f"Your request to top-up ₦{amount} through {bank_name} has been initiated successfully!\nPlease dial the provided code to complete the transaction."
                     send_text(text, number)
                     send_text(f"{ussd_code}", number)
@@ -157,8 +151,8 @@ def recharge_account(data, **kwargs):
         return send_text(text, number)
 
 
-def usd_exchange_rate(currency: str):
-    return 1200
+def exchange_rates(currency: str):
+    return 1650
 
 
 def generate_tx_ref(mode: str, user_uid: str):

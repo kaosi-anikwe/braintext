@@ -1,0 +1,17 @@
+#next-month {
+  border-left: 0 !important;
+}
+
+#prev-month {
+  border-right: 0 !important;
+}
+
+#month-display {
+  border-left: 0 !important;
+  border-right: 0 !important;
+}
+
+.main-chart {
+  height: 30%;
+  margin-bottom: 3rem;
+}

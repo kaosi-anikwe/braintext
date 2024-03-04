@@ -1,76 +1,209 @@
 {% extends "base.html" %} {% block app_content %}
 <link href="../static/niceadmin/css/style.css" rel="stylesheet" />
+<!-- End Page Title -->
 
-<link
-  rel="stylesheet"
-  type="text/css"
-  href="//cdn.jsdelivr.net/gh/loadingio/ldbutton@v1.0.1/dist/ldbtn.min.css"
-/>
-
-<main id="main" class="main">
-  <div class="center-title">
+<section class="section profile">
+  <div class="center-title my-3">
     <div class="pagetitle">
       <h1>Profile</h1>
     </div>
   </div>
-
-  <!-- End Page Title -->
-
-  <section class="section profile" style="padding-top: 40px">
-    <div class="row" style="justify-content: space-around">
-      <div class="col-xl-10">
-        <div class="card">
-          <div class="card-body pt-3">
-            <!-- Bordered Tabs -->
-            <ul class="nav nav-tabs nav-tabs-bordered">
-              <li class="nav-item">
-                <button
-                  class="nav-link active"
-                  data-bs-toggle="tab"
-                  data-bs-target="#profile-overview"
-                >
-                  Overview
-                </button>
-              </li>
-
-              <li class="nav-item">
-                <button
-                  class="nav-link"
-                  data-bs-toggle="tab"
-                  data-bs-target="#profile-edit"
-                >
-                  Edit Profile
-                </button>
-              </li>
-
-              <li class="nav-item">
-                <button
-                  id="account-settings"
-                  class="nav-link"
-                  data-bs-toggle="tab"
-                  data-bs-target="#profile-settings"
-                >
-                  Settings
-                </button>
-              </li>
-            </ul>
-            <div class="tab-content pt-2">
-              <div
-                class="tab-pane fade show active profile-overview"
-                id="profile-overview"
+  <div class="row" style="justify-content: space-around">
+    <div class="col-xl-10">
+      <div class="card">
+        <div class="card-body pt-3">
+          <!-- Bordered Tabs -->
+          <ul class="nav nav-tabs nav-tabs-bordered">
+            <li class="nav-item">
+              <button
+                class="nav-link active"
+                data-bs-toggle="tab"
+                data-bs-target="#profile-overview"
               >
-                <h5 class="card-title">Profile Details</h5>
+                Overview
+              </button>
+            </li>
 
-                <div class="row">
-                  <div class="col-lg-3 col-md-4 label">Full Name</div>
-                  <div class="col-lg-9 col-md-8">
-                    {{ current_user.display_name() }}
+            <li class="nav-item">
+              <button
+                class="nav-link"
+                id="toggle-settings-btn"
+                data-bs-toggle="tab"
+                data-bs-target="#profile-edit"
+              >
+                Edit Profile
+              </button>
+            </li>
+          </ul>
+          <div class="tab-content pt-2">
+            <div
+              class="tab-pane fade show active profile-overview"
+              id="profile-overview"
+            >
+              <h5 class="card-title">Profile Details</h5>
+
+              <div class="row">
+                <div class="col-lg-3 col-md-4 label">Full Name</div>
+                <div class="col-lg-9 col-md-8">
+                  {{ current_user.display_name() }}
+                </div>
+              </div>
+
+              <div class="row">
+                <div class="col-lg-3 col-md-4 label">Account Balance</div>
+                <div class="col-lg-9 col-md-8">
+                  <p class="my-2">{{ current_user.balance | round(2) }} BT</p>
+                  <a href="{{ url_for('payment.recharge') }}">
+                    <button
+                      id="top-up-btn"
+                      style="font-size: small; height: 2rem"
+                      type="button"
+                      class="btn btn-outline-primary ld-ext-right"
+                    >
+                      Recharge Account
+                    </button>
+                  </a>
+                </div>
+              </div>
+
+              <div class="row">
+                <div class="col-lg-3 col-md-4 label">Phone</div>
+                <div class="col-lg-9 col-md-8">
+                  {% if not current_user.phone_no %}
+                  <a href="{{ url_for('main.add_number') }}">
+                    <button
+                      style="font-size: small; height: 2rem"
+                      type="button"
+                      class="btn btn-outline-primary"
+                    >
+                      Add WhatsApp number
+                    </button>
+                  </a>
+                  {% elif current_user.phone_no and current_user.phone_verified
+                  %} {{ current_user.phone_no }} {% elif current_user.phone_no
+                  and not current_user.phone_verified %}
+                  <p style="margin: 5px 0">{{ current_user.phone_no }}</p>
+                  <a href="{{ url_for('main.add_number') }}?reverify=True">
+                    <button
+                      style="font-size: small; height: 2rem"
+                      type="submit"
+                      class="btn btn-outline-primary"
+                    >
+                      Verify Number
+                    </button>
+                  </a>
+                  {% endif %}
+                </div>
+              </div>
+
+              <div class="row">
+                <div class="col-lg-3 col-md-4 label">Email</div>
+                <div class="col-lg-9 col-md-8">
+                  {% if not current_user.email_verified %}
+                  <p class="my-2">{{ current_user.email }}</p>
+                  <button
+                    id="send-verification-email"
+                    style="font-size: small; height: 2rem"
+                    type="button"
+                    class="btn btn-outline-primary ld-ext-right"
+                  >
+                    Verify Email
+                    <div class="ld ld-ring ld-spin"></div>
+                  </button>
+                  {% else %} {{ current_user.email }} {% endif %}
+                </div>
+              </div>
+
+              <div class="row">
+                <div class="col-lg-3 col-md-4 label">Usage</div>
+                <div class="col-lg-9 col-md-8 my-2">
+                  <a href="{{ url_for('main.usage') }}">
+                    <button
+                      id="top-up-btn"
+                      style="font-size: small; height: 2rem"
+                      type="button"
+                      class="btn btn-outline-primary ld-ext-right"
+                    >
+                      See Usage
+                    </button>
+                  </a>
+                </div>
+              </div>
+
+              <div class="row">
+                <div class="col-lg-3 col-md-4 label">Settings</div>
+                <div class="col-lg-9 col-md-8 my-2">
+                  <a
+                    target="_blank"
+                    href="https://wa.me/message/LSSENDXYVWVFN1"
+                  >
+                    <button
+                      id="top-up-btn"
+                      style="font-size: small; height: 2rem"
+                      type="button"
+                      class="btn btn-outline-primary ld-ext-right"
+                    >
+                      Go to Settings
+                    </button>
+                  </a>
+                </div>
+              </div>
+
+              <div class="row">
+                <div class="col-lg-3 col-md-4 label">User ID</div>
+                <div class="col-lg-9 col-md-8">{{ current_user.uid }}</div>
+              </div>
+            </div>
+
+            <div class="tab-pane fade profile-edit pt-3" id="profile-edit">
+              <!-- Profile Edit Form -->
+              <form method="post" action="{{ url_for('auth.edit_profile') }}">
+                <input
+                  type="hidden"
+                  name="csrf_token"
+                  value="{{ csrf_token() }}"
+                  id="csrf_token"
+                />
+                <div class="row mb-3">
+                  <label
+                    for="first_name"
+                    class="col-md-4 col-lg-3 col-form-label"
+                    >First Name</label
+                  >
+                  <div class="col-md-8 col-lg-9">
+                    <input
+                      name="first_name"
+                      type="text"
+                      class="form-control"
+                      id="first_name"
+                      value="{{ current_user.first_name }}"
+                      style="font-size: 15px"
+                    />
+                  </div>
+                </div>
+                <div class="row mb-3">
+                  <label
+                    for="last_name"
+                    class="col-md-4 col-lg-3 col-form-label"
+                    >Last Name</label
+                  >
+                  <div class="col-md-8 col-lg-9">
+                    <input
+                      name="last_name"
+                      type="text"
+                      class="form-control"
+                      id="last_name"
+                      value="{{ current_user.last_name }}"
+                      style="font-size: 15px"
+                    />
                   </div>
                 </div>
 
-                <div class="row">
-                  <div class="col-lg-3 col-md-4 label">Phone</div>
-                  <div class="col-lg-9 col-md-8">
+                <div class="row mb-3">
+                  <label for="Phone" class="col-md-4 col-lg-3 col-form-label"
+                    >Phone</label
+                  >
+                  <div class="col-md-8 col-lg-9">
                     {% if not current_user.phone_no %}
                     <a href="{{ url_for('main.add_number') }}">
                       <button
@@ -81,434 +214,73 @@
                         Add WhatsApp number
                       </button>
                     </a>
-                    {% elif current_user.phone_no and
-                    current_user.phone_verified %} {{ current_user.phone_no }}
-                    {% elif current_user.phone_no and not
-                    current_user.phone_verified %}
-                    <p style="margin: 5px 0">{{ current_user.phone_no }}</p>
-                    <a href="{{ url_for('main.add_number') }}?reverify=True">
-                      <button
-                        style="font-size: small; height: 2rem"
-                        type="submit"
-                        class="btn btn-outline-primary"
-                      >
-                        Verify Number
-                      </button>
-                    </a>
-                    {% endif %}
-                  </div>
-                </div>
-
-                <div class="row">
-                  <div class="col-lg-3 col-md-4 label">Email</div>
-                  <div class="col-lg-9 col-md-8">
-                    {% if not current_user.email_verified %}
-                    <p style="margin: 5px 0">{{ current_user.email }}</p>
-                    <button
-                      id="send-verification-email"
-                      style="font-size: small; height: 2rem"
-                      type="button"
-                      class="btn btn-outline-primary ld-ext-right"
-                    >
-                      Verify Email
-                      <div class="ld ld-ring ld-spin"></div>
-                    </button>
-                    {% else %} {{ current_user.email }} {% endif %}
-                  </div>
-                </div>
-
-                <div class="row">
-                  <div class="col-lg-3 col-md-4 label">Account Balance</div>
-                  <div class="col-lg-9 col-md-8">
-                    {{ current_user.balance }}
-                  </div>
-                </div>
-
-                <div class="row">
-                  <div class="col-lg-3 col-md-4 label">Account Type</div>
-                  <div class="col-lg-9 col-md-8">
-                    <p style="margin: 5px 0">{{ current_user.account_type }}</p>
-                    {% if current_user.account_type == "Standard" %}
-                    <a
-                      href="{{ url_for('payment.checkout', package='prmum') }}"
-                    >
-                      <button
-                        style="font-size: small; height: 2rem"
-                        type="button"
-                        class="btn btn-outline-primary"
-                      >
-                        Upgrade Account
-                      </button>
-                    </a>
-                    {% endif %} {% if current_user.account_type == "Basic" %}
-                    <a
-                      href="{{ url_for('payment.checkout', package='stnrd') }}"
-                    >
-                      <button
-                        style="font-size: small; height: 2rem"
-                        type="button"
-                        class="btn btn-outline-primary"
-                      >
-                        Upgrade Account
-                      </button>
-                    </a>
-                    {% endif %}
-                  </div>
-                </div>
-
-                <div class="row">
-                  <div class="col-lg-3 col-md-4 label">User ID</div>
-                  <div class="col-lg-9 col-md-8">{{ current_user.uid }}</div>
-                </div>
-              </div>
-
-              <div class="tab-pane fade profile-edit pt-3" id="profile-edit">
-                <!-- Profile Edit Form -->
-                <form method="post" action="{{ url_for('auth.edit_profile') }}">
-                  <input
-                    type="hidden"
-                    name="csrf_token"
-                    value="{{ csrf_token() }}"
-                  />
-                  <div class="row mb-3">
-                    <label
-                      for="first_name"
-                      class="col-md-4 col-lg-3 col-form-label"
-                      >First Name</label
-                    >
-                    <div class="col-md-8 col-lg-9">
-                      <input
-                        name="first_name"
-                        type="text"
-                        class="form-control"
-                        id="first_name"
-                        value="{{ current_user.first_name }}"
-                        style="font-size: 15px"
-                      />
-                    </div>
-                  </div>
-                  <div class="row mb-3">
-                    <label
-                      for="last_name"
-                      class="col-md-4 col-lg-3 col-form-label"
-                      >Last Name</label
-                    >
-                    <div class="col-md-8 col-lg-9">
-                      <input
-                        name="last_name"
-                        type="text"
-                        class="form-control"
-                        id="last_name"
-                        value="{{ current_user.last_name }}"
-                        style="font-size: 15px"
-                      />
-                    </div>
-                  </div>
-
-                  <div class="row mb-3">
-                    <label
-                      for="company"
-                      class="col-md-4 col-lg-3 col-form-label"
-                      >Account Type</label
-                    >
-                    <div class="col-md-8 col-lg-9">
-                      <input
-                        name="account_type"
-                        type="text"
-                        readonly
-                        disabled
-                        class="form-control"
-                        id="account_type"
-                        value="{{ current_user.account_type }}"
-                        style="font-size: 15px"
-                      />
-                    </div>
-                  </div>
-
-                  <div class="row mb-3">
-                    <label for="Phone" class="col-md-4 col-lg-3 col-form-label"
-                      >Phone</label
-                    >
-                    <div class="col-md-8 col-lg-9">
-                      {% if not current_user.phone_no %}
-                      <a href="{{ url_for('main.add_number') }}">
-                        <button
-                          style="font-size: small; height: 2rem"
-                          type="button"
-                          class="btn btn-outline-primary"
-                        >
-                          Add WhatsApp number
-                        </button>
-                      </a>
-                      {% else %}
-
-                      <input
-                        name="phone_no"
-                        type="text"
-                        class="form-control"
-                        id="phone_no"
-                        value="{{ current_user.phone_no }}"
-                        style="font-size: 15px"
-                      />
-                      {% endif %}
-                    </div>
-                  </div>
-
-                  <div class="row mb-3">
-                    <label for="Email" class="col-md-4 col-lg-3 col-form-label"
-                      >Email</label
-                    >
-                    <div class="col-md-8 col-lg-9">
-                      <input
-                        name="email"
-                        {%
-                        if
-                        current_user.email_verified
-                        %}
-                        readonly
-                        {%
-                        endif
-                        %}
-                        type="email"
-                        class="form-control"
-                        id="email"
-                        value="{{ current_user.email }}"
-                        style="font-size: 15px"
-                      />
-                    </div>
-                  </div>
-
-                  <div class="text-center">
-                    <button
-                      id="edit-submit-btn"
-                      type="submit"
-                      class="btn btn-primary"
-                    >
-                      Save Changes
-                    </button>
-                  </div>
-                </form>
-                <!-- End Profile Edit Form -->
-              </div>
-
-              <div
-                class="tab-pane fade profile-edit pt-3"
-                id="profile-settings"
-              >
-                <!-- Settings Form -->
-                <form
-                  method="post"
-                  action="{{ url_for('auth.edit_settings') }}"
-                >
-                  <input
-                    type="hidden"
-                    name="csrf_token"
-                    value="{{ csrf_token() }}"
-                  />
-                  <div class="row mb-3">
-                    <label
-                      for="changesMade"
-                      class="col-md-4 col-lg-3 col-form-label"
-                      >Email Notifications</label
-                    >
-                    <div class="col-md-8 col-lg-9">
-                      <div class="form-check">
-                        <input
-                          class="form-check-input"
-                          type="checkbox"
-                          id="changesMade"
-                          value="y"
-                          name="notify_on_profile_change"
-                          {%
-                          if
-                          current_user.notify_on_profile_change
-                          %}
-                          checked
-                          {%
-                          endif
-                          %}
-                        />
-                        <label
-                          class="form-check-label"
-                          for="changesMade"
-                          style="
-                            font-size: 15px;
-                            font-weight: normal;
-                            color: var(--bs-card-color);
-                          "
-                        >
-                          Changes made to your account
-                        </label>
-                      </div>
-                      <div class="form-check">
-                        <input
-                          class="form-check-input"
-                          type="checkbox"
-                          id="newProducts"
-                          value="y"
-                          name="product_updates"
-                          {%
-                          if
-                          current_user.product_updates
-                          %}
-                          checked
-                          {%
-                          endif
-                          %}
-                        />
-                        <label
-                          class="form-check-label"
-                          for="newProducts"
-                          style="
-                            font-size: 15px;
-                            font-weight: normal;
-                            color: var(--bs-card-color);
-                          "
-                        >
-                          Information on new products and services
-                        </label>
-                      </div>
-                      <div class="form-check">
-                        <input
-                          class="form-check-input"
-                          type="checkbox"
-                          id="subExpiry"
-                          value="y"
-                          name="subscription_expiry"
-                          {%
-                          if
-                          current_user.subscription_expiry
-                          %}
-                          checked
-                          {%
-                          endif
-                          %}
-                        />
-                        <label
-                          class="form-check-label"
-                          for="subExpiry"
-                          style="
-                            font-size: 15px;
-                            font-weight: normal;
-                            color: var(--bs-card-color);
-                          "
-                        >
-                          Upcoming subscription expiration
-                        </label>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div class="row mb-3">
-                    <label class="col-md-4 col-lg-3 col-form-label"
-                      >Select preferred AI voice type</label
-                    >
-                    {% if current_user.account_type == "Premium" %}
-                    <div class="col-md-8 col-lg-9">
-                      <select
-                        class="form-select"
-                        aria-label="Select voice type"
-                        id="aiVoice"
-                        name="ai_voice_type"
-                      >
-                        <optgroup label="Male">
-                          {% for voice in voices["male"] %}
-                          <option value="{{ voice }}">{{ voice }}</option>
-                          {% endfor %}
-                        </optgroup>
-                        <optgroup label="Female">
-                          {% for voice in voices["female"] %}
-                          <option value="{{ voice }}">{{ voice }}</option>
-                          {% endfor%}
-                        </optgroup>
-                      </select>
-                    </div>
                     {% else %}
-                    <div class="col-lg-9 col-md-8">
-                      <a
-                        href="{{ url_for('payment.checkout', package='prmum') }}"
-                      >
-                        <button
-                          style="font-size: small; height: 2rem"
-                          type="button"
-                          class="btn btn-outline-primary"
-                        >
-                          Upgrade Account
-                        </button>
-                      </a>
-                    </div>
+
+                    <input
+                      name="phone_no"
+                      type="text"
+                      class="form-control"
+                      id="phone_no"
+                      value="{{ current_user.phone_no }}"
+                      style="font-size: 15px"
+                    />
                     {% endif %}
                   </div>
-                  {% if current_user.account_type == "Premium" %}
+                </div>
 
-                  <div class="row mb-3">
-                    <label class="col-md-4 col-lg-3 col-form-label"
-                      >Audio response to Voice Notes</label
-                    >
-                    <div class="col-md-8 col-lg-9">
-                      <div class="form-check" style="padding-top: 0.5rem">
-                        <input
-                          class="form-check-input"
-                          type="checkbox"
-                          name="voice_response"
-                          {%
-                          if
-                          current_user.voice_response
-                          %}
-                          checked
-                          {%
-                          endif
-                          %}
-                          id="voice_response"
-                          value="checked"
-                        />
-                        <label
-                          class="form-check-label"
-                          for="voice_response"
-                          style="
-                            font-size: 15px;
-                            font-weight: normal;
-                            color: var(--bs-card-color);
-                          "
-                        >
-                          Respond with synthesized speech
-                        </label>
-                      </div>
-                    </div>
+                <div class="row mb-3">
+                  <label for="Email" class="col-md-4 col-lg-3 col-form-label"
+                    >Email</label
+                  >
+                  <div class="col-md-8 col-lg-9">
+                    <input
+                      name="email"
+                      {%
+                      if
+                      current_user.email_verified
+                      %}
+                      readonly
+                      {%
+                      endif
+                      %}
+                      type="email"
+                      class="form-control"
+                      id="email"
+                      value="{{ current_user.email }}"
+                      style="font-size: 15px"
+                    />
                   </div>
-                  {% endif %}
-                  <div class="text-center">
-                    <button
-                      id="edit-profile-btn"
-                      type="submit"
-                      class="btn btn-primary"
-                    >
-                      Save Changes
-                    </button>
-                  </div>
-                </form>
-                <!-- End settings Form -->
-              </div>
+                </div>
+
+                <div class="text-center">
+                  <button
+                    id="edit-submit-btn"
+                    type="submit"
+                    class="btn btn-primary"
+                  >
+                    Save Changes
+                  </button>
+                </div>
+              </form>
+              <!-- End Profile Edit Form -->
             </div>
-            <!-- End Bordered Tabs -->
           </div>
+          <!-- End Bordered Tabs -->
         </div>
       </div>
     </div>
-  </section>
-</main>
+  </div>
+</section>
 {% if settings %}
 <script>
   window.onload = () => {
-    const settingsBtn = document.getElementById("account-settings");
+    const settingsBtn = document.getElementById("toggle-settings-btn");
+    console.log(settingsBtn);
     settingsBtn.click();
   };
 </script>
 {% endif %}
-<script>
-  var userAiVoice = "{{ current_user.ai_voice_type }}";
-</script>
+<script></script>
 <script src="{{ url_for('static', filename= 'assets/js/profile.js') }}"></script>
-
 <!-- End #main -->
 {% endblock %}

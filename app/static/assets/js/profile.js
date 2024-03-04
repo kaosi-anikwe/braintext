@@ -44,11 +44,13 @@ const newProductsEl = document.getElementById("newProducts");
 const voiceResponseEl = document.getElementById("voice_response");
 
 // set user ai voice
-aiVoiceEl.value = userAiVoice;
+if (aiVoiceEl) {
+  aiVoiceEl.value = userAiVoice;
+  const subExpiry = subExpiryEl.checked;
+  const changesMade = changesMadeEl.checked;
+  const newProducts = newProductsEl.checked;
+}
 
-const subExpiry = subExpiryEl.checked;
-const changesMade = changesMadeEl.checked;
-const newProducts = newProductsEl.checked;
 let aiVoice;
 if (aiVoiceEl) aiVoice = aiVoiceEl.value;
 let voiceResponse;
@@ -86,8 +88,8 @@ const checkEdit = () => {
   else editProfileBtn.disabled = true;
 };
 
-window.addEventListener("input", checkEdit);
-window.addEventListener("load", checkEdit);
+// window.addEventListener("input", checkEdit);
+// window.addEventListener("load", checkEdit);
 
 const sendVerificatonEmail = document.getElementById("send-verification-email");
 if (sendVerificatonEmail) {

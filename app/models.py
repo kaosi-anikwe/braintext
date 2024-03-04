@@ -8,16 +8,23 @@ from datetime import datetime, timedelta, timezone
 
 # installed imports
 import jwt
+import pytz
+import phonenumbers
 from flask import current_app
+from dotenv import load_dotenv
 from flask_login import UserMixin
+from phonenumbers import timezone
 from werkzeug.security import generate_password_hash, check_password_hash
 
 # local imports
-from app import db, login_manager
+from app import db, login_manager, logger
 from app.modules.calculate import *
 
+load_dotenv()
 
-BASE_COST = 0.3
+USD2BT = int(os.getenv("USD2BT"))
+BASE_COST = float(os.getenv("BASE_COST"))
+
 
 # generate 6 digit OTP
 def get_otp() -> int:
@@ -110,18 +117,6 @@ class Users(db.Model, TimestampMixin, UserMixin, DatabaseHelperMixin):
     def display_name(self):
         return f"{self.first_name} {self.last_name}"
 
-    # get local timezone
-    def get_timezone(self):
-        return timezone(offset=timedelta(seconds=self.timezone_offset))
-
-    # get local time with timezone
-    def timenow(self):
-        return (
-            datetime.now(tz=self.get_timezone())
-            if not self.from_anonymous
-            else datetime.utcnow()
-        )
-
     # verify token generated for resetting password
     @staticmethod
     def verify_reset_password_token(token):
@@ -137,6 +132,21 @@ class Users(db.Model, TimestampMixin, UserMixin, DatabaseHelperMixin):
         settings: UserSettings
         settings = UserSettings.query.filter(UserSettings.user_id == self.id).one()
         return settings
+
+    # get local timezone
+    def timezone(self):
+        if self.phone_no:
+            parsed_number = phonenumbers.parse(self.phone_no)
+            country_code = parsed_number.country_code
+            country_timezone = timezone.time_zones_for_number(parsed_number)
+            if country_timezone:
+                return pytz.timezone(country_timezone[0])
+            return None
+        return None
+
+    # get local time with timezone
+    def timenow(self):
+        return datetime.now(self.timezone())
 
 
 class UserSettings(db.Model, TimestampMixin, DatabaseHelperMixin):
@@ -212,6 +222,21 @@ class AnonymousUsers(db.Model, TimestampMixin, DatabaseHelperMixin):
     def display_name(self):
         return f"{self.first_name} {self.last_name}"
 
+    # get local timezone
+    def timezone(self):
+        if self.phone_no:
+            parsed_number = phonenumbers.parse(self.phone_no)
+            country_code = parsed_number.country_code
+            country_timezone = timezone.time_zones_for_number(parsed_number)
+            if country_timezone:
+                return pytz.timezone(country_timezone[0])
+            return None
+        return None
+
+    # get local time with timezone
+    def timenow(self):
+        return datetime.now(self.timezone())
+
 
 class MessageRequests(db.Model, TimestampMixin, DatabaseHelperMixin):
     __tablename__ = "usage"
@@ -251,19 +276,25 @@ class MessageRequests(db.Model, TimestampMixin, DatabaseHelperMixin):
         gpt_3_tokens = {"input": self.gpt_3_input, "output": self.gpt_3_output}
         gpt_4_tokens = {"input": self.gpt_3_input, "output": self.gpt_4_output}
         dalle_3 = {
-            "type": self.dalle_3.split("-")[0],
-            "res": self.dalle_3.split("-")[1],
+            "type": self.dalle_3.split("-")[0].split(".")[-1] if self.dalle_3 else None,
+            "res": self.dalle_3.split("-")[1] if self.dalle_3 else None,
         }
         cost = {
-            "gpt_3": gpt_3_5_cost(gpt_3_tokens),
-            "gpt_4": gpt_4_vision_cost(gpt_4_tokens),
-            "dalle_2": dalle2_cost(self.dalle_2),
-            "dalle_3": dalle3_cost(dalle_3),
-            "tts": tts_cost(self.tts),
-            "whisper": whisper_cost(self.whisper),
+            "gpt_3": gpt_3_5_cost(gpt_3_tokens) * USD2BT,
+            "gpt_4": gpt_4_vision_cost(gpt_4_tokens) * USD2BT,
+            "dalle": (dalle2_cost(self.dalle_2) + dalle3_cost(dalle_3)) * USD2BT,
+            "audio": (tts_cost(self.tts) + whisper_cost(self.whisper)) * USD2BT,
         }
-        cost["total"] = sum(price for price in cost.values())
         return cost
+
+    @staticmethod
+    def empty():
+        return {
+            "gpt_3": 0,
+            "gpt_4": 0,
+            "dalle": 0,
+            "audio": 0,
+        }
 
 
 class Transactions(db.Model, TimestampMixin, DatabaseHelperMixin):
@@ -341,4 +372,19 @@ class Voices(db.Model, TimestampMixin, DatabaseHelperMixin):
         self.name = name
         self.gender = gender
         self.type = type
+        self.insert()
+
+
+class FAQ(db.Model, TimestampMixin, DatabaseHelperMixin):
+    __tablename__ = "faq"
+
+    id = db.Column(db.Integer, primary_key=True)
+    question = db.Column(db.String(5000), nullable=False)
+    answer = db.Column(db.Text, nullable=False)
+    user_id = db.Column(db.ForeignKey("user.id"))
+
+    def __init__(self, question, answer, user_id):
+        self.question = question
+        self.answer = answer
+        self.user_id = user_id
         self.insert()
