@@ -43,7 +43,7 @@ def get_account_balance(data: Dict[Any, Any], **kwargs):
             if not user:
                 text = "Access to this feature requires an account. Please create an account to proceed."
                 return send_text(text, number)
-            text = f"Your estimated balance is {round(user.balance, 2)}"
+            text = f"Your estimated balance is BT {round(user.balance, 2)}"
             return send_text(text, number)
         except:
             logger.error(traceback.format_exc())
