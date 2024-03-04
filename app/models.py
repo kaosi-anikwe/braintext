@@ -89,11 +89,11 @@ class Users(db.Model, TimestampMixin, UserMixin, DatabaseHelperMixin):
     edited = db.Column(db.Boolean, default=False)
     password_hash = db.Column(db.String(128), nullable=False)
 
-    def __init__(self, first_name, last_name, email, password, timezone_offset) -> None:
+    def __init__(self, first_name, last_name, email, timezone_offset, password=None) -> None:
         self.first_name = first_name
         self.last_name = last_name
         self.email = email
-        self.password_hash = self.get_password_hash(password)
+        self.password_hash = self.get_password_hash(password) if password else None
         self.uid = uuid.uuid4().hex
         self.timezone_offset = timezone_offset
 
@@ -156,7 +156,7 @@ class UserSettings(db.Model, TimestampMixin, DatabaseHelperMixin):
     context_messages = db.Column(db.Integer, default=int(os.getenv("CONTEXT_LIMIT")))
     max_response_length = db.Column(db.Integer)
     response_type = db.Column(db.String(20), default="elaborated")
-    image_generation = db.Column(db.Boolean, default=True)
+    image_generation = db.Column(db.Boolean, default=False)
     online_search = db.Column(db.Boolean, default=True)
     media_search = db.Column(db.Boolean, default=True)
     audio_responses = db.Column(db.Boolean, default=True)
