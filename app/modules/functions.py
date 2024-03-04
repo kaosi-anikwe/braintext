@@ -5,9 +5,11 @@ import json
 import base64
 import tempfile
 import requests
+import tempfile
 import traceback
 import threading
 import subprocess
+from bs4 import BeautifulSoup
 from datetime import datetime
 from bs4 import BeautifulSoup
 from contextlib import closing
@@ -835,10 +837,12 @@ def chatgpt_response(
                 import random
 
                 text = random.choice(WAIT_MESSAGES)
-                send_text(
-                    message=text, recipient=number
-                ) if not message_id else reply_to_message(
-                    message_id=message_id, recipient=number, message=text
+                (
+                    send_text(message=text, recipient=number)
+                    if not message_id
+                    else reply_to_message(
+                        message_id=message_id, recipient=number, message=text
+                    )
                 )
 
         # set timer
