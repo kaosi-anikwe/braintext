@@ -274,7 +274,7 @@ class MessageRequests(db.Model, TimestampMixin, DatabaseHelperMixin):
 
     def cost(self):
         gpt_3_tokens = {"input": self.gpt_3_input, "output": self.gpt_3_output}
-        gpt_4_tokens = {"input": self.gpt_3_input, "output": self.gpt_4_output}
+        gpt_4_tokens = {"input": self.gpt_4_input, "output": self.gpt_4_output}
         dalle_3 = {
             "type": self.dalle_3.split("-")[0].split(".")[-1] if self.dalle_3 else None,
             "res": self.dalle_3.split("-")[1] if self.dalle_3 else None,
