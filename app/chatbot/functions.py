@@ -1429,10 +1429,10 @@ def meta_interactive_response(
                     "rows": [
                         {
                             "id": f"warn_{i}",
-                            "title": f"{i}BT",
+                            "title": f"BT {i}",
                             "description": f"Warn when balance is below {i}BT.",
                         }
-                        for i in range(2, 12, 2)
+                        for i in [0.2, 0.5, 1, 2, 5]
                     ],
                 }
             ]
