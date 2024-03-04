@@ -80,7 +80,7 @@ class Users(db.Model, TimestampMixin, UserMixin, DatabaseHelperMixin):
     last_name = db.Column(db.String(50), nullable=False)
     email = db.Column(db.String(100), nullable=False)
     account_type = db.Column(db.String(20), default="regular")
-    balance = db.Column(db.Float, default=5)
+    balance = db.Column(db.Float, default=2)
     timezone_offset = db.Column(db.Integer)
     phone_no = db.Column(db.String(20))
     phone_verified = db.Column(db.Boolean, default=False)
@@ -206,7 +206,7 @@ class AnonymousUsers(db.Model, TimestampMixin, DatabaseHelperMixin):
     email = db.Column(db.String(100))
     phone_no = db.Column(db.String(20))
     signup_stage = db.Column(db.String(50))
-    balance = db.Column(db.Float, default=5)
+    balance = db.Column(db.Float, default=2)
 
     def __init__(self, phone_no) -> None:
         self.phone_no = phone_no
@@ -274,7 +274,7 @@ class MessageRequests(db.Model, TimestampMixin, DatabaseHelperMixin):
 
     def cost(self):
         gpt_3_tokens = {"input": self.gpt_3_input, "output": self.gpt_3_output}
-        gpt_4_tokens = {"input": self.gpt_3_input, "output": self.gpt_4_output}
+        gpt_4_tokens = {"input": self.gpt_4_input, "output": self.gpt_4_output}
         dalle_3 = {
             "type": self.dalle_3.split("-")[0].split(".")[-1] if self.dalle_3 else None,
             "res": self.dalle_3.split("-")[1] if self.dalle_3 else None,
