@@ -15,8 +15,6 @@ def send_email(receiver_email, subject, plaintext, html=None):
     PORT = 465  # For starttls
     USERNAME = os.environ.get("SENDER_EMAIL")
     PASSWORD = os.environ.get("PASSWORD")
-    logger.info(USERNAME)
-    logger.info(PASSWORD)
 
     # Message setup
     message = MIMEMultipart()

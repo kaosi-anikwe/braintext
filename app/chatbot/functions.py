@@ -14,19 +14,20 @@ from PIL import Image
 # local imports
 from ..models import (
     Users,
-    BasicSubscription,
-    StandardSubscription,
-    PremiumSubscription,
     AnonymousUsers,
     UserSettings,
+    MessageRequests,
 )
 from .. import logger
 from ..modules.email_utility import send_registration_email
 from ..modules.verification import generate_confirmation_token
 from ..modules.functions import *
+from ..modules.calculate import *
 
 load_dotenv()
 
+USD2BT = int(os.getenv("USD2BT"))
+FILES = os.getenv("FILES")
 TEMP_FOLDER = os.getenv("TEMP_FOLDER")
 TOKEN = os.getenv("META_VERIFY_TOKEN")
 PHONE_NUMBER_ID = os.getenv("PHONE_NUMBER_ID")
@@ -109,6 +110,7 @@ def get_phone_id(data: Dict[Any, Any]) -> Union[str, None]:
     data = _preprocess(data)
     if "metadata" in data:
         return data["metadata"]["phone_number_id"]
+
 
 def get_number(data: Dict[Any, Any]) -> Union[str, None]:
     """
@@ -339,24 +341,26 @@ def send_document(document_link: str, recipient: str, caption=None) -> bool:
 
 
 def _create_interaction(
-    button: Dict[Any, Any], type: Literal["button", "list"] = "button"
+    interactive: Dict[Any, Any], type: Literal["button", "list"] = "button"
 ) -> Dict[Any, Any]:
     """
     Creates a button to be used to send interactive messages.
     This function is meant to be called internally.
     """
-    data = {"type": type, "action": button.get("action")}
-    if button.get("header"):
-        data["header"] = {"type": "text", "text": button.get("header")}
-    if button.get("body"):
-        data["body"] = {"text": button.get("body")}
-    if button.get("footer"):
-        data["footer"] = {"text": button.get("footer")}
+    data = {"type": type, "action": interactive.get("action")}
+    if interactive.get("header"):
+        data["header"] = {"type": "text", "text": interactive.get("header")}
+    if interactive.get("body"):
+        data["body"] = {"text": interactive.get("body")}
+    if interactive.get("footer"):
+        data["footer"] = {"text": interactive.get("footer")}
     return data
 
 
 def send_interactive_message(
-    button: Dict[Any, Any], recipient: str
+    interactive: Dict[Any, Any],
+    recipient: str,
+    interactive_type: Literal["button", "list", "cta_url"] = "button",
 ) -> Union[str, None]:
     """
     Sends an interactive message to the user.
@@ -367,7 +371,7 @@ def send_interactive_message(
         "messaging_product": "whatsapp",
         "to": recipient,
         "type": "interactive",
-        "interactive": _create_interaction(button),
+        "interactive": _create_interaction(interactive, type=interactive_type),
     }
     response = requests.post(URL, headers=HEADERS, json=data)
     if response.status_code == 200:
@@ -392,7 +396,7 @@ def download_media(
     """
     Download media from media url and return its file path.
     """
-    response = requests.get(media_url, headers=HEADERS)
+    response = requests.get(media_url, headers=HEADERS, timeout=5)
     if response.status_code == 200:
         try:
             full_path = os.path.join(file_path, file_name)
@@ -430,6 +434,59 @@ def generate_interactive_button(
                 },
             }
         )
+    return data
+
+
+def generate_list_message(
+    body: str,
+    header: str,
+    button_text: str,
+    sections: list,
+    footer: str = "Learn through conversations, evolve with AI.",
+):
+    """
+    Genereates the messsage list to be used as a parameter to the `send_interactive_message` function.
+    """
+    data = {
+        "action": {"button": button_text, "sections": []},
+        "header": header,
+        "body": body,
+        "footer": footer,
+    }
+    for section in sections:
+        data["action"]["sections"].append(
+            {
+                "title": section.get("title"),
+                "rows": [
+                    {
+                        "id": row.get("id"),
+                        "title": row.get("title"),
+                        "description": row.get("description"),
+                    }
+                    for row in section.get("rows")
+                ],
+            }
+        )
+    return data
+
+
+def generate_cta_action(
+    header: str,
+    body: str,
+    button_text: str,
+    button_url: str,
+    footer: str = "Learn through conversations, evolve with AI.",
+):
+    """Generate a CTA button to send to the user"""
+    data = {
+        "action": {
+            "name": "cta_url",
+            "parameters": {"display_text": button_text, "url": button_url},
+        },
+        "header": header,
+        "body": body,
+        "footer": footer,
+    }
     return data
 
 
@@ -567,7 +624,11 @@ def meta_split_and_respond(
 
 
 def image_recognition(
-    user: Users, data: Dict[Any, Any], prompt: str, message_list: list
+    user: Users,
+    data: Dict[Any, Any],
+    prompt: str,
+    message_list: list,
+    message_request: MessageRequests,
 ):
     """Perform image recognition with OpenAI's GPT-4V"""
     try:
@@ -583,15 +644,31 @@ def image_recognition(
             message_list=message_list,
         )
         response = openai_client.chat.completions.create(
-            model="gpt-4-vision-preview",
+            model="gpt-4-0125-preview",
             messages=messages,
             temperature=1,
             max_tokens=4000,
         )
         text = response.choices[0].message.content
-        tokens = int(response.usage.total_tokens)
+        tokens = int(response.usage.prompt_tokens), int(
+            response.usage.completion_tokens
+        )
+        logger.info(f"GPT 4 VISION TOKENS: {tokens}")
         role = response.choices[0].message.role
-
+        # update request records
+        message_request.gpt_4_input = tokens[0]
+        message_request.gpt_4_output = tokens[1]
+        message_request.update()
+        # charge user
+        cost = gpt_4_vision_cost({"input": tokens[0], "output": tokens[1]})
+        bt_cost = cost * USD2BT
+        debit_user(
+            user=user,
+            bt_cost=bt_cost,
+            message_request=message_request,
+            reason="GPT4-Vision",
+        )
+        # log response
         log_response(
             name=name,
             number=number,
@@ -624,11 +701,9 @@ def image_recognition(
 def meta_chat_response(
     data: Dict[Any, Any],
     user: Users,
+    message_request: MessageRequests,
     message: str = None,
-    subscription: Union[
-        BasicSubscription, StandardSubscription, PremiumSubscription
-    ] = None,
-    anonymous: bool = False,
+    anonymous: bool = None,
 ):
     """
     Typical WhatsApp text response with Meta functions.
@@ -648,6 +723,17 @@ def meta_chat_response(
     greeting = contains_greeting(message)
     thanks = contains_thanks(message)
     try:
+        # check balance
+        num_tokens = num_tokens_from_messages(messages)
+        logger.info(f"INPUT TOKENS: {num_tokens}")
+        cost = gpt_3_5_cost({"input": num_tokens, "output": 0})
+        bt_cost = cost * USD2BT
+        if bt_cost > user.balance:
+            text = f"Insufficent balance. Cost is {bt_cost}"
+            logger.info(
+                f"INSUFFICIENT BALANCE - user: {user.phone_no}. BALANCE: {user.balance}"
+            )
+            return send_text(text, number)
         # react to message
         send_reaction(
             chr(128075), message_id, number
@@ -656,22 +742,34 @@ def meta_chat_response(
             chr(128153), message_id, number
         ) if thanks else None  # react blue love emoji
 
-        if subscription:
-            if subscription.expired():
-                subscription.update_account(user.id)
-                text = f"It seems your subscription has expired. Plese renew your subscription to continue to enjoy your services. \n{request.host_url}profile"
-                return reply_to_message(message_id, number, text)
         try:
             response = chatgpt_response(
                 data=data,
+                user=user,
                 messages=messages,
                 message=message,
                 number=number,
                 message_id=message_id,
+                message_request=message_request,
             )
+            logger.info(f"CHATGPT RESPONSE: {response}")
             if not response:  # function called from ChatGPT response
                 return
             text, tokens, role = response[0], response[1], response[2]
+            logger.info(f"CHATGPT RESPONSE TOKENS: {tokens[0], tokens[1]}")
+            # update request records
+            message_request.gpt_3_input = tokens[0]
+            message_request.gpt_3_output = tokens[1]
+            message_request.update()
+            # charge user
+            cost = gpt_3_5_cost({"input": tokens[0], "output": tokens[1]})
+            bt_cost = cost * USD2BT
+            debit_user(
+                user=user,
+                bt_cost=bt_cost,
+                message_request=message_request,
+                reason="ChatGPT",
+            )
         except:
             logger.error(traceback.format_exc())
             text = (
@@ -707,7 +805,12 @@ def meta_chat_response(
         return reply_to_message(message_id, number, text)
 
 
-def meta_audio_response(user: Users, data: Dict[Any, Any], anonymous: bool = False):
+def meta_audio_response(
+    user: Users,
+    data: Dict[Any, Any],
+    message_request: MessageRequests,
+    anonymous: bool = False,
+):
     """WhatsApp audio response with Meta functions."""
     name = get_name(data)
     number = f"+{get_number(data)}"
@@ -719,10 +822,32 @@ def meta_audio_response(user: Users, data: Dict[Any, Any], anonymous: bool = Fal
             audio_url,
             f"{datetime.utcnow().strftime('%M%S%f')}",
         )
+        duration = get_audio_duration(audio_file)
+        cost = whisper_cost(duration)
+        bt_cost = cost * USD2BT
+        logger.info(f"AUDIO DURATION: {duration}")
+        logger.info(f"WHISPER COST IN USD: {cost}")
+        logger.info(f"WHISPER COST IN BT: {bt_cost}")
+        if bt_cost > user.balance:
+            text = f"Insufficent balance. Cost is {bt_cost}"
+            logger.info(
+                f"INSUFFICIENT BALANCE - user: {user.phone_no}. BALANCE: {user.balance}"
+            )
+            return send_text(text, number)
         try:
             transcript = openai_transcribe_audio(audio_file)
             greeting = contains_greeting(transcript)
             thanks = contains_thanks(transcript)
+            # update request records
+            message_request.whisper = duration
+            message_request.update()
+            # charge user
+            debit_user(
+                user=user,
+                bt_cost=bt_cost,
+                message_request=message_request,
+                reason="ChatGPT",
+            )
         except:
             logger.error(traceback.format_exc())
             text = "Error transcribing audio. Please try again later."
@@ -745,16 +870,41 @@ def meta_audio_response(user: Users, data: Dict[Any, Any], anonymous: bool = Fal
                 prompt=transcript,
                 db_path=user_db_path,
             )
+            num_tokens = num_tokens_from_messages(messages)
+            logger.info(f"INPUT TOKENS: {num_tokens}")
+            cost = gpt_3_5_cost({"input": num_tokens, "output": 0})
+            bt_cost = cost * USD2BT
+            if bt_cost > user.balance:
+                text = f"Insufficent balance. Cost is {bt_cost}"
+                logger.info(
+                    f"INSUFFICIENT BALANCE - user: {user.phone_no}. BALANCE: {user.balance}"
+                )
+                return send_text(text, number)
             response = chatgpt_response(
                 data=data,
+                user=user,
                 messages=messages,
                 message=transcript,
                 number=number,
                 message_id=message_id,
+                message_request=message_request,
             )
             if not response:  # function called from ChatGPT response
                 return
             text, tokens, role = response[0], response[1], response[2]
+            # update request records
+            message_request.gpt_3_input = tokens[0]
+            message_request.gpt_3_output = tokens[1]
+            message_request.update()
+            # charge user
+            cost = gpt_3_5_cost({"input": tokens[0], "output": tokens[1]})
+            bt_cost = cost * USD2BT
+            debit_user(
+                user=user,
+                bt_cost=bt_cost,
+                message_request=message_request,
+                reason="ChatGPT",
+            )
         except:
             logger.error(traceback.format_exc())
             text = (
@@ -764,7 +914,7 @@ def meta_audio_response(user: Users, data: Dict[Any, Any], anonymous: bool = Fal
 
         user_settings = user.user_settings() if not anonymous else None
         if user_settings:
-            if not user_settings.voice_response:
+            if not user_settings.audio_responses:
                 if len(text) < WHATSAPP_CHAR_LIMIT:
                     return send_text(text, number)
                 else:
@@ -773,7 +923,13 @@ def meta_audio_response(user: Users, data: Dict[Any, Any], anonymous: bool = Fal
                         number,
                         get_message_id(data),
                     )
-        return speech_synthesis(data=data, text=text, tokens=tokens, message=transcript)
+        return speech_synthesis(
+            data=data,
+            text=text,
+            tokens=tokens,
+            message=transcript,
+            message_request=message_request,
+        )
 
     except:
         logger.error(traceback.format_exc())
@@ -781,42 +937,38 @@ def meta_audio_response(user: Users, data: Dict[Any, Any], anonymous: bool = Fal
         return send_text(text, number)
 
 
-def meta_image_response(user: Users, data: Dict[Any, Any], anonymous: bool = False):
+def meta_image_response(
+    user: Users,
+    data: Dict[Any, Any],
+    message_request: MessageRequests,
+    anonymous: bool = False,
+):
     """WhatsApp image response wtih Meta functions."""
     name = get_name(data)
     number = f"+{get_number(data)}"
-    try:
-        image = get_image(data)
-        image_url = get_media_url(image["id"])
-        image_path = download_media(
-            image_url,
-            f"{datetime.utcnow().strftime('%M%S%f')}.jpg",
-        )
-        # convert to png
-        image_content = Image.open(image_path)
-        image_content = image_content.convert(
-            "RGBA"
-        )  # If the image has an alpha channel (transparency)
-        image_content.save(image_path, format="PNG")
-        # get image prompt
-        prompt = ""
-        if "caption" in image:
-            prompt = image["caption"]
-        # check for text in image
-        text = image_to_string(image_path)
-        if text:  # ChatGPT response
-            if prompt:
-                user_message = f"{prompt}:\n{text}"
-            else:
-                user_message = text
-            meta_chat_response(
-                user=user, data=data, anonymous=anonymous, message=user_message
+    run = False
+    if isinstance(user, Users):
+        if user.user_settings().image_recognition:
+            run = True
+    else:
+        run = True
+
+    if run:
+        try:
+            image = get_image(data)
+            image_url = get_media_url(image["id"])
+            image_path = download_media(
+                image_url,
+                f"{datetime.utcnow().strftime('%M%S%f')}.jpg",
             )
-            delete_file(image_path)
-        else:
+            # convert to png
+            image_content = Image.open(image_path)
+            image_content = image_content.convert(
+                "RGBA"
+            )  # If the image has an alpha channel (transparency)
+            image_content.save(image_path, format="PNG")
+            prompt = image.get("caption", "What's in this image?")
             base64_image = encode_image(image_path)
-            if not prompt:
-                prompt = "What's in this image?"
             message_list = [
                 {
                     "role": "user",
@@ -836,13 +988,486 @@ def meta_image_response(user: Users, data: Dict[Any, Any], anonymous: bool = Fal
                 data=data,
                 prompt=prompt,
                 message_list=message_list,
+                message_request=message_request,
             )
-    except:
-        logger.error(traceback.format_exc())
-        text = "Something went wrong. Please try again later."
+        except:
+            logger.error(traceback.format_exc())
+            text = "Something went wrong. Please try again later."
+            return send_text(text, number)
+        finally:
+            delete_file(image_path)
+
+
+def meta_interactive_response(
+    data: Dict[Any, Any],
+    **kwargs,
+):
+    """WhatsApp interactive message response."""
+    response = get_interactive_response(data)
+    logger.info(response)
+    number = f"+{get_number(data)}"
+    user: Users
+    user = Users.query.filter(Users.phone_no == number).one_or_none()
+    if not user:
+        text = "Access to this feature requires an account. Please create an account to proceed."
         return send_text(text, number)
-    finally:
-        delete_file(image_path)
+    user_settings = user.user_settings()
+    type = response.get("type", "button_reply")
+    if type == "button_reply":
+        reply_id = response[type]["id"]
+        if "settings" in str(response[type]["title"]).lower():
+            with open(os.path.join(FILES, "settings.json")) as settings_file:
+                settings = json.load(settings_file)
+
+            if "user" in str(response[type]["title"]).lower():
+                message_list = generate_list_message(
+                    header="Settings",
+                    body="Here are the available user settings",
+                    button_text="User settings",
+                    sections=settings["userSettings"],
+                )
+                return send_interactive_message(message_list, number, "list")
+            elif "chatbot" in str(response[type]["title"]).lower():
+                message_list = generate_list_message(
+                    header="Settings",
+                    body="Here are the available chatbot settings",
+                    button_text="Chatbot settings",
+                    sections=settings["chatbotSettings"],
+                )
+                return send_interactive_message(message_list, number, "list")
+        # CHATBOT SETTINGS
+        if "response_type" in reply_id:
+            # handle response type
+            response_type = bool(int(reply_id.removeprefix("response_type_")))
+            response_type = "simplified" if not response_type else "elaborated"
+            logger.info(f"NEW RESPONSE TYPE: {response_type}")
+            user_settings.response_type = response_type
+            user_settings.update()
+            text = f"Response settings updated successfully!"
+            return send_text(text, number)
+        if "image_generation" in reply_id:
+            # handle image gen toggle
+            image_gen = bool(int(reply_id.removeprefix("image_generation_")))
+            logger.info(f"NEW IMAGE TOGGLE: {image_gen}")
+            user_settings.image_generation = image_gen
+            user_settings.update()
+            text = f"Image generation settings updated successfully!"
+            return send_text(text, number)
+        if "online_search" in reply_id:
+            # handle image gen toggle
+            online_search = bool(int(reply_id.removeprefix("online_search_")))
+            logger.info(f"NEW ONLINE TOGGLE: {online_search}")
+            user_settings.online_search = online_search
+            user_settings.update()
+            text = f"Online search settings updated successfully!"
+            return send_text(text, number)
+        if "media_search" in reply_id:
+            # handle image gen toggle
+            media_search = bool(int(reply_id.removeprefix("media_search_")))
+            logger.info(f"NEW MEDIA TOGGLE: {media_search}")
+            user_settings.media_search = media_search
+            user_settings.update()
+            text = f"Media search settings updated successfully!"
+            return send_text(text, number)
+        if "audio_responses" in reply_id:
+            # handle image gen toggle
+            audio_responses = bool(int(reply_id.removeprefix("audio_responses_")))
+            logger.info(f"NEW AUDIO TOGGLE: {audio_responses}")
+            user_settings.audio_responses = audio_responses
+            user_settings.update()
+            text = f"Audio response settings updated successfully!"
+            return send_text(text, number)
+        if "image_recognition" in reply_id:
+            # handle image gen toggle
+            image_recognition = bool(int(reply_id.removeprefix("image_recognition_")))
+            logger.info(f"NEW IMG RECOG TOGGLE: {image_recognition}")
+            user_settings.image_recognition = image_recognition
+            user_settings.update()
+            text = f"Image recognition settings updated successfully!"
+            return send_text(text, number)
+        if "accept_links" in reply_id:
+            # handle web scrapping toggle
+            web_scrapping = bool(int(reply_id.removeprefix("accept_links_")))
+            logger.info(f"NEW WEB SCRAPE TOGGLE: {web_scrapping}")
+            user_settings.web_scrapping = web_scrapping
+            user_settings.update()
+            text = f"Chat settings updated successfully!"
+            return send_text(text, number)
+        if "image_model" in reply_id:
+            # change image model settings
+            model = int(reply_id.removeprefix("image_model_"))
+            model = "dalle2" if not model else "dalle3"
+            logger.info(f"NEW IMG MODEL: {model}")
+            user_settings.image_generation_model = model
+            user_settings.update()
+            text = f"Image model settings updated successfully!"
+            return send_text(text, number)
+        if "image_style" in reply_id:
+            # change image style settings
+            style = int(reply_id.removeprefix("image_style_"))
+            style = "vivid" if not style else "natural"
+            logger.info(f"NEW IMG STYLE: {style}")
+            user_settings.image_generation_style = style
+            user_settings.update()
+            text = f"Image style settings updated successfully!"
+            return send_text(text, number)
+        if "image_quality" in reply_id:
+            # change image quality settings
+            quality = int(reply_id.removeprefix("image_quality_"))
+            quality = "standard" if not quality else "hd"
+            logger.info(f"NEW IMG QUALITY: {quality}")
+            user_settings.image_generation_quality = quality
+            user_settings.update()
+            text = f"Image quality settings updated successfully!"
+            return send_text(text, number)
+        if "image_size" in reply_id:
+            # change image size settings
+            if user_settings.image_generation_model == "dalle2":
+                sizes = ["256x256", "512x512", "1024x1024"]
+            else:
+                sizes = ["1024x1024", "1024x1792", "1792x1024"]
+            size = int(reply_id.removeprefix("image_size_"))
+            size = sizes[size]
+            logger.info(f"NEW IMG SIZE: {size}")
+            user_settings.image_generation_size = size
+            user_settings.update()
+            text = f"Image size settings updated successfully!"
+            return send_text(text, number)
+        # USER SETTINGS
+        if "email_updates" in reply_id:
+            # handle email updates settings
+            update = bool(int(reply_id.removeprefix("email_updates_")))
+            logger.info(f"NEW EMAIL SETTING: {update}")
+            user_settings.email_updates = update
+            user_settings.update()
+            text = f"Email update settings updated successfully!"
+            return send_text(text, number)
+
+    if type == "list_reply":
+        reply_id = response[type]["id"]
+        # CHATBOT SETTINGS
+        # Handle Context and Responses settings
+        if reply_id == "context_and_responses":
+            logger.info(f"REPLY ID: {reply_id}")
+            choices = [
+                {
+                    "title": "Context and Responses",
+                    "rows": [
+                        {
+                            "id": "context_messages",
+                            "title": "Context length",
+                            "description": "Set length of message context.",
+                        },
+                        {
+                            "id": "max_response_length",
+                            "title": "Max Length of Response",
+                            "description": "Define the maximum length allowed for chatbot responses.",
+                        },
+                        {
+                            "id": "response_type",
+                            "title": "Response Type",
+                            "description": "Choose the manner the chatbot response to prompts.",
+                        },
+                    ],
+                }
+            ]
+            message_list = generate_list_message(
+                header="Context and Responses",
+                body=f"Customize your context settings and response type.",
+                button_text="Choose setting",
+                sections=choices,
+            )
+            return send_interactive_message(message_list, number, "list")
+        # Handle response type
+        if reply_id == "response_type":
+            logger.info(f"REPLY ID: {reply_id}")
+            button = generate_interactive_button(
+                header=f"Response Type",
+                body=f"Set the nature of the responses to prompts. *Elaborated* tends to use more prompts which may increase cost.\nCurrent setting is *{user_settings.response_type}*.",
+                button_texts=["Simplified", "Elaborated"],
+            )
+            return send_interactive_message(interactive=button, recipient=number)
+        # Handle Context length
+        if reply_id == "context_messages":
+            logger.info(f"REPLY ID: {reply_id}")
+            choices = [
+                {
+                    "title": "Context Length",
+                    "rows": [
+                        {
+                            "id": f"context_{i}",
+                            "title": f"{i}",
+                            "description": f"Send back {i} pairs of messages.",
+                        }
+                        for i in range(0, 12, 2)
+                    ],
+                }
+            ]
+            message_list = generate_list_message(
+                header="Context Length",
+                body=f"The context length defines how many of your previous messages will be sent back in order to keep the conversation context.\n*Note that this increases cost.*\nCurrent setting is {user_settings.context_messages}",
+                button_text="Choose length",
+                sections=choices,
+            )
+            return send_interactive_message(message_list, number, "list")
+        elif "context_" in reply_id:
+            # change context settings
+            context = int(reply_id.removeprefix("context_"))
+            logger.info(f"NEW CONTEXT: {context}")
+            user_settings.context_messages = context
+            user_settings.update()
+            text = f"Context settings updated successfully!"
+            return send_text(text, number)
+        # Handle response length
+        if reply_id == "max_response_length":
+            logger.info(f"REPLY  ID: {reply_id}")
+            nums = [20, 50, 100, 200, 500, 1000]
+            choices = [
+                {
+                    "title": "Max Response Size",
+                    "rows": [
+                        {
+                            "id": f"response_len_{i}",
+                            "title": f"{i}",
+                            "description": f"Response will not be longer than {i} tokens.",
+                        }
+                        for i in nums
+                    ],
+                }
+            ]
+            choices[0]["rows"].append(
+                {
+                    "id": "response_len_unltd",
+                    "title": "Unlimited",
+                    "description": "No upper bound for response size.",
+                }
+            )
+            message_list = generate_list_message(
+                header="Max Response Size",
+                body=f"This number defines the maximum number of words that can be in a response. Reducing this helps save cost.\n*Note that a low number may cause issues in response.*\nCurrent setting is {'*Unlimited*' if not user_settings.max_response_length else user_settings.max_response_length}",
+                button_text="Choose size",
+                sections=choices,
+            )
+            return send_interactive_message(message_list, number, "list")
+        elif "response_len" in reply_id:
+            # change max response length
+            try:
+                max_response = int(reply_id.removeprefix("response_len_"))
+            except ValueError:
+                max_response = None
+            logger.info(f"NEW MAX RESPONSE: {max_response}")
+            user_settings.max_response_length = max_response
+            user_settings.update()
+            text = f"Max response length updated successfully!"
+            return send_text(text, number)
+        # Handle image gen toggle
+        if reply_id == "image_generation":
+            logger.info(f"REPLY ID: {reply_id}")
+            button = generate_interactive_button(
+                header=f"Image Generation",
+                body=f"Toggle the ability of the chatbot to generate images at will. This setting is currently {'*enabled*.' if user_settings.image_generation else '*disabled*.'}",
+                button_texts=["Disable", "Enable"],
+            )
+            return send_interactive_message(interactive=button, recipient=number)
+        # Handle online search toggle
+        if reply_id == "online_search":
+            logger.info(f"REPLY ID: {reply_id}")
+            button = generate_interactive_button(
+                header=f"Online Search",
+                body=f"Toggle the ability of the chatbot to perform online searches to better answer questions. This setting is currently {'*enabled*.' if user_settings.online_search else '*disabled*.'}",
+                button_texts=["Disable", "Enable"],
+            )
+            return send_interactive_message(interactive=button, recipient=number)
+        # Handle media search toggle
+        if reply_id == "media_search":
+            logger.info(f"REPLY ID: {reply_id}")
+            button = generate_interactive_button(
+                header=f"Media Search",
+                body=f"Toggle the ability of the chatbot to retrieve images and documents from the internet. This setting is currently {'*enabled*.' if user_settings.media_search else '*disabled*.'}",
+                button_texts=["Disable", "Enable"],
+            )
+            return send_interactive_message(interactive=button, recipient=number)
+        # Handle audio response toggle
+        if reply_id == "audio_responses":
+            logger.info(f"REPLY ID: {reply_id}")
+            button = generate_interactive_button(
+                header=f"Audio Responses",
+                body=f"Toggle the ability of the chatbot to respond with audio at will. This setting is currently {'*enabled*.' if user_settings.audio_responses else '*disabled*.'}",
+                button_texts=["Disable", "Enable"],
+            )
+            return send_interactive_message(interactive=button, recipient=number)
+        # Handle image recognition toggle
+        if reply_id == "image_recognition":
+            logger.info(f"REPLY ID: {reply_id}")
+            button = generate_interactive_button(
+                header=f"Image Recognition",
+                body=f"Toggle the ability of the chatbot to recognize and respond to images. This setting is currently {'*enabled*.' if user_settings.image_recognition else '*disabled*.'}",
+                button_texts=["Disable", "Enable"],
+            )
+            return send_interactive_message(interactive=button, recipient=number)
+        # Handle web scrapping toggle
+        if reply_id == "accept_links":
+            logger.info(f"REPLY ID: {reply_id}")
+            button = generate_interactive_button(
+                header=f"Accept Links",
+                body=f"Toggle the ability of the chatbot to be prompted with links.\n*Note that some websites cannot be scrapped and will cause an error.*\nThis setting is currently {'*enabled*.' if user_settings.web_scrapping else '*disabled*.'}",
+                button_texts=["Disable", "Enable"],
+            )
+            return send_interactive_message(interactive=button, recipient=number)
+        # Handle audio voice change
+        if reply_id == "audio_voice":
+            logger.info(f"REPLY ID: {reply_id}")
+            with open(os.path.join(FILES, "settings.json")) as settings_file:
+                settings = json.load(settings_file)
+            voices = settings["chatbotSettings"][2]["rows"][0]["voices"]
+            choices = [
+                {
+                    "title": "Audio Voice",
+                    "rows": [
+                        {
+                            "id": f"audio_voice_{voice['name']}",
+                            "title": voice["name"],
+                            "description": "Male voice"
+                            if voice["gender"] == "male"
+                            else "Female voice",
+                        }
+                        for voice in voices
+                    ],
+                }
+            ]
+            message_list = generate_list_message(
+                header="Audio Voice",
+                body=f"Choose your preferred audio voice from the provided list.\nThe current voice is {user_settings.audio_voice}",
+                button_text="Choose voice",
+                sections=choices,
+            )
+            return send_interactive_message(message_list, number, "list")
+        elif "audio_voice_" in reply_id:
+            # change audio voice
+            voice = reply_id.removeprefix("audio_voice_")
+            logger.info(f"NEW AUDIO VOICE: {voice}")
+            user_settings.audio_voice = voice
+            user_settings.update()
+            text = f"Audio voice settings updated successfully!"
+            return send_text(text, number)
+        # Handle image generation settings
+        if reply_id == "image_gen_settings":
+            logger.info(f"REPLY ID: {reply_id}")
+            settings = ["Image Model", "Image Style", "Image Quality", "Image Size"]
+            choices = [
+                {
+                    "title": "Image Settings",
+                    "rows": [
+                        {
+                            "id": f"img_{setting}",
+                            "title": setting,
+                            "description": f"Change {setting}",
+                        }
+                        for setting in settings
+                    ],
+                }
+            ]
+            message_list = generate_list_message(
+                header="Image Settings",
+                body=f"Modify your image generation settings.",
+                button_text="Choose setting",
+                sections=choices,
+            )
+            return send_interactive_message(message_list, number, "list")
+        elif "img_" in reply_id:
+            # change image gen settings
+            setting = reply_id.removeprefix("img_")
+            if "model" in reply_id.lower():
+                logger.info(f"REPLY ID: {reply_id}")
+                button = generate_interactive_button(
+                    header=f"Image Model",
+                    body=f"Choose your preferred image generation model. Remember to adjust size settings too as there may be incompatibility issues with some sizes.\nCurrent setting is {'*Dalle-2*.' if '2' in user_settings.image_generation_model else '*Dalle-3*.'}",
+                    button_texts=["Dalle-2", "Dalle-3"],
+                )
+                return send_interactive_message(interactive=button, recipient=number)
+            elif "style" in reply_id.lower():
+                logger.info(f"REPLY ID: {reply_id}")
+                if user_settings.image_generation_model == "dalle2":
+                    text = f"This setting is only available if the image generation model is Dalle-3."
+                    return send_text(text, number)
+                button = generate_interactive_button(
+                    header=f"Image Style",
+                    body=f"Choose your preferred image generation style. Current setting is *{user_settings.image_generation_style}*",
+                    button_texts=["Vivid", "Natural"],
+                )
+                return send_interactive_message(interactive=button, recipient=number)
+            elif "quality" in reply_id.lower():
+                logger.info(f"REPLY ID: {reply_id}")
+                if user_settings.image_generation_model == "dalle2":
+                    text = f"This setting is only available if the image generation model is Dalle-3."
+                    return send_text(text, number)
+                button = generate_interactive_button(
+                    header=f"Image Quality",
+                    body=f"Choose your preferred image generation style\n*Note that HD has a higher cost.*\nCurrent setting is *{user_settings.image_generation_quality}*",
+                    button_texts=["Standard", "HD"],
+                )
+                return send_interactive_message(interactive=button, recipient=number)
+            elif "size" in reply_id.lower():
+                if user_settings.image_generation_model == "dalle2":
+                    button_texts = ["256x256", "512x512", "1024x1024"]
+                else:
+                    button_texts = ["1024x1024", "1024x1792", "1792x1024"]
+                button = generate_interactive_button(
+                    header=f"Image Size",
+                    body=f"Choose your preferred image generation style. Current setting is *{user_settings.image_generation_size}*",
+                    button_texts=button_texts,
+                )
+                return send_interactive_message(interactive=button, recipient=number)
+
+        # USER SETTINGS
+        # Handle warn low balance
+        if reply_id == "warn_low_balance":
+            logger.info(f"REPLY ID: {reply_id}")
+            choices = [
+                {
+                    "title": "Warn on Low Balance",
+                    "rows": [
+                        {
+                            "id": f"warn_{i}",
+                            "title": f"{i}BT",
+                            "description": f"Warn when balance is below {i}BT.",
+                        }
+                        for i in range(2, 12, 2)
+                    ],
+                }
+            ]
+            message_list = generate_list_message(
+                header="Warn on Low Balance",
+                body=f"Be notified when balance is below this threshold.\nCurrent setting is {user_settings.warn_low_balance}",
+                button_text="Set threshold",
+                sections=choices,
+            )
+            return send_interactive_message(message_list, number, "list")
+        elif "warn_" in reply_id:
+            # change warn setting
+            threshold = int(reply_id.removeprefix("warn_"))
+            logger.info(f"NEW WARN: {threshold}")
+            user_settings.warn_low_balance = threshold
+            user_settings.update()
+            text = f"Warn threshold settings updated successfully!"
+            return send_text(text, number)
+        # Handle email updates
+        if reply_id == "email_updates":
+            logger.info(f"REPLY ID: {reply_id}")
+            button = generate_interactive_button(
+                header=f"Email Updates",
+                body=f"Receive email updates about new features and services and other important information. This setting is currently {'*enabled*.' if user_settings.email_updates else '*disabled*.'}",
+                button_texts=["Disable", "Enable"],
+            )
+            return send_interactive_message(interactive=button, recipient=number)
+        if "change" in reply_id:
+            cta_action = generate_cta_action(
+                header="User Settings",
+                body="Navigate to your profile to complete this action.",
+                button_text="Go to Profile",
+                button_url=f"{request.host_url}profile?settings=True",
+            )
+            return send_interactive_message(cta_action, number, "cta_url")
 
 
 def whatsapp_signup(
@@ -867,7 +1492,7 @@ def whatsapp_signup(
                     button = generate_interactive_button(
                         body=body, header=header, button_texts=button_texts
                     )
-                    send_interactive_message(button=button, recipient=number)
+                    send_interactive_message(interactive=button, recipient=number)
                 elif "Maybe later" in text:
                     message = "That's alright."
                     send_text(message, number)
@@ -881,12 +1506,12 @@ def whatsapp_signup(
                     message = "Okay, let's get started. What's your first name?"
                     send_text(message, number)
             elif "confirm_name" in response_id:
-                if "Yes" in text:
+                if "No" in text:
                     user.signup_stage = "firstname_prompted"
                     user.update()
                     message = "What is your first name?"
                     send_text(message, number)
-                elif "No" in text:
+                elif "Yes" in text:
                     user.signup_stage = "email_prompted"
                     user.update()
                     message = (
@@ -908,12 +1533,12 @@ def whatsapp_signup(
                 user.update()
                 # confirm name
                 header = "Confirm name"
-                body = f"Your name is registered as {user.display_name()}. Would you like to change that?"
+                body = f"Your name is registered as {user.display_name()}. Is that correct?"
                 button_texts = ["Yes", "No"]
                 button = generate_interactive_button(
                     body=body, header=header, button_texts=button_texts
                 )
-                send_interactive_message(button=button, recipient=number)
+                send_interactive_message(interactive=button, recipient=number)
             elif user.signup_stage == "email_prompted":
                 email = get_message(data).strip()
                 if not is_valid_email(email):
@@ -941,18 +1566,11 @@ def whatsapp_signup(
                         new_user.phone_no = number
                         new_user.phone_verified = True
                         new_user.from_anonymous = True
-                        # TODO: email sending not working
-                        new_user.email_verified = True
+                        new_user.balance = user.balance
                         new_user.insert()
-                        # create basic sub instance
-                        basic_sub = BasicSubscription(new_user.id)
-                        basic_sub.insert()
                         # create user setting instance
                         user_settings = UserSettings(new_user.id)
                         user_settings.insert()
-
-                        # create fake premium sub
-                        PremiumSubscription.create_fake(new_user.id)
 
                         send_registration_email(new_user)
                         message = f"New WhatsAppp sign up from {user.display_name()}.\nNumber: {user.phone_no}"
@@ -965,9 +1583,14 @@ def whatsapp_signup(
                             _external=True,
                             _scheme="https",
                         )
-
-                        message = f"Awesome! You're all set up.\nCheck your inbox for a verification link.\nLogin to edit your profile or change settings. {request.host_url}profile?settings=True.\n*Your password the number you're texting with.*\nFollow this link to change your password.\n{change_url}\n\nThank you for choosing BrainText 💙."
-                        send_text(message, number)
+                        message = f"Awesome! You're all set up.\nCheck your inbox for a verification link.\nLogin to edit your profile or change settings. {request.host_url}profile?settings=True. Settings can also be changed from here.\n*Your password the number you're texting with in the international format.*\nFollow the link below to change your password.\nThank you for choosing BrainText 💙."
+                        cta_action = generate_cta_action(
+                            header="Account Created!",
+                            body=message,
+                            button_text="Change password",
+                            button_url=change_url,
+                        )
+                        send_interactive_message(cta_action, number, "cta_url")
                         # send welcome audio
                         media_url = f"{url_for('chatbot.send_voice_note', _external=True, _scheme='https')}?filename=welcome.ogg"
                         send_audio(media_url, number)

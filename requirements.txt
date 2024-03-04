@@ -58,6 +58,7 @@ mysqlclient==2.1.1
 numpy==1.26.1
 openai==1.4.0
 packaging==23.2
+phonenumbers==8.13.30
 Pillow==10.0.0
 ply==3.11
 proto-plus==1.22.3

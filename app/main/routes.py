@@ -1,23 +1,29 @@
 # python imports
 import os
+import calendar
 import traceback
-from datetime import datetime, timedelta
+from datetime import datetime
 
 # installed imports
 from dotenv import load_dotenv
+from sqlalchemy import extract
 from flask_login import login_required, current_user
-from flask import Blueprint, render_template, request, flash, jsonify, redirect, url_for
+from flask import (
+    Blueprint,
+    render_template,
+    request,
+    flash,
+    jsonify,
+    redirect,
+    url_for,
+)
 
 # local imports
-from .. import logger
+from .. import logger, csrf
+from ..payment.functions import exchange_rates
 from ..modules.email_utility import send_email
 from ..chatbot.functions import send_text, send_otp_message, send_audio
-from ..models import (
-    OTP,
-    get_otp,
-    Users,
-    Voices,
-)
+from ..models import OTP, get_otp, Users, Voices, MessageRequests, Transactions, FAQ
 
 load_dotenv()
 
@@ -29,12 +35,10 @@ main = Blueprint("main", __name__)
 # Index ---------------------------------------------
 @main.route("/")
 def index():
-    return render_template("main/index.html")
-
-
-@main.route("/email-template")
-def email_template():
-    return render_template("email_base.html")
+    faqs = FAQ.query.all()
+    return render_template(
+        "main/index.html", faqs=faqs, exchange_rate=exchange_rates("USD")
+    )
 
 
 # User Account -----------------------------------------
@@ -43,39 +47,6 @@ def email_template():
 def profile():
     settings = True if request.args.get("settings") else False
     user_settings = current_user.user_settings()
-
-    current_user.notify_on_profile_change = user_settings.notify_on_profile_change
-    current_user.product_updates = user_settings.product_updates
-    current_user.subscription_expiry = user_settings.subscription_expiry
-    current_user.ai_voice_type = user_settings.ai_voice_type
-    current_user.voice_response = user_settings.voice_response
-
-    # check account expiry
-    subscription = current_user.get_active_sub()
-
-    if not subscription:  # all subscriptions have expired
-        current_user.account_type = "Basic"
-        current_user.update()
-
-    if subscription:
-        # calculate expiry date
-        days_left = (subscription.get_expire_date() - current_user.timenow()).days
-        if days_left < 1:
-            hours_left = (
-                subscription.get_expire_date() - current_user.timenow()
-            ).total_seconds() / 3600
-            expire_time = current_user.timenow() + timedelta(hours=hours_left)
-            if expire_time.day > current_user.timenow().day:
-                # next day
-                days_left = f"tomorrow at {expire_time.strftime('%I:%M %p')}"
-            else:
-                days_left = f"expires today at {expire_time.strftime('%I:%M %p')}"
-        else:
-            days_left = (
-                f"{days_left} days left" if days_left > 1 else f"{days_left} day left"
-            )
-
-        current_user.days_left = days_left
 
     # get voices
     voices = {}
@@ -90,9 +61,7 @@ def profile():
     voices["male"] = male_voices
     voices["female"] = female_voices
 
-    return render_template(
-        "main/profile.html", settings=settings, voices=voices, title="Profile"
-    )
+    return render_template("main/profile.html", title="Profile")
 
 
 # OTP AND VERIFICATION ---------------------------------
@@ -242,7 +211,6 @@ def send_contact_email():
             receiver_email="support@braintext.io",
             subject=subject,
             plaintext=body,
-            sender_email=email,
         ):
             return jsonify({"success": True}), 200
     except:
@@ -258,3 +226,117 @@ def terms_of_service():
 @main.get("/privacy-policy")
 def privacy_policy():
     return render_template("main/privacy.html", title="Pricacy Policy")
+
+
+@main.route("/usage", methods=["POST", "GET"])
+@login_required
+def usage():
+    if request.method == "POST":
+        try:
+            data = request.get_json()
+            month = int(data.get("month", datetime.utcnow().month))
+            year = int(data.get("year", datetime.utcnow().year))
+            records = MessageRequests.query.filter(
+                extract("month", MessageRequests.created_at) == month,
+                extract("year", MessageRequests.created_at) == year,
+                MessageRequests.user_id == current_user.id,
+            ).all()
+            usage = []
+            usage_total = 0
+            # extract cost usage for each day
+            days = calendar.monthrange(year, month)[1]
+            for day in range(1, days + 1):
+                date = datetime(year=year, month=month, day=day)
+                label = date.strftime("%d %b")
+                day_cost = {}
+                day_usage = [
+                    record.cost() for record in records if record.created_at.day == day
+                ]
+                if day_usage:
+                    for key in day_usage[0].keys():
+                        total = sum(day[key] for day in day_usage)
+                        usage_total += total
+                        day_cost[key] = total
+                    usage.append({label: day_cost})
+                else:
+                    usage.append({label: MessageRequests.empty()})
+            # get user's range
+            oldest = (
+                MessageRequests.query.filter(MessageRequests.user_id == current_user.id)
+                .order_by(MessageRequests.created_at.asc())
+                .first()
+            )
+            usage_range = (
+                [
+                    {
+                        "month": oldest.created_at.month - 1,
+                        "year": oldest.created_at.year,
+                    },
+                    {"month": datetime.now().month - 1, "year": datetime.now().year},
+                ]
+                if oldest
+                else [
+                    {"month": datetime.now().month - 1, "year": datetime.now().year},
+                    {"month": datetime.now().month - 1, "year": datetime.now().year},
+                ]
+            )
+            return jsonify(usage=usage, total=usage_total, range=usage_range)
+        except:
+            logger.error(traceback.format_exc())
+            return jsonify(success=False), 500
+    return render_template("main/usage.html")
+
+
+@main.post("/recharge-history")
+@login_required
+def recharge_history():
+    try:
+        data = request.get_json()
+        month = int(data.get("month", datetime.utcnow().month))
+        year = int(data.get("year", datetime.utcnow().year))
+        records = Transactions.query.filter(
+            extract("year", Transactions.created_at) == year,
+            Transactions.user_id == current_user.id,
+            Transactions.status == "completed",
+        ).all()
+        tx_records = [
+            {"date": row.created_at.strftime("%d %b"), "amount": row.usd_value}
+            for row in records
+            if row.created_at.month == month
+        ]
+        return jsonify(records=tx_records)
+    except:
+        logger.error(traceback.format_exc())
+        return jsonify(success=False), 500
+
+
+# FAQ -----------------------------------------------
+@main.post("/index-faq")
+@login_required
+@csrf.exempt
+def get_faqs():
+    try:
+        data = request.get_json()
+        action = data["action"]
+        if action == "add":
+            question = data["question"]
+            answer = data["answer"]
+            FAQ(question, answer, current_user.id)
+            return jsonify(success=True)
+        if action == "edit":
+            faq_id = data["faq_id"]
+            question = data["question"]
+            answer = data["answer"]
+            faq = FAQ.query.get(int(faq_id))
+            faq.question = question
+            faq.answer = answer
+            faq.update()
+            return jsonify(success=True)
+        if action == "delete":
+            faq_id = data["faq_id"]
+            faq = FAQ.query.get(int(faq_id))
+            faq.delete()
+            return jsonify(success=True)
+    except Exception as e:
+        logger.error(traceback.format_exc())
+        return jsonify(success=False, error=str(e)), 500

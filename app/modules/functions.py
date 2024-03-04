@@ -3,6 +3,7 @@ import os
 import re
 import json
 import base64
+import tempfile
 import requests
 import tempfile
 import traceback
@@ -10,6 +11,7 @@ import threading
 import subprocess
 from bs4 import BeautifulSoup
 from datetime import datetime
+from bs4 import BeautifulSoup
 from contextlib import closing
 from typing import Union, Dict, Any
 
@@ -26,7 +28,6 @@ from sqlalchemy import desc
 from datetime import timedelta
 from dotenv import load_dotenv
 from pydub import AudioSegment
-from twilio.rest import Client
 from google.cloud import texttospeech, storage
 from google.oauth2 import service_account
 from google.cloud.speech_v2 import SpeechClient
@@ -35,18 +36,24 @@ from botocore.exceptions import BotoCoreError, ClientError
 
 # local imports
 from .. import logger
-from ..models import Voices, Users
+from ..modules.calculate import *
+from ..payment.routes import BANK_CODES
+from ..models import Voices, Users, AnonymousUsers, MessageRequests
 from ..modules.messages import create_all, get_engine, Messages
+
+# chatgpt functions
+from .functions2 import account_settings
+from ..payment.functions import get_account_balance, recharge_account
 
 
 load_dotenv()
 
+USD2BT = int(os.getenv("USD2BT"))
 LOG_DIR = os.getenv("CHATBOT_LOG")
 TEMP_FOLDER = os.getenv("TEMP_FOLDER")
 WHATSAPP_NUMBER = os.getenv("WHATSAPP_NUMBER")
 WHATSAPP_TEMPLATE_NAMESPACE = os.getenv("WHATSAPP_TEMPLATE_NAMESPACE")
 WHATSAPP_TEMPLATE_NAME = os.getenv("WHATSAPP_TEMPLATE_NAME")
-CONTEXT_LIMIT = int(os.getenv("CONTEXT_LIMIT"))
 WHATSAPP_CHAR_LIMIT = int(os.getenv("WHATSAPP_CHAR_LIMIT"))
 # Meta
 TOKEN = os.getenv("META_VERIFY_TOKEN")
@@ -234,7 +241,7 @@ def create_image_variation(image_path: str) -> str:
     return image_url
 
 
-def log_response(name: str, number: str, message: str, tokens: int = 0) -> None:
+def log_response(name: str, number: str, message: str, tokens: tuple = 0) -> None:
     with open(log_location(name, number), "a") as file:
         message = message.replace("\n", " ")
         print(
@@ -380,8 +387,12 @@ def load_messages(
     message.insert()
     # load previous messages
     session = message.session()
+    if isinstance(user, Users):
+        context_limit = int(user.user_settings().context_messages) or 1
+    else:
+        context_limit = 10
     get_messages = (
-        session.query(Messages).order_by(desc(Messages.id)).limit(CONTEXT_LIMIT).all()
+        session.query(Messages).order_by(desc(Messages.id)).limit(context_limit).all()
     )
     messages = [
         {"role": message.role, "content": message.content if message.content else ""}
@@ -390,9 +401,9 @@ def load_messages(
 
     if message_list:
         messages.append(message_list[0])
-
-    while num_tokens_from_messages(messages) > 16000:
-        messages.pop(0)
+    else:
+        while num_tokens_from_messages(messages) > 16000:
+            messages.pop(0)
 
     # add system prompt
     system = {
@@ -400,13 +411,16 @@ def load_messages(
         "content": f"""
                     You are a youthfull personal assistant.
                     You always give your opinion on things.
-                    You're conservative about your age.
+                    You're conservative about your age, but don't mention that.
                     You always give comprehensive answers unless asked not to.
                     Your name is BrainText.
+                    Always give {user.user_settings().response_type if isinstance(user, Users) else 'elaborated'} answers.
+                    You are in a WhatsApp environment, so format your responses accordingly.
                     Don't make assumptions about what values to plug into functions and never return an empty response.
-                    Ask for clarification if a user request is ambiguous.
                     The user's first name is {user.first_name if user.first_name else 'not known'},
                     and the user's last name is {user.last_name if user.last_name else 'not known'}.
+                    The current time is {user.timenow().strftime("%A, %Y-%m-%d %I:%M:%S %p")}\
+                    The user's timezone/location is {user.timezone().zone}
                 """,
     }
     messages.insert(0, system)
@@ -704,30 +718,38 @@ def encode_image(image_path):
         return base64.b64encode(image_file.read()).decode("utf-8")
 
 
+def debit_user(
+    user: Users, bt_cost: float, message_request: MessageRequests, reason: str = None
+):
+    """Debit user and check/alert low balance"""
+    user.balance -= bt_cost
+    user.update()
+    logger.info(
+        f"DEDUCTED {bt_cost} FROM USER #{user.id} {reason}. BALANCE IS {user.balance}"
+    )
+    if isinstance(user, Users):
+        if user.balance < user.user_settings().warn_low_balance:
+            if not message_request.alert_low:
+                text = f"Your balance is running low. Consider recharging your account.\nCurrent balance is {round(user.balance, 2)}."
+                send_text(text, user.phone_no)
+                message_request.alert_low = True
+                message_request.update()
+
+
 # ChatGPT ----------------------------------
-def num_tokens_from_messages(messages, model="gpt-3.5-turbo-0301"):
+def num_tokens_from_messages(messages, model="gpt-3.5-turbo-1106"):
     """Returns the number of tokens used by a list of messages."""
     try:
         encoding = tiktoken.encoding_for_model(model)
     except KeyError:
         logger.error("Warning: model not found. Using cl100k_base encoding.")
         encoding = tiktoken.get_encoding("cl100k_base")
-    if model == "gpt-3.5-turbo":
-        logger.warning(
-            "Warning: gpt-3.5-turbo may change over time. Returning num tokens assuming gpt-3.5-turbo-0301."
-        )
-        return num_tokens_from_messages(messages, model="gpt-3.5-turbo-0301")
-    elif model == "gpt-4":
-        logger.warning(
-            "Warning: gpt-4 may change over time. Returning num tokens assuming gpt-4-0314."
-        )
-        return num_tokens_from_messages(messages, model="gpt-4-0314")
-    elif model == "gpt-3.5-turbo-0301":
+    if "gpt-3.5-turbo" in model:
         tokens_per_message = (
             4  # every message follows <|start|>{role/name}\n{content}<|end|>\n
         )
         tokens_per_name = -1  # if there's a name, the role is omitted
-    elif model == "gpt-4-0314":
+    elif "gpt-4" in model:
         tokens_per_message = 3
         tokens_per_name = 1
     else:
@@ -797,9 +819,11 @@ def scrape_website(url, max_words=5000):
 
 def chatgpt_response(
     data: Dict[Any, Any],
+    user: Users,
     messages: list,
     message: str,
     number: str,
+    message_request: MessageRequests,
     message_id: str = None,
 ) -> tuple | None:
     """Get response from ChatGPT"""
@@ -825,13 +849,37 @@ def chatgpt_response(
         thread = threading.Thread(target=status_update)
         thread.start()
 
+        # usage tokens
+        tokens = [0, 0]
+
+        # get enabled functions
+        if isinstance(user, Users):
+            enabled_functions = [
+                description
+                for function in user.user_settings().functions()
+                for description in CHATGPT_FUNCTION_DESCRIPTIONS
+                if function["name"] == description["name"] and function["enabled"]
+            ]
+        else:
+            enabled_functions = CHATGPT_FUNCTION_DESCRIPTIONS + ANONYMOUS_FUNCTIONS
+
+        logger.info(
+            f"Enabled functions: {[func['name'] for func in enabled_functions]}"
+        )
+
         completion = openai_client.chat.completions.create(
-            model="gpt-3.5-turbo-1106",
+            model="gpt-3.5-turbo-0125",
             messages=messages,
             temperature=1,
-            functions=CHATGPT_FUNCTION_DESCRIPTIONS,
+            functions=enabled_functions,
             function_call="auto",
+            max_tokens=user.user_settings().max_response_length
+            if isinstance(user, Users)
+            else None,
         )
+        # update tokens
+        tokens[0] += int(completion.usage.prompt_tokens)
+        tokens[1] += int(completion.usage.completion_tokens)
         # check for function call
         if completion.choices[0].message.function_call:
             logger.info(completion.choices[0].message.function_call)
@@ -843,9 +891,11 @@ def chatgpt_response(
             # pass in the request data to the function to be called
             function_arguments["data"] = data
             # pass in the number of tokens used for logging
-            function_arguments["tokens"] = int(completion.usage.total_tokens)
+            function_arguments["tokens"] = tokens
             # pass in current user message
             function_arguments["message"] = message
+            # pass in current user message request
+            function_arguments["message_request"] = message_request
             # call function with arguments as kwargs
             if CHATGPT_FUNCTIONS[function_name]["type"] == "callback":
                 messages.append(
@@ -866,25 +916,47 @@ def chatgpt_response(
                     functions=CHATGPT_FUNCTION_DESCRIPTIONS,
                     function_call="auto",
                 )
+                # update tokens
+                tokens[0] += int(completion.usage.prompt_tokens)
+                tokens[1] += int(completion.usage.completion_tokens)
 
                 text = completion.choices[0].message.content
-                tokens = int(completion.usage.total_tokens)
                 role = completion.choices[0].message.role
-
                 return text, tokens, role
             else:
+                # update request records
+                message_request.gpt_3_input = completion.usage.prompt_tokens
+                message_request.gpt_3_output = completion.usage.completion_tokens
+                message_request.update()
+                # charge user
+                cost = gpt_3_5_cost(
+                    {
+                        "input": completion.usage.prompt_tokens,
+                        "output": completion.usage.completion_tokens,
+                    }
+                )
+                bt_cost = cost * USD2BT
+                # charge user
+                debit_user(
+                    user=user,
+                    bt_cost=bt_cost,
+                    message_request=message_request,
+                    reason="ChatGPT Function call",
+                )
+                logger.info(
+                    f"FUNCTION CALL TOKENS: {int(completion.usage.prompt_tokens), int(completion.usage.completion_tokens)}"
+                )
                 CHATGPT_FUNCTIONS[function_name]["function"](**function_arguments)
                 return None
         else:
             text = completion.choices[0].message.content
-            tokens = int(completion.usage.total_tokens)
             role = completion.choices[0].message.role
 
             return text, tokens, role
     except:
         logger.error(traceback.format_exc())
         text = "Sorry, I can't respond to that at the moment. Plese try again later."
-        return text, 0, "assistant"
+        return text, (0, 0), "assistant"
     finally:
         # Signal the status update function to stop
         stop_event.set()
@@ -896,7 +968,14 @@ def chatgpt_response(
 # ChatGPT Functions ----------------------------
 
 
-def generate_image(data: Dict[Any, Any], tokens: int, message: str, prompt: str) -> str:
+def generate_image(
+    data: Dict[Any, Any],
+    tokens: int,
+    message: str,
+    prompt: str,
+    message_request: MessageRequests,
+    **kwargs,
+) -> str:
     """Genereates an image with the given prompt and returns the URL to the image."""
     from ..chatbot.functions import (
         get_name,
@@ -904,19 +983,76 @@ def generate_image(data: Dict[Any, Any], tokens: int, message: str, prompt: str)
         send_image,
     )
 
-    image_response = openai_client.images.generate(
-        model="dall-e-3",
-        prompt=prompt,
-        size="1024x1024",
-        quality="standard",
-        style="natural",
-        n=1,
-    )
-    image_url = image_response.data[0].url
-    logger.info(f"Revised image input prompt: {image_response.data[0].revised_prompt}")
-    # log response
+    # get user
     name = get_name(data)
     number = f"+{get_number(data)}"
+    response = kwargs.get("response")
+    user = Users.query.filter(Users.phone_no == number).one_or_none()
+    image_confg = (
+        user.user_settings().image_confg()
+        if user
+        else "dalle3.natural.standard-1024x1024"
+    )
+    image_type = image_confg.split(".")[0]
+    if not user:
+        user = AnonymousUsers.query.filter(
+            AnonymousUsers.phone_no == number
+        ).one_or_none()
+    logger.info(f"DALLE CONFG: {image_confg}")
+    if "dalle2" in image_type:
+        d2_res = image_confg.split(".")[1]
+        cost = dalle2_cost(image_confg.split(".")[1])
+        bt_cost = cost * USD2BT
+        if bt_cost > user.balance:
+            text = f"Insufficent balance. Cost is {bt_cost}"
+            logger.info(
+                f"INSUFFICIENT BALANCE - user: {user.phone_no}. BALANCE: {user.balance}"
+            )
+            return send_text(text, number)
+        image_response = openai_client.images.generate(
+            model="dall-e-2",
+            prompt=prompt,
+            size=d2_res,
+            n=1,
+        )
+        # update request records
+        message_request.dalle_2 = image_confg
+        message_request.update()
+        # charge user
+        debit_user(
+            user=user, bt_cost=bt_cost, message_request=message_request, reason="Dalle2"
+        )
+
+    elif "dalle3" in image_type:
+        d3_type = image_confg.split(".")[-1].split("-")[0]
+        d3_res = image_confg.split(".")[-1].split("-")[1]
+        d3_style = image_confg.split(".")[1]
+        img_confg = {"type": d3_type, "res": d3_res}
+        cost = dalle3_cost(img_confg)
+        bt_cost = cost * USD2BT
+        if bt_cost > user.balance:
+            text = f"Insufficent balance. Cost is {bt_cost}"
+            logger.info(
+                f"INSUFFICIENT BALANCE - user: {user.phone_no}. BALANCE: {user.balance}"
+            )
+            return send_text(text, number)
+        image_response = openai_client.images.generate(
+            model="dall-e-3",
+            prompt=prompt,
+            size=d3_res,
+            quality=d3_type,
+            style=d3_style,
+            n=1,
+        )
+        # update request records
+        message_request.dalle_3 = image_confg
+        message_request.update()
+        # charge user
+        debit_user(
+            user=user, bt_cost=bt_cost, message_request=message_request, reason="Dalle3"
+        )
+
+    image_url = image_response.data[0].url
     log_response(
         name=name,
         number=number,
@@ -932,11 +1068,16 @@ def generate_image(data: Dict[Any, Any], tokens: int, message: str, prompt: str)
     new_message = Messages(new_message, user_db_path)
     new_message.insert()
 
-    return send_image(image_url, number)
+    return send_image(image_url, number, caption=response)
 
 
 def speech_synthesis(
-    data: Dict[Any, Any], tokens: int, message: str, text: str, speed: float = 1.0
+    data: Dict[Any, Any],
+    tokens: tuple,
+    message: str,
+    text: str,
+    message_request: MessageRequests,
+    speed: float = 1.0,
 ):
     """Synthesize audio output and send to user."""
     from ..chatbot.functions import (
@@ -945,12 +1086,29 @@ def speech_synthesis(
         get_name,
     )
 
+    anonymous = False
+    # get user
+    number = f"+{get_number(data)}"
+    user = Users.query.filter(Users.phone_no == number).one_or_none()
+    if not user:
+        anonymous = True
+        user = AnonymousUsers.query.filter(
+            AnonymousUsers.phone_no == number
+        ).one_or_none()
     try:
+        cost = tts_cost(len(text))
+        logger.info(f"TTS COST: {len(text)} CHARACTERS")
+        bt_cost = cost * USD2BT
+        if bt_cost > user.balance:
+            text = f"Insufficent balance. Cost is {bt_cost}"
+            logger.info(
+                f"INSUFFICIENT BALANCE - user: {user.phone_no}. BALANCE: {user.balance}"
+            )
+            return send_text(text, number)
         name = get_name(data)
         number = f"+{get_number(data)}"
         # get voice type
-        user = Users.query.filter(Users.phone_no == number).one_or_none()
-        voice_type = user.user_settings().ai_voice_type if user else "Mia"
+        voice_type = user.user_settings().audio_voice if not anonymous else "Mia"
         # synthesize text
         audio_filename = openai_text_to_speech(
             text=text, voice_name=voice_type, speed=speed
@@ -958,6 +1116,13 @@ def speech_synthesis(
         if audio_filename == None:
             text = "Error synthesizing speech. Please try again later."
             return send_text(text, number)
+        # update request records
+        message_request.tts = len(text)
+        message_request.update()
+        # charge user
+        debit_user(
+            user=user, bt_cost=bt_cost, message_request=message_request, reason="TTS"
+        )
         media_url = f"{url_for('chatbot.send_voice_note', _external=True, _scheme='https')}?filename={audio_filename}"
         # log response
         log_response(
@@ -1130,10 +1295,27 @@ def web_scrapping(data: Dict[Any, Any], **kwargs):
         return "Error scrapping URL."
 
 
+def create_account(data: Dict[Any, Any], **kwargs):
+    from ..chatbot.functions import (
+        get_number,
+        generate_interactive_button,
+        send_interactive_message,
+    )
+
+    number = f"+{get_number(data)}"
+    body = "How would you like to register?"
+    header = "Register to Continue"
+    button_texts = ["Our website", "Continue here"]
+    button = generate_interactive_button(
+        body=body, header=header, button_texts=button_texts
+    )
+    return send_interactive_message(interactive=button, recipient=number)
+
+
 CHATGPT_FUNCTION_DESCRIPTIONS = [
     {
         "name": "generate_image",
-        "description": "This function generates an image in response to a user's explicit request for image generation. It is designed to be called only when the user specifically asks for an image to be generated.",
+        "description": "Generates an image with prompt extracted from user only on explicit request.",
         "parameters": {
             "type": "object",
             "properties": {
@@ -1141,8 +1323,12 @@ CHATGPT_FUNCTION_DESCRIPTIONS = [
                     "type": "string",
                     "description": "The image prompt or description to be used to generate the image.",
                 },
+                "response": {
+                    "type": "string",
+                    "description": "User friendly response to prompt.",
+                },
             },
-            "required": ["prompt"],
+            "required": ["prompt", "response"],
         },
     },
     {
@@ -1183,7 +1369,7 @@ CHATGPT_FUNCTION_DESCRIPTIONS = [
     },
     {
         "name": "google_search",
-        "description": "Performs online searches to retrieve current information only on explicit request.",
+        "description": "Performs online searches to retrieve information only on explicit request.",
         "parameters": {
             "type": "object",
             "properties": {
@@ -1243,7 +1429,49 @@ CHATGPT_FUNCTION_DESCRIPTIONS = [
             "required": ["url", "instruction"],
         },
     },
+    {
+        "name": "get_account_balance",
+        "description": "Returns the user's balance on enquiry.",
+        "parameters": {},
+    },
+    {
+        "name": "recharge_account",
+        "description": f"Creates a new account recharge request. Verify with the user the amount, currency, and bank from this list of banks: {[bank for bank in BANK_CODES.keys()]}. Non NGN requests are not accepted.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "number",
+                    "description": "The amount the user wishes to recharge.",
+                },
+                "currency": {
+                    "type": "string",
+                    "description": "The currency code the user wishes to recharge (eg NGN).",
+                },
+                "bank_name": {
+                    "type": "string",
+                    "description": "The selected bank from the list provided.",
+                },
+            },
+            "required": ["amount", "currency", "bank_name"],
+        },
+    },
+    {
+        "name": "account_settings",
+        "description": "Returns the user's settings",
+        "parameters": {},
+    },
 ]
+
+
+ANONYMOUS_FUNCTIONS = [
+    {
+        "name": "create_account",
+        "description": "Enables the user to create an account.",
+        "parameters": {},
+    }
+]
+
 
 CHATGPT_FUNCTIONS = {
     "generate_image": {
@@ -1266,6 +1494,16 @@ CHATGPT_FUNCTIONS = {
         "type": "callback",
         "function": web_scrapping,
     },
+    "get_account_balance": {
+        "type": "non-callback",
+        "function": get_account_balance,
+    },
+    "recharge_account": {
+        "type": "non-callback",
+        "function": recharge_account,
+    },
+    "account_settings": {"type": "non-callback", "function": account_settings},
+    "create_account": {"type": "non-callback", "function": create_account},
 }
 
 

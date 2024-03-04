@@ -1,0 +1,156 @@
+{% extends "base.html" %} {% block app_content %}
+<link
+  rel="stylesheet"
+  type="text/css"
+  href="//cdn.jsdelivr.net/gh/loadingio/ldbutton@v1.0.1/dist/ldbtn.min.css"
+/>
+<div
+  class="row"
+  style="padding-top: 5rem; padding-bottom: 5rem"
+  data-aos="fade-up"
+>
+  <div class="col-lg-9 col-md-9 mt-4 mt-md-0" style="margin: 0 auto">
+    <div class="center-title" style="padding: 1.5rem 0">
+      <div class="pagetitle">
+        <h1
+          style="
+            margin-bottom: 0;
+            font-weight: 600;
+            color: #012970;
+            text-align: center;
+          "
+        >
+          Recharge Account
+        </h1>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-body">
+        <div class="row">
+          <div class="col-lg-4 col-md-4">
+            <div class="pricing h-100">
+              <div class="box featured h-100">
+                <h3>Balance</h3>
+                <h4 id="user-balance">
+                  {{'{:,.2f}'.format(current_user.balance) }}<span>BT</span>
+                </h4>
+                <ul>
+                  <li></li>
+                  <li>1 USD = 10 BT</li>
+                  <!-- <li>NEW BALANCE</li> -->
+                  <!-- <li>20 BT</li> -->
+                  <!-- <li>Speech to Speech</li> -->
+                </ul>
+              </div>
+            </div>
+          </div>
+          <div class="col-lg-8 col-md-8 py-4">
+            <!-- Vertical Form -->
+            <form
+              id="submit-form"
+              method="POST"
+              action="https://checkout.flutterwave.com/v3/hosted/pay"
+              class="row g-3"
+            >
+              <!-- <form class="row g-3"> -->
+              <div class="col-12">
+                <label for="customer-name" class="form-label">Name</label>
+                <input
+                  required
+                  type="text"
+                  name="customer[name]"
+                  class="form-control"
+                  id="customer-name"
+                  value="{{ current_user.display_name() }}"
+                  readonly
+                />
+              </div>
+              <div class="col-12">
+                <label for="customer-email" class="form-label">Email</label>
+                <input
+                  type="email"
+                  name="customer[email]"
+                  class="form-control"
+                  id="customer-email"
+                  value="{{ current_user.email }}"
+                  readonly
+                />
+              </div>
+              <div class="col-12">
+                <label for="currency" class="form-label">Currency</label>
+                <select class="form-select" id="currency" name="currency">
+                  <option value="NGN" selected>Nigerian Naira</option>
+                  <option value="USD">US Dollar</option>
+                </select>
+              </div>
+
+              <div class="col-12">
+                <label for="amount" class="form-label">Amount</label>
+                <input
+                  type="number"
+                  name="amount"
+                  class="form-control"
+                  placeholder="10"
+                  id="amount"
+                  step="0.01"
+                  required
+                />
+              </div>
+              <div class="col-12">
+                <label for="bt_amount" class="form-label">BT</label>
+                <input
+                  type="number"
+                  name="meta[bt_amount]"
+                  class="form-control"
+                  id="bt_amount"
+                  placeholder="10"
+                  step="0.01"
+                  required
+                  {%
+                  if
+                  amount
+                  %}
+                  value="{{ amount}}"
+                  {%
+                  endif
+                  %}
+                />
+              </div>
+              <input
+                type="hidden"
+                name="public_key"
+                value="FLWPUBK_TEST-f0c7ce8c5b2d29f0a6dbf867b742102f-X"
+              />
+              <input id="tx_ref" type="hidden" name="tx_ref" value="" />
+              <input
+                type="hidden"
+                name="redirect_url"
+                value="{{ url_for('payment.payment_callback', _external=True) }}"
+              />
+              <input
+                name="meta[user_id]"
+                id="user_id"
+                type="text"
+                value="{{ current_user.uid }}"
+                hidden
+              />
+              <div class="text-center">
+                <button
+                  type="submit"
+                  id="flw-form-btn"
+                  class="btn btn-primary ld-ext-right"
+                >
+                  Submit
+                  <div class="ld ld-ring ld-spin"></div>
+                </button>
+              </div>
+            </form>
+            <!-- Vertical Form -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="{{ url_for('static', filename='assets/js/recharge.js') }}"></script>
+{% endblock %}

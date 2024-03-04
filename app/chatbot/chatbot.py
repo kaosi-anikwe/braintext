@@ -13,7 +13,7 @@ from ..modules.functions import *
 from ..models import (
     Users,
     AnonymousUsers,
-    BasicSubscription,
+    MessageRequests,
 )
 
 
@@ -21,6 +21,7 @@ load_dotenv()
 
 chatbot = Blueprint("chatbot", __name__)
 META_VERIFY_TOKEN = os.getenv("META_VERIFY_TOKEN")
+BASE_COST = float(os.getenv("BASE_COST"))
 
 
 @chatbot.get("/send-voice-note")
@@ -78,106 +79,54 @@ def webhook():
                     if user:  # user account exists
                         if user.phone_verified:
                             if user.email_verified:
-                                # identify user account type
-                                if user.account_type == "Basic":
-                                    subscription = BasicSubscription.query.filter(
-                                        BasicSubscription.user_id == user.id
-                                    ).one_or_none()
-                                    if subscription:
-                                        if subscription.respond():
-                                            if message_type == "image":
-                                                # Image editing/variation
-                                                meta_image_response(user=user, data=data)
-                                            if message_type == "text":
-                                                # Chat/Dalle response
-                                                meta_chat_response(
-                                                    data=data,
-                                                    user=user,
-                                                    subscription=subscription,
-                                                )
-                                            elif message_type == "audio":
-                                                # Audio response
-                                                meta_audio_response(user=user, data=data)
-                                        else:
-                                            if not user.from_anonymous:
-                                                text = f"You have exceed your limit for the week.\nYour prompts will be renewed on {subscription.get_expire_date().strftime('%A, %d/%m/%Y')} at {subscription.get_expire_date().strftime('%I:%M %p')}.\nUpgrade your account to decrease limits.\n{request.host_url}profile"
-                                            else:
-                                                text = f"You have exceed your limit for the week.\nYour prompts will be renewed on {subscription.get_expire_date().strftime('%A, %d/%m/%Y')} at {subscription.get_expire_date().strftime('%I:%M %p')} GMT.\nUpgrade your account to decrease limits.\n{request.host_url}profile"
-                                            reply_to_message(
-                                                message_id, number, text
-                                            ) if message_type == "text" else send_text(
-                                                text, number
-                                            )
-                                    else:
-                                        text = f"There's a problem, I can't respond at this time. Your subscription may have expired.\nCheck your profle to confirm. {request.host_url}profile"
-                                        reply_to_message(
-                                            message_id, number, text
-                                        ) if message_type == "text" else send_text(
-                                            text, number
+                                # check user balance
+                                if not is_interative_reply(data):
+                                    if BASE_COST > user.balance:
+                                        text = (
+                                            f"Insufficent balance. Cost is {BASE_COST}"
                                         )
-                                if user.account_type == "Standard":
-                                    subscription = user.get_active_sub()
-                                    if subscription:
-                                        if not subscription.expired():
-                                            if message_type == "audio":
-                                                # Audio response
-                                                text = f"You don't have access to this service. Please upgrade your account to decrease limits. \n{request.host_url}profile"
-                                                reply_to_message(message_id, number, text)
-                                            elif message_type == "image":
-                                                # Image editing/variation
-                                                meta_image_response(user=user, data=data)
-                                            elif message_type == "text":
-                                                # Chat/Dalle response
-                                                meta_chat_response(
-                                                    user=user,
-                                                    data=data,
-                                                    subscription=subscription,
-                                                )
-                                        else:
-                                            text = f"It seems your subscription has expired. Plese renew your subscription to continue to enjoy your services. \n{request.host_url}profile"
-                                            reply_to_message(
-                                                message_id, number, text
-                                            ) if message_type == "text" else send_text(
-                                                text, number
-                                            )
-                                    else:
-                                        text = f"There's a problem, I can't respond at this time. Your subscription may have expired.\nCheck your profle to confirm. {request.host_url}profile"
-                                        reply_to_message(
-                                            message_id, number, text
-                                        ) if message_type == "text" else send_text(
-                                            text, number
+                                        logger.info(
+                                            f"INSUFFICIENT BALANCE - user: {user.phone_no}. BALANCE: {user.balance}"
                                         )
-                                if user.account_type == "Premium":
-                                    subscription = user.get_active_sub()
-                                    if subscription:
-                                        if not subscription.expired():
-                                            if message_type == "audio":
-                                                # Audio response
-                                                meta_audio_response(user=user, data=data)
-                                            if message_type == "image":
-                                                # Image editing/variation
-                                                meta_image_response(user=user, data=data)
-                                            if message_type == "text":
-                                                # Chat/Dalle response
-                                                meta_chat_response(
-                                                    user=user,
-                                                    data=data,
-                                                    subscription=subscription,
-                                                )
-                                        else:
-                                            text = f"It seems your subscription has expired. Plese renew your subscription to continue to enjoy your services. \n{request.host_url}profile"
-                                            reply_to_message(
-                                                message_id, number, text
-                                            ) if message_type == "text" else send_text(
-                                                text, number
-                                            )
-                                    else:
-                                        text = f"There's a problem, I can't respond at this time. Your subscription may have expired.\nCheck your profle to confirm. {request.host_url}profile"
-                                        reply_to_message(
-                                            message_id, number, text
-                                        ) if message_type == "text" else send_text(
-                                            text, number
-                                        )
+                                        return send_text(text, number)
+                                    # charge base cost
+                                    user.balance -= BASE_COST
+                                    user.update()
+                                    logger.info(
+                                        f"DEDUCTED {BASE_COST} (BASE COST) FROM USER BALANCE IS {user.balance}"
+                                    )
+                                message_request = MessageRequests(user.id)
+                                message_request.interactive = (
+                                    True if is_interative_reply(data) else False
+                                )
+                                message_request.insert()
+                                if message_type == "audio":
+                                    # Audio response
+                                    meta_audio_response(
+                                        user=user,
+                                        data=data,
+                                        message_request=message_request,
+                                    )
+                                if message_type == "image":
+                                    # Image editing/variation
+                                    meta_image_response(
+                                        user=user,
+                                        data=data,
+                                        message_request=message_request,
+                                    )
+                                if message_type == "text":
+                                    # Chat/Dalle response
+                                    meta_chat_response(
+                                        user=user,
+                                        data=data,
+                                        message_request=message_request,
+                                    )
+                                if message_type == "interactive":
+                                    meta_interactive_response(
+                                        user=user,
+                                        data=data,
+                                        message_request=message_request,
+                                    )
                             else:
                                 text = f"Please verify your email to access the service. Check your inbox for the verification link, or login to request another. {request.host_url}profile"
                                 reply_to_message(
@@ -214,7 +163,9 @@ def webhook():
                                 button = generate_interactive_button(
                                     body=body, header=header, button_texts=button_texts
                                 )
-                                send_interactive_message(button=button, recipient=number)
+                                send_interactive_message(
+                                    interactive=button, recipient=number
+                                )
                                 return response
 
                         signup = is_interative_reply(data)
@@ -226,21 +177,38 @@ def webhook():
                             )  # processing ends here as this sends a response to user
                             signup = True
                         if not signup and user.respond():
-                            user.prompts += 1
+                            # charge base cost
+                            user.balance -= BASE_COST
                             user.update()
+                            logger.info(
+                                f"DEDUCTED {BASE_COST} (BASE COST) FROM USER BALANCE IS {user.balance}"
+                            )
+                            message_request = MessageRequests(user.id, True)
+                            message_request.insert()
                             if message_type == "image":
                                 # Image editing/variation
-                                meta_image_response(user=user, data=data, anonymous=True)
+                                meta_image_response(
+                                    user=user,
+                                    data=data,
+                                    message_request=message_request,
+                                    anonymous=True,
+                                )
                             if message_type == "text":
                                 # Chat/Dalle response
                                 meta_chat_response(
                                     user=user,
                                     data=data,
+                                    message_request=message_request,
                                     anonymous=True,
                                 )
                             elif message_type == "audio":
                                 # Audio response
-                                meta_audio_response(user=user, data=data, anonymous=True)
+                                meta_audio_response(
+                                    user=user,
+                                    data=data,
+                                    message_request=message_request,
+                                    anonymous=True,
+                                )
                         elif not signup and not user.respond():
                             text = "Thank you for using our service. We're sorry to inform you that you have reached your limit of prompts. To continue receiving prompts, please consider signing up for an account at BrainText. Here, you can access more prompts and enhance your experience. Thank you for your understanding and support."
                             reply_to_message(
@@ -253,7 +221,9 @@ def webhook():
                             button = generate_interactive_button(
                                 body=body, header=header, button_texts=button_texts
                             )
-                            send_interactive_message(button=button, recipient=number)     
+                            send_interactive_message(
+                                interactive=button, recipient=number
+                            )
     except:
         logger.error(traceback.format_exc())
         text = "Sorry, I can't respond to that at the moment. Plese try again later."

@@ -84,6 +84,14 @@
   });
   toastList.forEach((toast) => toast.show());
 
+  // activate tooltips
+  document.addEventListener("DOMContentLoaded", function () {
+    var elements = document.querySelectorAll('[data-toggle="tooltip"]');
+    elements.forEach(function (element) {
+      new bootstrap.Tooltip(element);
+    });
+  });
+
   /**
    * Toggle .header-scrolled class to #header when page is scrolled
    */

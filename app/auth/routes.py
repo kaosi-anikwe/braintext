@@ -10,7 +10,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from app import db, csrf, logger
 from app.modules.verification import confirm_token
 from app.modules.functions import send_text
-from app.models import Users, BasicSubscription, UserSettings, PremiumSubscription
+from app.models import Users, UserSettings
 from app.modules.email_utility import (
     send_registration_email,
     send_forgot_password_email,
@@ -83,22 +83,10 @@ def register():
 
         # create user class instance / database record
         new_user = Users(first_name, last_name, email, password, timezone_offset)
-        # TODO: email not sending
-        new_user.email_verified = True
         new_user.insert()
-        # create basic sub instance / database record
-        basic_sub = BasicSubscription(new_user.id)
-        # localize time
-        basic_sub.expire_date = basic_sub.expire_date.replace(
-            tzinfo=new_user.get_timezone()
-        )
-        basic_sub.insert()
         # create user setting instance / database record
         user_settings = UserSettings(new_user.id)
         user_settings.insert()
-
-        # create fake sub
-        PremiumSubscription.create_fake(new_user.id)
 
         send_registration_email(new_user)
         message = f"New website sign up from {new_user.display_name()}.\nNumber: {new_user.phone_no}"
@@ -236,9 +224,8 @@ def forgot_password():
     if user:
         try:
             send = send_forgot_password_email(user)
-            logger.warning(send, "SEND")
             if send:
-                flash("Follow the linkbwe sent to reset your password.", "sucess")
+                flash("Follow the link we sent to reset your password.", "success")
                 return render_template("auth/auth.html")
             flash(
                 "There was an error sending the email please try again later.", "danger"
@@ -252,7 +239,6 @@ def forgot_password():
             return render_template("auth/auth.html")
     flash("Your account was not found. Please proceed to create an account.", "danger")
     return render_template("auth/auth.html")
-    # if user:
 
 
 @auth.post("/confirm-new-password")

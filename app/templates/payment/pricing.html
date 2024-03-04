@@ -1,0 +1,375 @@
+{% extends "base.html" %} {% block app_content %}
+<link href="../static/niceadmin/css/style.css" rel="stylesheet" />
+<!-- End Page Title -->
+
+<section class="section profile">
+  <div class="center-title my-3">
+    <div class="pagetitle">
+      <h1>Pricing</h1>
+    </div>
+  </div>
+  <div class="container">
+    <div class="row" style="justify-content: space-around">
+      <div class="col-xl-10">
+        <hr style="border-top: 2px solid black" />
+        <div class="row mb-5">
+          <div class="col-md-6">
+            <p class="h2">Language models</p>
+          </div>
+          <div class="col-md-6">
+            <p class="h4">
+              Multiple models, each with different capabilities and price
+              points. You can think of tokens as pieces of words, where 1,000
+              tokens are about 750 words. This paragraph is 40 tokens.
+            </p>
+            <p>
+              Use this
+              <a href="https://platform.openai.com/tokenizer" target="_blank"
+                >tool</a
+              >
+              to manually calculate your input tokens.
+              <i
+                class="ri-information-line"
+                data-toggle="tooltip"
+                data-placement="top"
+                title="The actual input token maybe larger due to system prompting, default functions and retained context. Adjust chatbot settings to reduce cost"
+              ></i>
+            </p>
+          </div>
+        </div>
+        <hr />
+        <div class="row">
+          <div class="col-md-6">
+            <p class="h4">GPT-4 Turbo</p>
+          </div>
+          <div class="col-md-6">
+            <p class="h6">
+              With 128k context, fresher knowledge and the broadest set of
+              capabilities, GPT-4 Turbo is more powerful than GPT-4 and offered
+              at a lower price.
+            </p>
+            <p>
+              <a
+                href="https://platform.openai.com/docs/models/gpt-4-and-gpt-4-turbo"
+                >Learn about GPT-4 Turbo <i class="ri-arrow-right-up-line"></i
+              ></a>
+            </p>
+            <hr style="border-top: 2px solid black" />
+            <div class="mt-3">
+              <!-- Table starts here -->
+              <table class="table">
+                <thead class="thead-dark">
+                  <tr>
+                    <th scope="col">Model</th>
+                    <th scope="col">Input</th>
+                    <th scope="col">Output</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>gpt-4-0125-preview</td>
+                    <td>BT 0.11 / 1K tokens</td>
+                    <td>BT 0.33 / 1K tokens</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="mt-5">
+              <h4 class="my-4">Vision pricing calculator</h4>
+              <form>
+                <div class="form-group row">
+                  <label for="height" class="col-sm-4 col-form-label"
+                    >Height</label
+                  >
+                  <div class="col-sm-4">
+                    <input
+                      type="number"
+                      class="form-control"
+                      id="height"
+                      value="150"
+                      oninput="countImageTokens()"
+                    />
+                  </div>
+                  <label class="col-form-label">px by</label>
+                  <label for="width" class="col-sm-4 col-form-label"
+                    >Width</label
+                  >
+                  <div class="col-sm-4">
+                    <input
+                      type="number"
+                      class="form-control"
+                      id="width"
+                      value="150"
+                      oninput="countImageTokens()"
+                    />
+                  </div>
+                  <div class="col-sm-4">
+                    <input
+                      type="text"
+                      readonly
+                      class="form-control-plaintext"
+                      id="result"
+                      value="BT 0.02805"
+                    />
+                  </div>
+                </div>
+              </form>
+            </div>
+            <div class="mt-5">
+              <hr style="border-top: 2px solid black" />
+              <table class="table">
+                <thead class="thead-dark d-none">
+                  <tr>
+                    <th scope="col">Name</th>
+                    <th scope="col">Value</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Price per 1K tokens (fixed)</td>
+                    <td>BT 0.11</td>
+                  </tr>
+                  <tr>
+                    <td>512 x 512 tiles</td>
+                    <td id="512tiles">1 x 1</td>
+                  </tr>
+                  <tr>
+                    <td>Total tiles</td>
+                    <td id="total-tiles">1</td>
+                  </tr>
+                  <tr>
+                    <td>Base tokens</td>
+                    <td>85</td>
+                  </tr>
+                  <tr>
+                    <td>Tile tokens</td>
+                    <td id="tile-tokens">170 x 1 = 170</td>
+                  </tr>
+                  <tr>
+                    <td>Total tokens</td>
+                    <td id="total-tokens">255</td>
+                  </tr>
+                  <tr>
+                    <td>Total price</td>
+                    <td id="total-price">BT 0.02805</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <hr />
+        <div class="row mb-5">
+          <div class="col-md-6">
+            <p class="h4">GPT-3.5 Turbo</p>
+          </div>
+          <div class="col-md-6">
+            <p>GPT-3.5 Turbo models are capable and cost-effective.</p>
+            <p>
+              <code
+                class="text-primary bg-secondary"
+                style="--bs-bg-opacity: 0.5"
+                >gpt-3.5-turbo-0125</code
+              >
+              is the flagship model of this family, supports a 16K context
+              window and is optimized for dialog. This is the model currenty
+              being used in our system.
+            </p>
+            <p>
+              <a
+                href="https://platform.openai.com/docs/guides/text-generation/chat-completions-api"
+                >Learn about GPT-3 Turbo <i class="ri-arrow-right-up-line"></i
+              ></a>
+            </p>
+            <hr style="border-top: 2px solid black" />
+            <div class="mt-3">
+              <!-- Table starts here -->
+              <table class="table">
+                <thead class="thead-dark">
+                  <tr>
+                    <th scope="col">Model</th>
+                    <th scope="col">Input</th>
+                    <th scope="col">Output</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>gpt-3.5-turbo-0125</td>
+                    <td>BT 0.0055 / 1K tokens</td>
+                    <td>BT 0.0165 / 1K tokens</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <hr style="border-top: 2px solid black" />
+        <div class="row mb-5">
+          <div class="col-md-6">
+            <p class="h2">Other models</p>
+          </div>
+        </div>
+        <hr />
+        <div class="row mb-5">
+          <div class="col-md-6">
+            <p class="h4">Image models</p>
+          </div>
+          <div class="col-md-6">
+            <p>
+              Build DALL·E directly into your apps to generate and edit novel
+              images and art. DALL·E 3 is the highest quality model and DALL·E 2
+              is optimized for lower cost.
+            </p>
+            <p>
+              <a href="https://beta.openai.com/docs/guides/images"
+                >Learn about image generation
+                <i class="ri-arrow-right-up-line"></i
+              ></a>
+            </p>
+            <hr style="border-top: 2px solid black" />
+            <div class="mt-3">
+              <!-- Table starts here -->
+              <table class="table">
+                <thead class="thead-dark">
+                  <tr>
+                    <th scope="col">Model</th>
+                    <th scope="col">Quality</th>
+                    <th scope="col">Resolution</th>
+                    <th scope="col">Price</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>DALL·E 3</td>
+                    <td>Standard</td>
+                    <td>1024x1024</td>
+                    <td>BT 0.44 / image</td>
+                  </tr>
+                  <tr>
+                    <td></td>
+                    <td>Standard</td>
+                    <td>1024x1792, 1792x1024</td>
+                    <td>BT 0.88 / image</td>
+                  </tr>
+                  <tr>
+                    <td>DALL·E 3</td>
+                    <td>HD</td>
+                    <td>1024x1024</td>
+                    <td>BT 0.88 / image</td>
+                  </tr>
+                  <tr>
+                    <td></td>
+                    <td>HD</td>
+                    <td>1024x1792, 1792x1024</td>
+                    <td>BT 1.32 / image</td>
+                  </tr>
+                  <tr>
+                    <td>DALL·E 2</td>
+                    <td></td>
+                    <td>1024x1024</td>
+                    <td>BT 0.23 / image</td>
+                  </tr>
+                  <tr>
+                    <td></td>
+                    <td></td>
+                    <td>512x512</td>
+                    <td>BT 0.198 / image</td>
+                  </tr>
+                  <tr>
+                    <td>DALL·E 2</td>
+                    <td></td>
+                    <td>256x256</td>
+                    <td>BT 0.176 / image</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <hr />
+        <div class="row">
+          <div class="col-md-6">
+            <p class="h4">Audio models</p>
+          </div>
+          <div class="col-md-6">
+            <p>
+              <a
+                href="https://platform.openai.com/docs/guides/speech-to-text"
+                target="_blank"
+                >Whisper</a
+              >
+              can transcribe speech into text and translate many languages into
+              English.
+            </p>
+            <p>
+              <a
+                href="https://platform.openai.com/docs/guides/text-to-speech"
+                target="_blank"
+                >Text-to-speech (TTS)</a
+              >
+              can convert text into spoken audio.
+            </p>
+            <hr style="border-top: 2px solid black" />
+            <div class="mt-3">
+              <!-- Table starts here -->
+              <table class="table">
+                <thead class="thead-dark">
+                  <tr>
+                    <th scope="col">Model</th>
+                    <th scope="col">Usage</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Whisper</td>
+                    <td>BT 0.066 / minute (rounded to the nearest second)</td>
+                  </tr>
+                  <tr>
+                    <td>TTS</td>
+                    <td>BT 0.165 / 1K characters</td>
+                  </tr>
+                  <tr>
+                    <td>TTS HD</td>
+                    <td>BT 0.33 / 1K characters</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p class="text-secondary">
+              Please be informed that the voice you are currently hearing is
+              generated by artificial intelligence technology for Text-to-Speech
+              synthesis. This voice is not that of a human, but rather a
+              computer-generated voice. We want to ensure transparency and
+              clarity in our communication, and we appreciate your
+              understanding. If you have any questions or concerns, please feel
+              free to reach out to us
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+<script>
+  const countImageTokens = () => {
+    const bt2USD = 0.11;
+    const width = parseInt(document.getElementById("width").value);
+    const height = parseInt(document.getElementById("height").value);
+    const h = Math.ceil(height / 512);
+    const w = Math.ceil(width / 512);
+    document.getElementById("512tiles").innerText = `${h} x ${w}`;
+    const n = w * h;
+    document.getElementById("total-tiles").innerText = n;
+    document.getElementById("tile-tokens").innerText = `170 x ${n} = ${
+      170 * n
+    }`;
+    const total = 85 + 170 * n;
+    document.getElementById("total-tokens").innerText = total;
+    const totalPrice = `BT ${((total / 1000) * bt2USD).toFixed(5)}`;
+    document.getElementById("total-price").innerText = totalPrice;
+    document.getElementById("result").value = totalPrice;
+    return total;
+  };
+</script>
+<!-- End #main -->
+{% endblock %}
