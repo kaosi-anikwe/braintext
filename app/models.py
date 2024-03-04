@@ -167,7 +167,7 @@ class UserSettings(db.Model, TimestampMixin, DatabaseHelperMixin):
     image_generation_style = db.Column(db.String(50), default="natural")
     image_generation_quality = db.Column(db.String(50), default="standard")
     image_generation_size = db.Column(db.String(50), default="1024x1024")
-    warn_low_balance = db.Column(db.Integer, default=2)
+    warn_low_balance = db.Column(db.Float, default=0.2)
     email_updates = db.Column(db.Boolean, default=True)
     change_number = db.Column(db.Boolean, default=True)
     change_first_name = db.Column(db.Boolean, default=True)

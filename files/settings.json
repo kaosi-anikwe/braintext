@@ -7,7 +7,7 @@
           "id": "warn_low_balance",
           "title": "Warn on Low Balance",
           "description": "Receive a warning when your account balance is below a specified limit",
-          "default": 2,
+          "default": 0.2,
           "value": null
         },
         {
