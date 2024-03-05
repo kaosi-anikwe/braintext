@@ -644,7 +644,7 @@ def image_recognition(
             message_list=message_list,
         )
         response = openai_client.chat.completions.create(
-            model="gpt-4-0125-preview",
+            model="gpt-4-vision-preview",
             messages=messages,
             temperature=1,
             max_tokens=4000,
