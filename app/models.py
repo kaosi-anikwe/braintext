@@ -4,6 +4,7 @@ import time
 import uuid
 import math
 import random
+import traceback
 from datetime import datetime, timedelta, timezone
 
 # installed imports
@@ -148,7 +149,11 @@ class Users(db.Model, TimestampMixin, UserMixin, DatabaseHelperMixin):
 
     # get local time with timezone
     def timenow(self):
-        return datetime.now(self.timezone())
+        try:
+            return datetime.now(self.timezone())
+        except:
+            logger.info(traceback.format_exc())
+            return datetime.utcnow()
 
 
 class UserSettings(db.Model, TimestampMixin, DatabaseHelperMixin):
