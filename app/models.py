@@ -89,7 +89,9 @@ class Users(db.Model, TimestampMixin, UserMixin, DatabaseHelperMixin):
     edited = db.Column(db.Boolean, default=False)
     password_hash = db.Column(db.String(128), nullable=False)
 
-    def __init__(self, first_name, last_name, email, timezone_offset, password=None) -> None:
+    def __init__(
+        self, first_name, last_name, email, timezone_offset, password=None
+    ) -> None:
         self.first_name = first_name
         self.last_name = last_name
         self.email = email
