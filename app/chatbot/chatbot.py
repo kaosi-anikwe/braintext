@@ -9,6 +9,7 @@ from flask import Blueprint, request, jsonify, send_file, after_this_request
 # local imports
 from .. import logger
 from .functions import *
+from ..modules.functions2 import record_message
 from ..modules.functions import *
 from ..models import (
     Users,
@@ -70,10 +71,14 @@ def webhook():
                 if not is_old(data):
                     number = f"+{get_number(data)}"
                     logger.info(number)
+                    name = get_name(data)
                     message_id = get_message_id(data)
                     message_type = get_message_type(data)
                     mark_as_read(message_id)
-
+                    try:
+                        message = get_message(data)
+                    except KeyError:
+                        message = ""
                     # try to get user
                     user = Users.query.filter(Users.phone_no == number).one_or_none()
                     if user:  # user account exists
@@ -82,13 +87,29 @@ def webhook():
                                 # check user balance
                                 if not is_interative_reply(data):
                                     if BASE_COST > user.balance:
-                                        text = (
-                                            f"Insufficent balance. Cost is {BASE_COST}"
-                                        )
+                                        text = f"Insufficent balance. Cost is {round(BASE_COST, 2)} BT.\nCurrent balance is {round(user.balance, 2)} BT"
                                         logger.info(
                                             f"INSUFFICIENT BALANCE - user: {user.phone_no}. BALANCE: {user.balance}"
                                         )
-                                        return send_text(text, number)
+                                        header = "Recharge Now"
+                                        body = "Instantly top up your balance directly on WhatsApp"
+                                        button_texts = ["Yes", "No"]
+                                        button = generate_interactive_button(
+                                            header=header, body=body, button_texts=button_texts
+                                        )
+                                        # record messages
+                                        record_message(
+                                            name=name,
+                                            number=number,
+                                            message=message,
+                                            assistant=False,
+                                        )
+                                        record_message(
+                                            name=name, number=number, message=text
+                                        )
+                                        send_text(text, number)
+                                        return send_interactive_message(interactive=button, recipient=user.phone_no)
+
                                     # charge base cost
                                     user.balance -= BASE_COST
                                     user.update()
@@ -129,11 +150,25 @@ def webhook():
                                     )
                             else:
                                 text = f"Please verify your email to access the service. Check your inbox for the verification link, or login to request another. {request.host_url}profile"
+                                record_message(
+                                    name=name,
+                                    number=number,
+                                    message=message,
+                                    assistant=False,
+                                )
+                                record_message(name=name, number=number, message=text)
                                 reply_to_message(
                                     message_id, number, text
                                 ) if message_type == "text" else send_text(text, number)
                         else:
                             text = f"Please verify your number to access the service. Login to your profile to verify your number. {request.host_url}profile"
+                            record_message(
+                                name=name,
+                                number=number,
+                                message=message,
+                                assistant=False,
+                            )
+                            record_message(name=name, number=number, message=text)
                             reply_to_message(
                                 message_id, number, text
                             ) if message_type == "text" else send_text(text, number)
@@ -227,6 +262,8 @@ def webhook():
     except:
         logger.error(traceback.format_exc())
         text = "Sorry, I can't respond to that at the moment. Plese try again later."
+        record_message(name=name, number=number, message=message, assistant=False)
+        record_message(name=name, number=number, message=text)
         reply_to_message(
             message_id, number, text
         ) if message_type == "text" else send_text(text, number)

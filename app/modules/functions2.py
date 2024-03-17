@@ -8,7 +8,6 @@ from dotenv import load_dotenv
 
 # local imports
 from app import logger
-from .messages import Messages
 from ..models import Users
 
 load_dotenv()
@@ -57,7 +56,19 @@ def account_settings(data: Dict[Any, Any], **kwargs):
         )
 
         # record ChatGPT response
+        record_message(name, number, text)
+
+
+def record_message(name: str, number: str, message: str, assistant=True):
+    try:
+        from .messages import Messages
+        from .functions import get_user_db
+
         user_db_path = get_user_db(name=name, number=number)
-        new_message = {"role": "assistant", "content": text}
+        new_message = {"role": "assistant" if assistant else "user", "content": message}
         new_message = Messages(new_message, user_db_path)
         new_message.insert()
+        return True
+    except:
+        logger.error(traceback.format_exc())
+        return False
