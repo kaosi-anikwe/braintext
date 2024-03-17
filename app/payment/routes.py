@@ -38,21 +38,21 @@ LOG_DIR = os.getenv("LOG_DIR")
 WEBHOOK_LOG = os.path.join(LOG_DIR, "webhooks")
 BANK_CODES = {
     "Access Bank": "044",
-    "Ecobank": "050",
-    "Fidelity Bank": "070",
     "First Bank of Nigeria": "011",
-    "FCMB (First City Monument Bank)": "214",
+    "Fidelity Bank": "070",
+    "FCMB": "214",
     "Guaranty Trust Bank": "058",
-    "Heritage Bank": "030",
-    "Keystone Bank": "082",
-    "Stanbic IBTC Bank": "221",
-    "Sterling Bank": "232",
-    "Union Bank": "032",
-    "United Bank for Africa (UBA)": "033",
-    "Unity Bank": "215",
-    "VFD Microfinance Bank": "090110",
-    "Wema Bank": "035",
+    "UBA": "033",
     "Zenith Bank": "057",
+    "Wema Bank": "035",
+    "Stanbic IBTC Bank": "221",
+    "Ecobank": "050",
+    "Keystone Bank": "082",
+    "Union Bank": "032",
+    "Unity Bank": "215",
+    "Sterling Bank": "232",
+    "Heritage Bank": "030",
+    "VFD Microfinance Bank": "090110",
 }
 os.makedirs(WEBHOOK_LOG, exist_ok=True)
 

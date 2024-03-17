@@ -19,10 +19,11 @@ from ..models import (
     MessageRequests,
 )
 from .. import logger
-from ..modules.email_utility import send_registration_email
-from ..modules.verification import generate_confirmation_token
 from ..modules.functions import *
 from ..modules.calculate import *
+from ..modules.functions2 import record_message
+from ..modules.email_utility import send_registration_email
+from ..modules.verification import generate_confirmation_token
 
 load_dotenv()
 
@@ -631,9 +632,9 @@ def image_recognition(
     message_request: MessageRequests,
 ):
     """Perform image recognition with OpenAI's GPT-4V"""
+    name = get_name(data)
+    number = f"+{get_number(data)}"
     try:
-        name = get_name(data)
-        number = f"+{get_number(data)}"
         message_id = get_message_id(data)
         isreply = is_reply(data)
         user_db_path = get_user_db(name=name, number=number)
@@ -664,6 +665,7 @@ def image_recognition(
         bt_cost = cost * USD2BT
         debit_user(
             user=user,
+            name=name,
             bt_cost=bt_cost,
             message_request=message_request,
             reason="GPT4-Vision",
@@ -695,6 +697,7 @@ def image_recognition(
     except:
         logger.error(traceback.format_exc())
         text = "Sorry, I cannot respond to that at the moment, please try again later."
+        record_message(name=name, number=number, message=text)
         return reply_to_message(message_id, number, text)
 
 
@@ -729,10 +732,11 @@ def meta_chat_response(
         cost = gpt_3_5_cost({"input": num_tokens, "output": 0})
         bt_cost = cost * USD2BT
         if bt_cost > user.balance:
-            text = f"Insufficent balance. Cost is {bt_cost}"
+            text = f"Insufficent balance. Cost is {round(bt_cost, 2)} BT.\nCurrent balance is {round(user.balance, 2)} BT"
             logger.info(
                 f"INSUFFICIENT BALANCE - user: {user.phone_no}. BALANCE: {user.balance}"
             )
+            record_message(name=name, number=number, message=text)
             return send_text(text, number)
         # react to message
         send_reaction(
@@ -766,6 +770,7 @@ def meta_chat_response(
             bt_cost = cost * USD2BT
             debit_user(
                 user=user,
+                name=name,
                 bt_cost=bt_cost,
                 message_request=message_request,
                 reason="ChatGPT",
@@ -775,6 +780,7 @@ def meta_chat_response(
             text = (
                 "Sorry, I can't respond to that at the moment. Please try again later."
             )
+            record_message(name=name, number=number, message=text)
             return reply_to_message(message_id, number, text)
 
         log_response(
@@ -802,6 +808,7 @@ def meta_chat_response(
     except:
         logger.error(traceback.format_exc())
         text = "Sorry, I cannot respond to that at the moment, please try again later."
+        record_message(name=name, number=number, message=text)
         return reply_to_message(message_id, number, text)
 
 
@@ -815,6 +822,7 @@ def meta_audio_response(
     name = get_name(data)
     number = f"+{get_number(data)}"
     message_id = get_message_id(data)
+    message = get_message(data)
 
     try:
         audio_url = get_media_url(get_audio_id(data))
@@ -829,10 +837,12 @@ def meta_audio_response(
         logger.info(f"WHISPER COST IN USD: {cost}")
         logger.info(f"WHISPER COST IN BT: {bt_cost}")
         if bt_cost > user.balance:
-            text = f"Insufficent balance. Cost is {bt_cost}"
+            text = f"Insufficent balance. Cost is {round(bt_cost, 2)} BT.\nCurrent balance is {round(user.balance, 2)} BT"
             logger.info(
                 f"INSUFFICIENT BALANCE - user: {user.phone_no}. BALANCE: {user.balance}"
             )
+            record_message(name=name, number=number, message=message, assistant=False)
+            record_message(name=name, number=number, message=text)
             return send_text(text, number)
         try:
             transcript = openai_transcribe_audio(audio_file)
@@ -844,6 +854,7 @@ def meta_audio_response(
             # charge user
             debit_user(
                 user=user,
+                name=name,
                 bt_cost=bt_cost,
                 message_request=message_request,
                 reason="ChatGPT",
@@ -851,6 +862,8 @@ def meta_audio_response(
         except:
             logger.error(traceback.format_exc())
             text = "Error transcribing audio. Please try again later."
+            record_message(name=name, number=number, message=message, assistant=False)
+            record_message(name=name, number=number, message=text)
             return send_text(text, number)
         finally:
             # delete audio file
@@ -875,10 +888,14 @@ def meta_audio_response(
             cost = gpt_3_5_cost({"input": num_tokens, "output": 0})
             bt_cost = cost * USD2BT
             if bt_cost > user.balance:
-                text = f"Insufficent balance. Cost is {bt_cost}"
+                text = f"Insufficent balance. Cost is {round(bt_cost, 2)} BT.\nCurrent balance is {round(user.balance, 2)} BT"
                 logger.info(
                     f"INSUFFICIENT BALANCE - user: {user.phone_no}. BALANCE: {user.balance}"
                 )
+                record_message(
+                    name=name, number=number, message=message, assistant=False
+                )
+                record_message(name=name, number=number, message=text)
                 return send_text(text, number)
             response = chatgpt_response(
                 data=data,
@@ -901,6 +918,7 @@ def meta_audio_response(
             bt_cost = cost * USD2BT
             debit_user(
                 user=user,
+                name=name,
                 bt_cost=bt_cost,
                 message_request=message_request,
                 reason="ChatGPT",
@@ -910,6 +928,7 @@ def meta_audio_response(
             text = (
                 "Sorry I can't respond to that at the moment. Please try again later."
             )
+            record_message(name=name, number=number, message=text)
             return send_text(text, number)
 
         user_settings = user.user_settings() if not anonymous else None
@@ -934,6 +953,7 @@ def meta_audio_response(
     except:
         logger.error(traceback.format_exc())
         text = "Sorry, I cannot respond to that at the moment, please try again later."
+        record_message(name=name, number=number, message=text)
         return send_text(text, number)
 
 
@@ -946,6 +966,7 @@ def meta_image_response(
     """WhatsApp image response wtih Meta functions."""
     name = get_name(data)
     number = f"+{get_number(data)}"
+    message = get_message(data)
     run = False
     if isinstance(user, Users):
         if user.user_settings().image_recognition:
@@ -993,6 +1014,7 @@ def meta_image_response(
         except:
             logger.error(traceback.format_exc())
             text = "Something went wrong. Please try again later."
+            record_message(name=name, number=number, message=text)
             return send_text(text, number)
         finally:
             delete_file(image_path)
@@ -1035,6 +1057,40 @@ def meta_interactive_response(
                     sections=settings["chatbotSettings"],
                 )
                 return send_interactive_message(message_list, number, "list")
+        # RECHARGE ACCOUNT
+        if "recharge_now" in reply_id:
+            text = response["button_reply"]["title"]
+            record_message(get_name(data), number, text, assistant=False)
+            if "Yes" in text:
+                from ..payment.routes import BANK_CODES
+
+                header = "Choose Bank"
+                body = f"Choose your preferred bank from the options. To use a bank not listed here, please visit our website to proceed.\n{request.host_url}recharge"
+                choices = [
+                    {
+                        "title": "Accepted Banks",
+                        "rows": [
+                            {
+                                "id": f"bank_{code}",
+                                "title": bank,
+                                "description": f"Recharge with {bank}.",
+                            }
+                            for bank, code in list(BANK_CODES.items())[:10]
+                        ]
+                    }
+                ]
+                message_list = generate_list_message(
+                    header=header,
+                    body=body,
+                    button_text="Select Bank",
+                    sections=choices,
+                )
+                record_message(get_name(data), number, body)
+                return send_interactive_message(message_list, number, "list")
+            else:
+                text = "That's alright."
+                record_message(get_name(data), number, text)
+                return send_text(text, number)
         # CHATBOT SETTINGS
         if "response_type" in reply_id:
             # handle response type
@@ -1145,6 +1201,61 @@ def meta_interactive_response(
 
     if type == "list_reply":
         reply_id = response[type]["id"]
+        # RECHARGE ACCOUNT
+        if "bank_" in reply_id:
+            from ..payment.routes import BANK_CODES
+            
+            user_code = reply_id.removeprefix("bank_")
+            user_bank = ""
+            for bank_name, bank_code in BANK_CODES.items():
+                if bank_code == user_code:
+                    user_bank = bank_name
+            if not user_bank:
+                raise Exception(f"Bank with code: '{user_code}' not found")
+            
+            header = "Select amount"
+            body = f"Select amount to recharge with {user_bank}"
+            choices = [
+                {
+                    "title": "Amount to Recharge",
+                    "rows": [
+                        {
+                            "id": f"bt_{user_code}_{i}",
+                            "title": f"₦{i}",
+                            "description": "",
+                        }
+                        for i in [100, 200, 500, 1000, 2000, 5000]
+                    ],
+                }
+            ]
+            message_list = generate_list_message(
+                header=header,
+                body=body,
+                button_text="Choose Amount",
+                sections=choices,
+            )
+            return send_interactive_message(message_list, number, "list")
+        if "bt_" in reply_id:
+            from ..payment.routes import BANK_CODES
+            from ..payment.functions import recharge_account
+
+            user_code = reply_id.split("_")[1]
+            user_bank = ""
+            for bank_name, bank_code in BANK_CODES.items():
+                if bank_code == user_code:
+                    user_bank = bank_name
+            if not user_bank:
+                raise Exception(f"Bank with code: '{user_code}' not found")
+            amount = reply_id.split("_")[2]
+            message = response[type]["title"]
+            return recharge_account(
+                data=data,
+                tokens=0,
+                message=message,
+                amount=int(amount),
+                currency="NGN",
+                bank_name=user_bank
+            )
         # CHATBOT SETTINGS
         # Handle Context and Responses settings
         if reply_id == "context_and_responses":
@@ -1429,8 +1540,8 @@ def meta_interactive_response(
                     "rows": [
                         {
                             "id": f"warn_{i}",
-                            "title": f"BT {i}",
-                            "description": f"Warn when balance is below {i}BT.",
+                            "title": f"{i} BT",
+                            "description": f"Warn when balance is below {i} BT.",
                         }
                         for i in [0.2, 0.5, 1, 2, 5]
                     ],
@@ -1438,14 +1549,14 @@ def meta_interactive_response(
             ]
             message_list = generate_list_message(
                 header="Warn on Low Balance",
-                body=f"Be notified when balance is below this threshold.\nCurrent setting is {user_settings.warn_low_balance}",
+                body=f"Get notified when balance is below this threshold.\nCurrent setting is {user_settings.warn_low_balance}",
                 button_text="Set threshold",
                 sections=choices,
             )
             return send_interactive_message(message_list, number, "list")
         elif "warn_" in reply_id:
             # change warn setting
-            threshold = int(reply_id.removeprefix("warn_"))
+            threshold = float(reply_id.removeprefix("warn_"))
             logger.info(f"NEW WARN: {threshold}")
             user_settings.warn_low_balance = threshold
             user_settings.update()

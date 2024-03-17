@@ -42,7 +42,7 @@ from ..models import Voices, Users, AnonymousUsers, MessageRequests
 from ..modules.messages import create_all, get_engine, Messages
 
 # chatgpt functions
-from .functions2 import account_settings
+from .functions2 import account_settings, record_message
 from ..payment.functions import get_account_balance, recharge_account
 
 
@@ -120,6 +120,7 @@ def synthesize_speech(text: str, voice: str) -> str | None:
     except (BotoCoreError, ClientError) as error:
         # The service returned an error, exit gracefully
         logger.error(error)
+        return str(error)
 
     # Access the audio stream from the response
     if response and "AudioStream" in response:
@@ -139,6 +140,7 @@ def synthesize_speech(text: str, voice: str) -> str | None:
             except IOError as error:
                 # Could not write to file, exit gracefully
                 logger.error(error)
+                return str(error)
 
     else:
         # The response didn't contain audio data, exit gracefully
@@ -719,7 +721,11 @@ def encode_image(image_path):
 
 
 def debit_user(
-    user: Users, bt_cost: float, message_request: MessageRequests, reason: str = None
+    user: Users,
+    name: str,
+    bt_cost: float,
+    message_request: MessageRequests,
+    reason: str = None,
 ):
     """Debit user and check/alert low balance"""
     user.balance -= bt_cost
@@ -730,8 +736,21 @@ def debit_user(
     if isinstance(user, Users):
         if user.balance < user.user_settings().warn_low_balance:
             if not message_request.alert_low:
+                from ..chatbot.functions import (
+                    generate_interactive_button,
+                    send_interactive_message,
+                )
+
                 text = f"Your balance is running low. Consider recharging your account.\nCurrent balance is {round(user.balance, 2)}."
+                header = "Recharge Now"
+                body = "Instantly top up your balance directly on WhatsApp"
+                button_texts = ["Yes", "No"]
+                button = generate_interactive_button(
+                    header=header, body=body, button_texts=button_texts
+                )
+                record_message(name, user.phone_no, text)
                 send_text(text, user.phone_no)
+                send_interactive_message(interactive=button, recipient=user.phone_no)
                 message_request.alert_low = True
                 message_request.update()
 
@@ -827,6 +846,8 @@ def chatgpt_response(
     message_id: str = None,
 ) -> tuple | None:
     """Get response from ChatGPT"""
+    from ..chatbot.functions import get_name
+
     try:
         # Event to signal the status update function to stop if OpenAI responds on time
         stop_event = threading.Event()
@@ -939,6 +960,7 @@ def chatgpt_response(
                 # charge user
                 debit_user(
                     user=user,
+                    name=get_name(data),
                     bt_cost=bt_cost,
                     message_request=message_request,
                     reason="ChatGPT Function call",
@@ -966,8 +988,6 @@ def chatgpt_response(
 
 
 # ChatGPT Functions ----------------------------
-
-
 def generate_image(
     data: Dict[Any, Any],
     tokens: int,
@@ -1004,10 +1024,11 @@ def generate_image(
         cost = dalle2_cost(image_confg.split(".")[1])
         bt_cost = cost * USD2BT
         if bt_cost > user.balance:
-            text = f"Insufficent balance. Cost is {bt_cost}"
+            text = f"Insufficent balance. Cost is {round(bt_cost, 2)} BT.\nCurrent balance is {round(user.balance, 2)} BT"
             logger.info(
                 f"INSUFFICIENT BALANCE - user: {user.phone_no}. BALANCE: {user.balance}"
             )
+            record_message(name=name, number=number, message=text)
             return send_text(text, number)
         image_response = openai_client.images.generate(
             model="dall-e-2",
@@ -1020,7 +1041,11 @@ def generate_image(
         message_request.update()
         # charge user
         debit_user(
-            user=user, bt_cost=bt_cost, message_request=message_request, reason="Dalle2"
+            user=user,
+            name=name,
+            bt_cost=bt_cost,
+            message_request=message_request,
+            reason="Dalle2",
         )
 
     elif "dalle3" in image_type:
@@ -1031,10 +1056,11 @@ def generate_image(
         cost = dalle3_cost(img_confg)
         bt_cost = cost * USD2BT
         if bt_cost > user.balance:
-            text = f"Insufficent balance. Cost is {bt_cost}"
+            text = f"Insufficent balance. Cost is {round(bt_cost, 2)} BT.\nCurrent balance is {round(user.balance, 2)} BT"
             logger.info(
                 f"INSUFFICIENT BALANCE - user: {user.phone_no}. BALANCE: {user.balance}"
             )
+            record_message(name=name, number=number, message=text)
             return send_text(text, number)
         image_response = openai_client.images.generate(
             model="dall-e-3",
@@ -1049,7 +1075,11 @@ def generate_image(
         message_request.update()
         # charge user
         debit_user(
-            user=user, bt_cost=bt_cost, message_request=message_request, reason="Dalle3"
+            user=user,
+            name=name,
+            bt_cost=bt_cost,
+            message_request=message_request,
+            reason="Dalle3",
         )
 
     image_url = image_response.data[0].url
@@ -1088,6 +1118,7 @@ def speech_synthesis(
 
     anonymous = False
     # get user
+    name = get_name(data)
     number = f"+{get_number(data)}"
     user = Users.query.filter(Users.phone_no == number).one_or_none()
     if not user:
@@ -1100,13 +1131,13 @@ def speech_synthesis(
         logger.info(f"TTS COST: {len(text)} CHARACTERS")
         bt_cost = cost * USD2BT
         if bt_cost > user.balance:
-            text = f"Insufficent balance. Cost is {bt_cost}"
+            text = f"Insufficent balance. Cost is {round(bt_cost, 2)} BT.\nCurrent balance is {round(user.balance, 2)} BT"
             logger.info(
                 f"INSUFFICIENT BALANCE - user: {user.phone_no}. BALANCE: {user.balance}"
             )
+            record_message(name=name, number=number, message=text)
             return send_text(text, number)
-        name = get_name(data)
-        number = f"+{get_number(data)}"
+
         # get voice type
         voice_type = user.user_settings().audio_voice if not anonymous else "Mia"
         # synthesize text
@@ -1121,7 +1152,11 @@ def speech_synthesis(
         message_request.update()
         # charge user
         debit_user(
-            user=user, bt_cost=bt_cost, message_request=message_request, reason="TTS"
+            user=user,
+            name=name,
+            bt_cost=bt_cost,
+            message_request=message_request,
+            reason="TTS",
         )
         media_url = f"{url_for('chatbot.send_voice_note', _external=True, _scheme='https')}?filename={audio_filename}"
         # log response
@@ -1141,10 +1176,12 @@ def speech_synthesis(
     except BotoCoreError:
         logger.error(traceback.format_exc())
         text = "Sorry, I cannot respond to that at the moment, please try again later."
+        record_message(name=name, number=number, message=text)
         return send_text(text, number)
     except ClientError:
         logger.error(traceback.format_exc())
         text = "Sorry, your response was too long. Please rephrase the question or break it into segments."
+        record_message(name=name, number=number, message=text)
         return send_text(text, number)
 
 
@@ -1280,6 +1317,7 @@ def media_search(data: Dict[Any, Any], **kwargs):
     except:
         logger.error(traceback.format_exc())
         text = "Sorry, I cannot respond to that at the moment, please try again later."
+        record_message(name=name, number=number, message=text)
         return send_text(text, number)
 
 
