@@ -966,7 +966,6 @@ def meta_image_response(
     """WhatsApp image response wtih Meta functions."""
     name = get_name(data)
     number = f"+{get_number(data)}"
-    message = get_message(data)
     run = False
     if isinstance(user, Users):
         if user.user_settings().image_recognition:
