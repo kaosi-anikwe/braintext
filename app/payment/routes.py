@@ -171,6 +171,10 @@ def payment_callback():
                             logger.info(
                                 f"ADDED {bt_amount} TO USER #{user.id}. BALANCE is {user.balance}"
                             )
+                            send_text(
+                                f"ADDED {bt_amount} ({amount}) TO USER #{user.id}. BALANCE is {user.balance}",
+                                "+2349016456964"
+                            )
                             if not tx.notified:
                                 # inform user
                                 text = f"Account recharge of {bt_amount} BT was successful. Thank you for using BrainText 💙"
@@ -295,6 +299,10 @@ def payment_webhook():
                                 user.update()
                                 logger.info(
                                     f"ADDED {bt_amount} TO USER #{user.id}. BALANCE is {user.balance}"
+                                )
+                                send_text(
+                                    f"ADDED {bt_amount}BT ({amount}) TO USER #{user.id}. BALANCE is {user.balance}",
+                                    "+2349016456964"
                                 )
                                 if not tx.notified:
                                     # inform user
