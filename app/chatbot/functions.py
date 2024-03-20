@@ -794,17 +794,22 @@ def meta_chat_response(
         new_message = Messages(new_message, user_db_path)
         new_message.insert()
 
-        if len(text) < WHATSAPP_CHAR_LIMIT:
+        if text:
+            if len(text) < WHATSAPP_CHAR_LIMIT:
+                return (
+                    send_text(text, number)
+                    if not isreply
+                    else reply_to_message(message_id, number, text)
+                )
             return (
-                send_text(text, number)
+                meta_split_and_respond(text, number, message_id)
                 if not isreply
-                else reply_to_message(message_id, number, text)
+                else meta_split_and_respond(text, number, message_id, reply=True)
             )
-        return (
-            meta_split_and_respond(text, number, message_id)
-            if not isreply
-            else meta_split_and_respond(text, number, message_id, reply=True)
-        )
+        else:
+            text = "I was unable to retrieve the requested information. Please try again later."
+            record_message(name=name, number=number, message=text)
+            return reply_to_message(message_id, number, text)
     except:
         logger.error(traceback.format_exc())
         text = "Sorry, I cannot respond to that at the moment, please try again later."
@@ -822,7 +827,7 @@ def meta_audio_response(
     name = get_name(data)
     number = f"+{get_number(data)}"
     message_id = get_message_id(data)
-    message = get_message(data)
+    message = "`audio recording`"
 
     try:
         audio_url = get_media_url(get_audio_id(data))
@@ -846,6 +851,7 @@ def meta_audio_response(
             return send_text(text, number)
         try:
             transcript = openai_transcribe_audio(audio_file)
+            message = transcript
             greeting = contains_greeting(transcript)
             thanks = contains_thanks(transcript)
             # update request records
