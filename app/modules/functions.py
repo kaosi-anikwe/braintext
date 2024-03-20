@@ -591,7 +591,7 @@ def openai_text_to_speech(text: str, voice_name: str, speed: float = 1.0):
     try:
         # Get voice code from db
         voice_code = Voices.query.filter(Voices.name == voice_name).first().code
-        filename = f"{str(datetime.utcnow().strftime('%d-%m-%Y_%H-%M-%S'))}.ogg"
+        filename = f"{str(datetime.now().strftime('%d-%m-%Y_%H-%M-%S'))}.ogg"
         output = os.path.join(TEMP_FOLDER, filename)
         response = openai_client.audio.speech.create(
             input=text,
@@ -1127,6 +1127,10 @@ def speech_synthesis(
             AnonymousUsers.phone_no == number
         ).one_or_none()
     try:
+        if not text:
+            text = "Error synthesizing speech. Please try again later."
+            record_message(name=name, number=number, message=text)
+            return send_text(text, number)            
         cost = tts_cost(len(text))
         logger.info(f"TTS COST: {len(text)} CHARACTERS")
         bt_cost = cost * USD2BT
@@ -1146,6 +1150,7 @@ def speech_synthesis(
         )
         if audio_filename == None:
             text = "Error synthesizing speech. Please try again later."
+            record_message(name=name, number=number, message=text)
             return send_text(text, number)
         # update request records
         message_request.tts = len(text)
