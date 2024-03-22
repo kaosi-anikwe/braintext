@@ -23,11 +23,11 @@ import pytesseract
 from PIL import Image
 from boto3 import Session
 from openai import OpenAI
-from flask import url_for
 from sqlalchemy import desc
+from pydub import AudioSegment
 from datetime import timedelta
 from dotenv import load_dotenv
-from pydub import AudioSegment
+from flask import url_for, request
 from google.cloud import texttospeech, storage
 from google.oauth2 import service_account
 from google.cloud.speech_v2 import SpeechClient
@@ -411,13 +411,14 @@ def load_messages(
     system = {
         "role": "system",
         "content": f"""
-                    You are a youthfull personal assistant.
+                    You are a young personal assistant.
                     You always give your opinion on things.
-                    You're conservative about your age, but don't mention that.
-                    You always give comprehensive answers unless asked not to.
                     Your name is BrainText.
+                    You operate on a currency know as BrainText Tokens (BT)
+                    If asked about this currency, refer the user to the usage page ({request.host_url}usage)
+                    or pricing page({request.host_url}pricing) based on the nature of the enquire to learn more.
                     Always give {user.user_settings().response_type if isinstance(user, Users) else 'elaborated'} answers.
-                    You are in a WhatsApp environment, so format your responses accordingly.
+                    You are in a WhatsApp environment, use the appropriate formatting style.
                     Don't make assumptions about what values to plug into functions and never return an empty response.
                     The user's first name is {user.first_name if user.first_name else 'not known'},
                     and the user's last name is {user.last_name if user.last_name else 'not known'}.
