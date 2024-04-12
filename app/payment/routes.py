@@ -173,7 +173,7 @@ def payment_callback():
                             )
                             send_text(
                                 f"ADDED {bt_amount} ({amount}) TO USER #{user.id}. BALANCE is {user.balance}",
-                                "+2349016456964"
+                                "+2349016456964",
                             )
                             if not tx.notified:
                                 # inform user
@@ -302,7 +302,7 @@ def payment_webhook():
                                 )
                                 send_text(
                                     f"ADDED {bt_amount}BT ({amount}) TO USER #{user.id}. BALANCE is {user.balance}",
-                                    "+2349016456964"
+                                    "+2349016456964",
                                 )
                                 if not tx.notified:
                                     # inform user

@@ -38,8 +38,9 @@ from botocore.exceptions import BotoCoreError, ClientError
 from .. import logger
 from ..modules.calculate import *
 from ..payment.routes import BANK_CODES
-from ..models import Voices, Users, AnonymousUsers, MessageRequests
+from ..models import Voices, Users, AnonymousUsers, MessageRequests, Threads
 from ..modules.messages import create_all, get_engine, Messages
+from ..modules.wokspro import record_wokspro_message
 
 # chatgpt functions
 from .functions2 import account_settings, record_message
@@ -74,7 +75,9 @@ GOOGLE_CREDENTIALS = service_account.Credentials.from_service_account_file(
 openai_client = OpenAI()
 
 
-def send_text(message: str, recipient: str) -> Union[str, None]:
+def send_text(
+    message: str, recipient: str, phone_number_id=PHONE_NUMBER_ID
+) -> Union[str, None]:
     data = {
         "messaging_product": "whatsapp",
         "recipient_type": "individual",
@@ -82,14 +85,18 @@ def send_text(message: str, recipient: str) -> Union[str, None]:
         "type": "text",
         "text": {"preview_url": True, "body": message},
     }
-    response = requests.post(URL, headers=HEADERS, json=data)
+    response = requests.post(
+        f"{BASE_URL}/{phone_number_id}/messages", headers=HEADERS, json=data
+    )
     if response.status_code == 200:
         data = response.json()
         return str(data["messages"][0]["id"])
     return None
 
 
-def reply_to_message(message_id: str, recipient: str, message: str) -> Union[str, None]:
+def reply_to_message(
+    message_id: str, recipient: str, message: str, phone_number_id=PHONE_NUMBER_ID
+) -> Union[str, None]:
     data = {
         "messaging_product": "whatsapp",
         "recipient_type": "individual",
@@ -98,7 +105,9 @@ def reply_to_message(message_id: str, recipient: str, message: str) -> Union[str
         "context": {"message_id": message_id},
         "text": {"preview_url": True, "body": message},
     }
-    response = requests.post(URL, headers=HEADERS, json=data)
+    response = requests.post(
+        f"{BASE_URL}/{phone_number_id}/messages", headers=HEADERS, json=data
+    )
     if response.status_code == 200:
         data = response.json()
         return str(data["messages"][0]["id"])
@@ -994,7 +1003,7 @@ def generate_image(
     tokens: int,
     message: str,
     prompt: str,
-    message_request: MessageRequests,
+    message_request: MessageRequests = None,
     **kwargs,
 ) -> str:
     """Genereates an image with the given prompt and returns the URL to the image."""
@@ -1022,47 +1031,50 @@ def generate_image(
     logger.info(f"DALLE CONFG: {image_confg}")
     if "dalle2" in image_type:
         d2_res = image_confg.split(".")[1]
-        cost = dalle2_cost(image_confg.split(".")[1])
-        bt_cost = cost * USD2BT
-        if bt_cost > user.balance:
-            text = f"Insufficent balance. Cost is {round(bt_cost, 2)} BT.\nCurrent balance is {round(user.balance, 2)} BT"
-            logger.info(
-                f"INSUFFICIENT BALANCE - user: {user.phone_no}. BALANCE: {user.balance}"
-            )
-            record_message(name=name, number=number, message=text)
-            return send_text(text, number)
+        if message_request:
+            cost = dalle2_cost(image_confg.split(".")[1])
+            bt_cost = cost * USD2BT
+            if bt_cost > user.balance:
+                text = f"Insufficent balance. Cost is {round(bt_cost, 2)} BT.\nCurrent balance is {round(user.balance, 2)} BT"
+                logger.info(
+                    f"INSUFFICIENT BALANCE - user: {user.phone_no}. BALANCE: {user.balance}"
+                )
+                record_message(name=name, number=number, message=text)
+                return send_text(text, number)
         image_response = openai_client.images.generate(
             model="dall-e-2",
             prompt=prompt,
             size=d2_res,
             n=1,
         )
-        # update request records
-        message_request.dalle_2 = image_confg
-        message_request.update()
-        # charge user
-        debit_user(
-            user=user,
-            name=name,
-            bt_cost=bt_cost,
-            message_request=message_request,
-            reason="Dalle2",
-        )
+        if message_request:
+            # update request records
+            message_request.dalle_2 = image_confg
+            message_request.update()
+            # charge user
+            debit_user(
+                user=user,
+                name=name,
+                bt_cost=bt_cost,
+                message_request=message_request,
+                reason="Dalle2",
+            )
 
     elif "dalle3" in image_type:
         d3_type = image_confg.split(".")[-1].split("-")[0]
         d3_res = image_confg.split(".")[-1].split("-")[1]
         d3_style = image_confg.split(".")[1]
         img_confg = {"type": d3_type, "res": d3_res}
-        cost = dalle3_cost(img_confg)
-        bt_cost = cost * USD2BT
-        if bt_cost > user.balance:
-            text = f"Insufficent balance. Cost is {round(bt_cost, 2)} BT.\nCurrent balance is {round(user.balance, 2)} BT"
-            logger.info(
-                f"INSUFFICIENT BALANCE - user: {user.phone_no}. BALANCE: {user.balance}"
-            )
-            record_message(name=name, number=number, message=text)
-            return send_text(text, number)
+        if message_request:
+            cost = dalle3_cost(img_confg)
+            bt_cost = cost * USD2BT
+            if bt_cost > user.balance:
+                text = f"Insufficent balance. Cost is {round(bt_cost, 2)} BT.\nCurrent balance is {round(user.balance, 2)} BT"
+                logger.info(
+                    f"INSUFFICIENT BALANCE - user: {user.phone_no}. BALANCE: {user.balance}"
+                )
+                record_message(name=name, number=number, message=text)
+                return send_text(text, number)
         image_response = openai_client.images.generate(
             model="dall-e-3",
             prompt=prompt,
@@ -1071,35 +1083,46 @@ def generate_image(
             style=d3_style,
             n=1,
         )
-        # update request records
-        message_request.dalle_3 = image_confg
-        message_request.update()
-        # charge user
-        debit_user(
-            user=user,
-            name=name,
-            bt_cost=bt_cost,
-            message_request=message_request,
-            reason="Dalle3",
-        )
+        if message_request:
+            # update request records
+            message_request.dalle_3 = image_confg
+            message_request.update()
+            # charge user
+            debit_user(
+                user=user,
+                name=name,
+                bt_cost=bt_cost,
+                message_request=message_request,
+                reason="Dalle3",
+            )
 
     image_url = image_response.data[0].url
-    log_response(
-        name=name,
-        number=number,
-        message=message,
-        tokens=tokens,
-    )
-    # record ChatGPT response
-    user_db_path = get_user_db(name=name, number=number)
-    new_message = {
-        "role": "assistant",
-        "content": f"```an AI generated image of {prompt}```",
-    }
-    new_message = Messages(new_message, user_db_path)
-    new_message.insert()
+    if message_request:
+        log_response(
+            name=name,
+            number=number,
+            message=message,
+            tokens=tokens,
+        )
+        # record ChatGPT response
+        user_db_path = get_user_db(name=name, number=number)
+        new_message = {
+            "role": "assistant",
+            "content": f"```an AI generated image of {prompt}```",
+        }
+        new_message = Messages(new_message, user_db_path)
+        new_message.insert()
 
-    return send_image(image_url, number, caption=response)
+    return (
+        send_image(image_url, number, caption=response)
+        if message_request
+        else send_image(
+            image_url,
+            number,
+            caption=response,
+            phone_number_id=kwargs.get("wokspro_id"),
+        )
+    )
 
 
 def speech_synthesis(
@@ -1107,8 +1130,10 @@ def speech_synthesis(
     tokens: tuple,
     message: str,
     text: str,
-    message_request: MessageRequests,
+    message_request: MessageRequests = None,
     speed: float = 1.0,
+    thread: Threads = None,
+    **kwargs,
 ):
     """Synthesize audio output and send to user."""
     from ..chatbot.functions import (
@@ -1118,6 +1143,7 @@ def speech_synthesis(
     )
 
     anonymous = False
+    wokspro_id = kwargs.get("wokspro_id") or os.getenv("WOKSPRO_NUMBER_ID")
     # get user
     name = get_name(data)
     number = f"+{get_number(data)}"
@@ -1130,18 +1156,25 @@ def speech_synthesis(
     try:
         if not text:
             text = "Error synthesizing speech. Please try again later."
-            record_message(name=name, number=number, message=text)
-            return send_text(text, number)            
-        cost = tts_cost(len(text))
-        logger.info(f"TTS COST: {len(text)} CHARACTERS")
-        bt_cost = cost * USD2BT
-        if bt_cost > user.balance:
-            text = f"Insufficent balance. Cost is {round(bt_cost, 2)} BT.\nCurrent balance is {round(user.balance, 2)} BT"
-            logger.info(
-                f"INSUFFICIENT BALANCE - user: {user.phone_no}. BALANCE: {user.balance}"
+            record_message(
+                name=name, number=number, message=text
+            ) if message_request else record_wokspro_message(thread, text, "assistant")
+            return (
+                send_text(text, number)
+                if message_request
+                else send_text(text, number, wokspro_id)
             )
-            record_message(name=name, number=number, message=text)
-            return send_text(text, number)
+        if message_request:
+            cost = tts_cost(len(text))
+            logger.info(f"TTS COST: {len(text)} CHARACTERS")
+            bt_cost = cost * USD2BT
+            if bt_cost > user.balance:
+                text = f"Insufficent balance. Cost is {round(bt_cost, 2)} BT.\nCurrent balance is {round(user.balance, 2)} BT"
+                logger.info(
+                    f"INSUFFICIENT BALANCE - user: {user.phone_no}. BALANCE: {user.balance}"
+                )
+                record_message(name=name, number=number, message=text)
+                return send_text(text, number)
 
         # get voice type
         voice_type = user.user_settings().audio_voice if not anonymous else "Mia"
@@ -1151,44 +1184,68 @@ def speech_synthesis(
         )
         if audio_filename == None:
             text = "Error synthesizing speech. Please try again later."
-            record_message(name=name, number=number, message=text)
-            return send_text(text, number)
-        # update request records
-        message_request.tts = len(text)
-        message_request.update()
-        # charge user
-        debit_user(
-            user=user,
-            name=name,
-            bt_cost=bt_cost,
-            message_request=message_request,
-            reason="TTS",
-        )
+            record_message(
+                name=name, number=number, message=text
+            ) if message_request else record_wokspro_message(thread, text, "assistant")
+            return (
+                send_text(text, number)
+                if message_request
+                else send_text(text, number, wokspro_id)
+            )
+        if message_request:
+            # update request records
+            message_request.tts = len(text)
+            message_request.update()
+            # charge user
+            debit_user(
+                user=user,
+                name=name,
+                bt_cost=bt_cost,
+                message_request=message_request,
+                reason="TTS",
+            )
         media_url = f"{url_for('chatbot.send_voice_note', _external=True, _scheme='https')}?filename={audio_filename}"
-        # log response
-        log_response(
-            name=name,
-            number=number,
-            message=message,
-            tokens=tokens,
-        )
-        # record ChatGPT response
-        user_db_path = get_user_db(name=name, number=number)
-        new_message = {"role": "assistant", "content": text}
-        new_message = Messages(new_message, user_db_path)
-        new_message.insert()
+        if message_request:
+            # log response
+            log_response(
+                name=name,
+                number=number,
+                message=message,
+                tokens=tokens,
+            )
+            # record ChatGPT response
+            user_db_path = get_user_db(name=name, number=number)
+            new_message = {"role": "assistant", "content": text}
+            new_message = Messages(new_message, user_db_path)
+            new_message.insert()
 
-        return send_audio(media_url, number)
+        return (
+            send_audio(media_url, number)
+            if message_request
+            else send_audio(media_url, number, wokspro_id)
+        )
     except BotoCoreError:
         logger.error(traceback.format_exc())
         text = "Sorry, I cannot respond to that at the moment, please try again later."
-        record_message(name=name, number=number, message=text)
-        return send_text(text, number)
+        record_message(
+            name=name, number=number, message=text
+        ) if message_request else record_wokspro_message(thread, text, "assistant")
+        return (
+            send_text(text, number)
+            if message_request
+            else send_text(text, number, wokspro_id)
+        )
     except ClientError:
         logger.error(traceback.format_exc())
         text = "Sorry, your response was too long. Please rephrase the question or break it into segments."
-        record_message(name=name, number=number, message=text)
-        return send_text(text, number)
+        record_message(
+            name=name, number=number, message=text
+        ) if message_request else record_wokspro_message(thread, text, "assistant")
+        return (
+            send_text(text, number)
+            if message_request
+            else send_text(text, number, wokspro_id)
+        )
 
 
 def google_search(
@@ -1231,12 +1288,12 @@ def google_search(
         else:
             results = f"No results found for: '{query}'"
 
-        return results  # to be returned to ChatGPT to format for user
+        return {"results": results}  # to be returned to ChatGPT to format for user
 
     except:
         logger.error(traceback.format_exc())
         text = "Sorry, I cannot respond to that at the moment, please try again later."
-        return text
+        return {"error": text}
 
 
 def media_search(data: Dict[Any, Any], **kwargs):
@@ -1278,7 +1335,12 @@ def media_search(data: Dict[Any, Any], **kwargs):
         if items:
             # image search
             if image_search:
-                send_text(search_response, number) if search_response else None
+                if kwargs.get("message_request"):
+                    send_text(search_response, number) if search_response else None
+                else:
+                    send_text(
+                        search_response, number, kwargs.get("wokspro_id")
+                    ) if search_response else None
                 results = f"{num} Google images of {query}"
                 from ..chatbot.functions import send_image, download_media
 
@@ -1288,10 +1350,21 @@ def media_search(data: Dict[Any, Any], **kwargs):
                     ok = download_media(image.get("link", ""), image_name)
                     if ok:
                         image_url = f"{url_for('chatbot.send_media', _external=True, _scheme='https')}?filename={image_name}"
-                        send_image(image_link=image_url, recipient=number)
+                        send_image(
+                            image_link=image_url, recipient=number
+                        ) if kwargs.get("message_request") else send_image(
+                            image_link=image_url,
+                            recipient=number,
+                            phone_number_id=kwargs.get("wokspro_id"),
+                        )
             # document search
             if file_type:
-                send_text(search_response, number) if search_response else None
+                if kwargs.get("message_request"):
+                    send_text(search_response, number) if search_response else None
+                else:
+                    send_text(
+                        search_response, number, kwargs.get("wokspro_id")
+                    ) if search_response else None
                 results = f"{num} {file_type}'s from Google on {query}"
                 from ..chatbot.functions import send_document, download_media
 
@@ -1301,30 +1374,50 @@ def media_search(data: Dict[Any, Any], **kwargs):
                     ok = download_media(document.get("link", ""), document_name)
                     if ok:
                         document_url = f"{url_for('chatbot.send_media', _external=True, _scheme='https')}?filename={document_name}"
-                        send_document(document_link=document_url, recipient=number)
+                        send_document(
+                            document_link=document_url, recipient=number
+                        ) if kwargs.get("message_request") else send_document(
+                            document_link=document_url,
+                            recipient=number,
+                            phone_number_id=kwargs.get("wokspro_id"),
+                        )
         else:
             results = f"No results found for: '{query}'"
             not_found = True
 
-        log_response(
-            name=name,
-            number=number,
-            message=message,
-            tokens=tokens,
-        )
+        if kwargs.get("message_request"):
+            log_response(
+                name=name,
+                number=number,
+                message=message,
+                tokens=tokens,
+            )
 
-        # record ChatGPT response
-        user_db_path = get_user_db(name=name, number=number)
-        new_message = {"role": "assistant", "content": results}
-        new_message = Messages(new_message, user_db_path)
-        new_message.insert()
+            # record ChatGPT response
+            user_db_path = get_user_db(name=name, number=number)
+            new_message = {"role": "assistant", "content": results}
+            new_message = Messages(new_message, user_db_path)
+            new_message.insert()
 
-        return send_text(results, number) if not_found else None
+        if kwargs.get("message_request"):
+            return send_text(results, number) if not_found else None
+        else:
+            return (
+                send_text(results, number, kwargs.get("wokspro_id"))
+                if not_found
+                else None
+            )
     except:
         logger.error(traceback.format_exc())
         text = "Sorry, I cannot respond to that at the moment, please try again later."
-        record_message(name=name, number=number, message=text)
-        return send_text(text, number)
+        record_message(name=name, number=number, message=text) if kwargs.get(
+            "message_request"
+        ) else None
+        return (
+            send_text(text, number)
+            if kwargs.get("message_request")
+            else send_text(text, number, kwargs.get("wokspro_id"))
+        )
 
 
 def web_scrapping(data: Dict[Any, Any], **kwargs):
@@ -1332,11 +1425,10 @@ def web_scrapping(data: Dict[Any, Any], **kwargs):
     instructions = kwargs.get("instruction", "Summarize this.")
     try:
         _, results = scrape_website(url)
-        text = f"{instructions}\n\n{results}"
-        return text
+        return {"instructions": instructions, "results": results}
     except:
         logger.error(traceback.format_exc())
-        return "Error scrapping URL."
+        return {"error": "Error scrapping URL."}
 
 
 def create_account(data: Dict[Any, Any], **kwargs):

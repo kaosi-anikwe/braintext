@@ -395,3 +395,17 @@ class FAQ(db.Model, TimestampMixin, DatabaseHelperMixin):
         self.answer = answer
         self.user_id = user_id
         self.insert()
+
+
+class Threads(db.Model, TimestampMixin, DatabaseHelperMixin):
+    __tablename__ = "thread"
+
+    id = db.Column(db.Integer, primary_key=True)
+    thread_id = db.Column(db.String(100), nullable=False)
+    last_run = db.Column(db.String(100))
+    phone_no = db.Column(db.String(20), nullable=False)
+
+    def __init__(self, thread_id, phone_no):
+        self.thread_id = thread_id
+        self.phone_no = phone_no
+        self.insert()

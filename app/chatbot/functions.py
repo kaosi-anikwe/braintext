@@ -171,7 +171,7 @@ def get_message_timestamp(data: Dict[Any, Any]) -> Union[str, None]:
         return data["messages"][0]["timestamp"]
 
 
-def mark_as_read(message_id: str) -> bool:
+def mark_as_read(message_id: str, phone_number_id=PHONE_NUMBER_ID) -> bool:
     """
     Mark a message as read.
     """
@@ -181,14 +181,16 @@ def mark_as_read(message_id: str) -> bool:
         "message_id": message_id,
     }
     response = requests.post(
-        f"{BASE_URL}/{PHONE_NUMBER_ID}/messages", headers=HEADERS, json=data
+        f"{BASE_URL}/{phone_number_id}/messages", headers=HEADERS, json=data
     )
     if response.status_code == 200:
         return True
     return False
 
 
-def reply_to_message(message_id: str, recipient: str, message: str) -> Union[str, None]:
+def reply_to_message(
+    message_id: str, recipient: str, message: str, phone_number_id=PHONE_NUMBER_ID
+) -> Union[str, None]:
     data = {
         "messaging_product": "whatsapp",
         "recipient_type": "individual",
@@ -197,14 +199,18 @@ def reply_to_message(message_id: str, recipient: str, message: str) -> Union[str
         "context": {"message_id": message_id},
         "text": {"preview_url": True, "body": message},
     }
-    response = requests.post(URL, headers=HEADERS, json=data)
+    response = requests.post(
+        f"{BASE_URL}/{phone_number_id}/messages", headers=HEADERS, json=data
+    )
     if response.status_code == 200:
         data = response.json()
         return str(data["messages"][0]["id"])
     return False
 
 
-def send_text(message: str, recipient: str) -> Union[str, None]:
+def send_text(
+    message: str, recipient: str, phone_number_id=PHONE_NUMBER_ID
+) -> Union[str, None]:
     data = {
         "messaging_product": "whatsapp",
         "recipient_type": "individual",
@@ -212,14 +218,18 @@ def send_text(message: str, recipient: str) -> Union[str, None]:
         "type": "text",
         "text": {"preview_url": True, "body": message},
     }
-    response = requests.post(URL, headers=HEADERS, json=data)
+    response = requests.post(
+        f"{BASE_URL}/{phone_number_id}/messages", headers=HEADERS, json=data
+    )
     if response.status_code == 200:
         data = response.json()
         return str(data["messages"][0]["id"])
     return None
 
 
-def send_reaction(emoji, message_id, recipient) -> bool:
+def send_reaction(
+    emoji, message_id, recipient, phone_number_id=PHONE_NUMBER_ID
+) -> bool:
     """
     Sends a reaction message to a WhatsApp user's message.
 
@@ -232,13 +242,17 @@ def send_reaction(emoji, message_id, recipient) -> bool:
         "type": "reaction",
         "reaction": {"message_id": message_id, "emoji": emoji},
     }
-    response = requests.post(URL, headers=HEADERS, json=data)
+    response = requests.post(
+        f"{BASE_URL}/{phone_number_id}/messages", headers=HEADERS, json=data
+    )
     if response.status_code == 200:
         return True
     return False
 
 
-def send_template(template: str, recipient: str, components: Any) -> bool:
+def send_template(
+    template: str, recipient: str, components: Any, phone_number_id=PHONE_NUMBER_ID
+) -> bool:
     """
     Sends a template message with it's components.
     """
@@ -253,13 +267,17 @@ def send_template(template: str, recipient: str, components: Any) -> bool:
             "components": components,
         },
     }
-    response = requests.post(URL, headers=HEADERS, json=data)
+    response = requests.post(
+        f"{BASE_URL}/{phone_number_id}/messages", headers=HEADERS, json=data
+    )
     if response.status_code == 200:
         return True
     return False
 
 
-def send_image(image_link: str, recipient: str, caption=None) -> bool:
+def send_image(
+    image_link: str, recipient: str, caption=None, phone_number_id=PHONE_NUMBER_ID
+) -> bool:
     """
     Sends an image with its link.
     """
@@ -270,13 +288,17 @@ def send_image(image_link: str, recipient: str, caption=None) -> bool:
         "type": "image",
         "image": {"link": image_link, "caption": caption},
     }
-    response = requests.post(URL, headers=HEADERS, json=data)
+    response = requests.post(
+        f"{BASE_URL}/{phone_number_id}/messages", headers=HEADERS, json=data
+    )
     if response.status_code == 200:
         return True
     return False
 
 
-def send_sticker(sticker_link: str, recipient: str) -> bool:
+def send_sticker(
+    sticker_link: str, recipient: str, phone_number_id=PHONE_NUMBER_ID
+) -> bool:
     """
     Sends a sticker to the user with its link.
     """
@@ -287,13 +309,17 @@ def send_sticker(sticker_link: str, recipient: str) -> bool:
         "type": "sticker",
         "sticker": {"link": sticker_link},
     }
-    response = requests.post(URL, headers=HEADERS, json=data)
+    response = requests.post(
+        f"{BASE_URL}/{phone_number_id}/messages", headers=HEADERS, json=data
+    )
     if response.status_code == 200:
         return True
     return False
 
 
-def send_audio(audio_link: str, recipient: str) -> bool:
+def send_audio(
+    audio_link: str, recipient: str, phone_number_id=PHONE_NUMBER_ID
+) -> bool:
     """
     Sends an audio message to the user with its link.
     """
@@ -303,13 +329,17 @@ def send_audio(audio_link: str, recipient: str) -> bool:
         "type": "audio",
         "audio": {"link": audio_link},
     }
-    response = requests.post(URL, headers=HEADERS, json=data)
+    response = requests.post(
+        f"{BASE_URL}/{phone_number_id}/messages", headers=HEADERS, json=data
+    )
     if response.status_code == 200:
         return True
     return False
 
 
-def send_video(video_link: str, recipient: str, caption=None) -> bool:
+def send_video(
+    video_link: str, recipient: str, caption=None, phone_number_id=PHONE_NUMBER_ID
+) -> bool:
     """
     Sends a video to the user with its link.
     """
@@ -319,13 +349,17 @@ def send_video(video_link: str, recipient: str, caption=None) -> bool:
         "type": "video",
         "video": {"link": video_link, "caption": caption},
     }
-    response = requests.post(URL, headers=HEADERS, json=data)
+    response = requests.post(
+        f"{BASE_URL}/{phone_number_id}/messages", headers=HEADERS, json=data
+    )
     if response.status_code == 200:
         return True
     return False
 
 
-def send_document(document_link: str, recipient: str, caption=None) -> bool:
+def send_document(
+    document_link: str, recipient: str, caption=None, phone_number_id=PHONE_NUMBER_ID
+) -> bool:
     """
     Sends a document to the user with its link.
     """
@@ -335,7 +369,9 @@ def send_document(document_link: str, recipient: str, caption=None) -> bool:
         "type": "document",
         "document": {"link": document_link, "caption": caption},
     }
-    response = requests.post(URL, headers=HEADERS, json=data)
+    response = requests.post(
+        f"{BASE_URL}/{phone_number_id}/messages", headers=HEADERS, json=data
+    )
     if response.status_code == 200:
         return True
     return False
@@ -362,6 +398,7 @@ def send_interactive_message(
     interactive: Dict[Any, Any],
     recipient: str,
     interactive_type: Literal["button", "list", "cta_url"] = "button",
+    phone_number_id=PHONE_NUMBER_ID,
 ) -> Union[str, None]:
     """
     Sends an interactive message to the user.
@@ -374,7 +411,9 @@ def send_interactive_message(
         "type": "interactive",
         "interactive": _create_interaction(interactive, type=interactive_type),
     }
-    response = requests.post(URL, headers=HEADERS, json=data)
+    response = requests.post(
+        f"{BASE_URL}/{phone_number_id}/messages", headers=HEADERS, json=data
+    )
     if response.status_code == 200:
         data = response.json()
         return str(data["messages"][0]["id"])
@@ -594,6 +633,7 @@ def meta_split_and_respond(
     number: str,
     prev_mssg_id: str,
     max_length=WHATSAPP_CHAR_LIMIT,
+    phone_id=PHONE_NUMBER_ID,
     reply=False,
 ):
     """
@@ -602,9 +642,9 @@ def meta_split_and_respond(
     # If the text is shorter than the maximum length, process it directly
     if len(text) <= max_length:
         return (
-            send_text(text, number)
+            send_text(text, number, phone_id)
             if not reply
-            else reply_to_message(prev_mssg_id, number, text)
+            else reply_to_message(prev_mssg_id, number, text, phone_id)
         )
 
     # Otherwise, split the text into two parts and process each part recursively
@@ -618,10 +658,10 @@ def meta_split_and_respond(
     second_half = text[middle_index:]
 
     # Process the first half recursively
-    meta_split_and_respond(first_half, number, prev_mssg_id)
+    meta_split_and_respond(first_half, number, prev_mssg_id, phone_id=phone_id)
 
     # Process the second half recursively
-    meta_split_and_respond(second_half, number, prev_mssg_id)
+    meta_split_and_respond(second_half, number, prev_mssg_id, phone_id=phone_id)
 
 
 def image_recognition(
@@ -985,7 +1025,7 @@ def meta_image_response(
             image_url = get_media_url(image["id"])
             image_path = download_media(
                 image_url,
-                f"{datetime.utcnow().strftime('%M%S%f')}.jpg",
+                f"{datetime.now().strftime('%M%S%f')}.jpg",
             )
             # convert to png
             image_content = Image.open(image_path)
@@ -1081,7 +1121,7 @@ def meta_interactive_response(
                                 "description": f"Recharge with {bank}.",
                             }
                             for bank, code in list(BANK_CODES.items())[:10]
-                        ]
+                        ],
                     }
                 ]
                 message_list = generate_list_message(
@@ -1209,7 +1249,7 @@ def meta_interactive_response(
         # RECHARGE ACCOUNT
         if "bank_" in reply_id:
             from ..payment.routes import BANK_CODES
-            
+
             user_code = reply_id.removeprefix("bank_")
             user_bank = ""
             for bank_name, bank_code in BANK_CODES.items():
@@ -1217,7 +1257,7 @@ def meta_interactive_response(
                     user_bank = bank_name
             if not user_bank:
                 raise Exception(f"Bank with code: '{user_code}' not found")
-            
+
             header = "Select amount"
             body = f"Select amount to recharge with {user_bank}"
             choices = [
@@ -1259,7 +1299,7 @@ def meta_interactive_response(
                 message=message,
                 amount=int(amount),
                 currency="NGN",
-                bank_name=user_bank
+                bank_name=user_bank,
             )
         # CHATBOT SETTINGS
         # Handle Context and Responses settings
