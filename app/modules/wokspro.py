@@ -145,16 +145,16 @@ FUNCTION_DESCRIPTIONS = [
     },
     {
         "name": "plot_areas",
-        "description": "Plots the requested areas with their coordinates on a map and returns an image",
+        "description": "Plots the requested areas with their coordinates on a map",
         "parameters": {
             "type": "object",
             "properties": {
-                "coordinates": {
+                "locations": {
                     "type": "string",
-                    "description": "A list of tuples containing the requested coordinates to be plotted",
+                    "description": "An array of location names to be plotted E.g [Place1, Place2, Place3]",
                 },
             },
-            "required": ["coordinates"],
+            "required": ["locations"],
         },
     },
 ]
@@ -219,68 +219,93 @@ def record_wokspro_message(thread: Threads, message: Any, role: str = "user"):
             thread_id=thread.thread_id, run_id=thread.last_run
         )
         if last_run.status != "completed":
-            client.beta.threads.runs.update(
-                thread_id=thread.thread_id, run_id=thread.last_run, status="completed"
-            )
+            # delete thread and create new one
+            client.beta.threads.delete(thread.thread_id)
+            new_thread_id = client.beta.threads.create().id
+            logger.info(f"New thread created with ID: {new_thread_id}")
+            new_thread = Threads(thread_id=new_thread_id, phone_no=thread.phone_no)
+            thread.delete()
+            thread = new_thread
+
     client.beta.threads.messages.create(
         thread_id=thread.thread_id, role=role, content=message
     )
+    return thread
 
 
 def plot_areas(thread: Threads = None, **kwargs):
     from app.chatbot.functions import send_image
 
-    coordinates = list(kwargs.get("coordinates", []))
-    logger.info(f"COORDINATES: {coordinates}")
-    logger.info(f"COORDINATES LEN: {len(coordinates)}")
-    m = folium.Map(location=coordinates[0][:2], zoom_start=15)
+    try:
+        locations = kwargs.get("locations", [])
+        logger.info(locations)
+        logger.info(f"COORDINATES: {locations}")
+        logger.info(f"COORDINATES LEN: {len(locations)}")
 
-    for coordinate in coordinates:
-        # Add a marker at a specific location with a custom icon and popup message
-        folium.Marker(
-            location=[coordinate[0], coordinate[1]],
-            icon=folium.Icon(icon="location-pin", prefix="fa", color="blue"),
-        ).add_to(m)
-        # show name of area
-        folium.Marker(
-            location=[coordinate[0], coordinate[1]],
-            popup=coordinate[2],
-            icon=folium.DivIcon(
-                icon_size=(150, 36),
-                html=f'<div style="font-size: 12px; color: black;">{coordinate[2]}</div>',
-            ),
-        ).add_to(m)
+        with open(os.path.join(TEMP_FOLDER, "coordinates.json"), "r") as file:
+            coordinate_data = json.load(file)["Coordinates of Dump Sites in Enugu"]
 
-        # Add a circle around the marker with specified radius and color
-        folium.Circle(
-            radius=1000,  # radius in meters
-            location=[coordinate[0], coordinate[1]],
-            color="blue",
-            fill=True,
-            fill_color="blue",
-            fill_opacity=0.3,  # opacity of the shaded area
-            weight=1,
-        ).add_to(m)
+        coordinates = []
+        for location in locations:
+            for area in coordinate_data:
+                if area["Name"] == location:
+                    coordinates.append([area["Latitude"], area["Longitude"], area["Name"]])
+        
+        logger.info(f"COORDINTES: {coordinates}")
 
-        logger.info(f"ADDED {coordinate[2]} to map")
+        m = folium.Map(location=coordinates[0][:2], zoom_start=15.5)
 
-    # make all markers visible
-    m.fit_bounds([(coord[0], coord[1]) for coord in coordinates])
+        for coordinate in coordinates:
+            # Add a marker at a specific location with a custom icon and popup message
+            folium.Marker(
+                location=[coordinate[0], coordinate[1]],
+                icon=folium.Icon(icon="location-pin", prefix="fa", color="blue"),
+            ).add_to(m)
+            # show name of area
+            folium.Marker(
+                location=[coordinate[0], coordinate[1]],
+                popup=coordinate[2],
+                icon=folium.DivIcon(
+                    icon_size=(150, 36),
+                    html=f'<div style="font-size: 20px; color: black;">{coordinate[2]}</div>',
+                ),
+            ).add_to(m)
 
-    # Create a temporary file to save the image
-    logger.info("Saving to png")
-    img_path = os.path.join(TEMP_FOLDER, f"{datetime.now().strftime('%f')}.png")
-    img_data = m._to_png()
-    img = Image.open(io.BytesIO(img_data))
-    img.save(img_path)
-    logger.info("Image saved successfully")
-    # Send the image using the send_image function
-    image_url = f"{url_for('chatbot.send_media', _external=True, _scheme='https')}?filename={os.path.basename(img_path)}"
-    logger.info(
-        send_image(image_url, thread.phone_no, phone_number_id=kwargs.get("wokspro_id"))
-    )
+            # Add a circle around the marker with specified radius and color
+            # folium.Circle(
+            #     radius=1000,  # radius in meters
+            #     location=[coordinate[0], coordinate[1]],
+            #     color="blue",
+            #     fill=True,
+            #     fill_color="blue",
+            #     fill_opacity=0.3,  # opacity of the shaded area
+            #     weight=1,
+            # ).add_to(m)
 
-    return {"coordinates": coordinates, "success": True}
+            logger.info(f"ADDED {coordinate[2]} to map")
+
+        # make all markers visible
+        m.fit_bounds([(coord[0], coord[1]) for coord in locations])
+
+        # Create a temporary file to save the image
+        logger.info("Saving to png")
+        img_path = os.path.join(TEMP_FOLDER, f"{datetime.now().strftime('%f')}.png")
+        img_data = m._to_png()
+        img = Image.open(io.BytesIO(img_data))
+        img.save(img_path)
+        logger.info("Image saved successfully")
+        # Send the image using the send_image function
+        image_url = f"{url_for('chatbot.send_media', _external=True, _scheme='https')}?filename={os.path.basename(img_path)}"
+        logger.info(
+            send_image(
+                image_url, thread.phone_no, phone_number_id=kwargs.get("wokspro_id")
+            )
+        )
+
+        return {"coordinates": locations, "success": True}
+    except:
+        logger.error(traceback.format_exc())
+        return {"coordinates": [], "success": False}
 
 
 def wokspro_response(thread: Threads, data: Dict[Any, Any]):
@@ -339,299 +364,299 @@ def wokspro_response(thread: Threads, data: Dict[Any, Any]):
         },
     }
 
-    new_app = create_app()
-    with new_app.app_context():
-        wokspro_id = os.getenv("WOKSPRO_NUMBER_ID")
-        number = f"+{get_number(data)}"
-        message_id = get_message_id(data)
-        message_type = get_message_type(data)
-        message = "`audio recording`" if message_type != "text" else get_message(data)
+    wokspro_id = os.getenv("WOKSPRO_NUMBER_ID")
+    number = f"+{get_number(data)}"
+    message_id = get_message_id(data)
+    message_type = get_message_type(data)
+    message = "`audio recording`" if message_type != "text" else get_message(data)
 
-        if message_type == "audio":
-            from app.modules.functions import (
-                openai_transcribe_audio,
-                contains_greeting,
-                contains_thanks,
+    if message_type == "audio":
+        from app.modules.functions import (
+            openai_transcribe_audio,
+            contains_greeting,
+            contains_thanks,
+        )
+
+        callback = True
+        audio_url = get_media_url(get_audio_id(data))
+        audio_file = download_media(
+            audio_url,
+            f"{datetime.now().strftime('%M%S%f')}",
+        )
+        duration = get_audio_duration(audio_file)
+        logger.info(f"AUDIO DURATION: {duration}")
+        try:
+            transcript = openai_transcribe_audio(audio_file)
+            message = transcript
+            greeting = contains_greeting(transcript)
+            thanks = contains_thanks(transcript)
+        except:
+            logger.error(traceback.format_exc())
+            text = "Error transcribing audio. Please try again later."
+            thread = record_wokspro_message(thread=thread, message=message)
+            thread = record_wokspro_message(
+                thread=thread, message=message, role="assistant"
             )
+            return send_text(text, number, wokspro_id)
+        finally:
+            # delete audio file
+            delete_file(audio_file)
+        # reactions
+        send_reaction(
+            chr(128075), message_id, number, wokspro_id
+        ) if greeting else None  # react waving hand
+        send_reaction(
+            chr(128153), message_id, number, wokspro_id
+        ) if thanks else None  # react blue love emoji
 
-            callback = True
-            audio_url = get_media_url(get_audio_id(data))
-            audio_file = download_media(
-                audio_url,
-                f"{datetime.now().strftime('%M%S%f')}",
+        # run the assistant
+        thread = record_wokspro_message(thread=thread, message=message)
+        run = client.beta.threads.runs.create(
+            thread_id=thread.thread_id, assistant_id=create_assistant()
+        )
+        # update thread last run
+        thread.last_run = run.id
+        thread.update()
+        # wait for response
+        while True:
+            run_status = client.beta.threads.runs.retrieve(
+                thread_id=thread.thread_id, run_id=run.id
             )
-            duration = get_audio_duration(audio_file)
-            logger.info(f"AUDIO DURATION: {duration}")
-            try:
-                transcript = openai_transcribe_audio(audio_file)
-                message = transcript
-                greeting = contains_greeting(transcript)
-                thanks = contains_thanks(transcript)
-            except:
-                logger.error(traceback.format_exc())
-                text = "Error transcribing audio. Please try again later."
-                record_wokspro_message(thread=thread, message=message)
-                record_wokspro_message(thread=thread, message=message, role="assistant")
-                return send_text(text, number, wokspro_id)
-            finally:
-                # delete audio file
-                delete_file(audio_file)
-            # reactions
-            send_reaction(
-                chr(128075), message_id, number, wokspro_id
-            ) if greeting else None  # react waving hand
-            send_reaction(
-                chr(128153), message_id, number, wokspro_id
-            ) if thanks else None  # react blue love emoji
-
-            # run the assistant
-            record_wokspro_message(thread=thread, message=message)
-            run = client.beta.threads.runs.create(
-                thread_id=thread.thread_id, assistant_id=create_assistant()
-            )
-            # update thread last run
-            thread.last_run = run.id
-            thread.update()
-            # wait for response
-            while True:
-                run_status = client.beta.threads.runs.retrieve(
-                    thread_id=thread.thread_id, run_id=run.id
-                )
-                logger.info(f"Run status: {run_status.status}")
-                if run_status.status == "completed":
-                    break
-                elif run_status.status == "requires_action":
-                    # handle function call
-                    for (
-                        tool_call
-                    ) in run_status.required_action.submit_tool_outputs.tool_calls:
-                        logger.info(tool_call.function)
-                        function_name = tool_call.function.name
-                        callback = (
-                            False
-                            if FUNCTIONS[function_name]["type"] == "non-callback"
-                            else True
-                        )
-                        if FUNCTIONS.get(function_name):
-                            # get function arguments
-                            arguments = json.loads(tool_call.function.arguments)
-                            arguments["data"] = data
-                            arguments["message"] = message
-                            arguments["tokens"] = 0
-                            arguments["message_request"] = None
-                            arguments["wokspro_id"] = wokspro_id
-                            arguments["thread"] = thread
-                            output = FUNCTIONS[function_name]["function"](**arguments)
-                            logger.info(output)
-                            client.beta.threads.runs.submit_tool_outputs(
-                                thread_id=thread.thread_id,
-                                run_id=run.id,
-                                tool_outputs=[
-                                    {
-                                        "tool_call_id": tool_call.id,
-                                        "output": json.dumps(output),
-                                    }
-                                ],
-                            )
-                time.sleep(1)  # wait for a second before checking again
-
-            if callback:
-                # retrieve and return the latest message from the assistant
-                messages = client.beta.threads.messages.list(thread_id=thread.thread_id)
-                text = messages.data[0].content[0].text
-                annotations = text.annotations
-
-                # Iterate over the annotations and remove them
-                for _, annotation in enumerate(annotations):
-                    text.value = text.value.replace(annotation.text, "")
-                text = text.value
-                return speech_synthesis(
-                    data=data,
-                    text=text,
-                    tokens=0,
-                    message=transcript,
-                )
-
-        if message_type == "image":
-            callback = True
-            image = get_image(data)
-            image_url = get_media_url(image["id"])
-            image_path = download_media(
-                image_url,
-                f"{datetime.now().strftime('%M%S%f')}.jpg",
-            )
-            # convert to png
-            image_content = Image.open(image_path)
-            image_content = image_content.convert(
-                "RGBA"
-            )  # If the image has an alpha channel (transparency)
-            image_content.save(image_path, format="PNG")
-            prompt = image.get("caption", "What's in this image?")
-            base64_image = encode_image(image_path)
-
-            content = {
-                "type": "image_url",
-                "image_url": {"url": f"data:image/png;base64,{base64_image}"},
-            }
-            record_wokspro_message(thread, prompt)
-            record_wokspro_message(thread, content)
-
-            # run the assistant
-            record_wokspro_message(thread=thread, message=message)
-            run = client.beta.threads.runs.create(
-                thread_id=thread.thread_id, assistant_id=create_assistant()
-            )
-            # update thread last run
-            thread.last_run = run.id
-            thread.update()
-            # wait for response
-            while True:
-                run_status = client.beta.threads.runs.retrieve(
-                    thread_id=thread.thread_id, run_id=run.id
-                )
-                logger.info(f"Run status: {run_status.status}")
-                if run_status.status == "completed":
-                    break
-                elif run_status.status == "requires_action":
-                    # handle function call
-                    for (
-                        tool_call
-                    ) in run_status.required_action.submit_tool_outputs.tool_calls:
-                        logger.info(tool_call.function)
-                        function_name = tool_call.function.name
-                        callback = (
-                            False
-                            if FUNCTIONS[function_name]["type"] == "non-callback"
-                            else True
-                        )
-                        if FUNCTIONS.get(function_name):
-                            # get function arguments
-                            arguments = json.loads(tool_call.function.arguments)
-                            arguments["data"] = data
-                            arguments["message"] = message
-                            arguments["tokens"] = 0
-                            arguments["message_request"] = None
-                            arguments["wokspro_id"] = wokspro_id
-                            arguments["thread"] = thread
-                            output = FUNCTIONS[function_name]["function"](**arguments)
-                            logger.info(output)
-                            client.beta.threads.runs.submit_tool_outputs(
-                                thread_id=thread.thread_id,
-                                run_id=run.id,
-                                tool_outputs=[
-                                    {
-                                        "tool_call_id": tool_call.id,
-                                        "output": json.dumps(output),
-                                    }
-                                ],
-                            )
-                time.sleep(1)  # wait for a second before checking again
-            if callback:
-                # retrieve and return the latest message from the assistant
-                messages = client.beta.threads.messages.list(thread_id=thread.thread_id)
-                text = messages.data[0].content[0].text
-                annotations = text.annotations
-
-                # Iterate over the annotations and remove them
-                for _, annotation in enumerate(annotations):
-                    text.value = text.value.replace(annotation.text, "")
-                text = text.value
-                return send_text(message, number, wokspro_id)
-
-        if message_type == "text":
-            from app.modules.functions import contains_greeting, contains_thanks
-
-            isreply = is_reply(data)
-            greeting = contains_greeting(message)
-            thanks = contains_thanks(message)
-            callback = True
-            # react to message
-            send_reaction(
-                chr(128075), message_id, number
-            ) if greeting else None  # react waving hand
-            send_reaction(
-                chr(128153), message_id, number
-            ) if thanks else None  # react blue love emoji
-
-            # run the assistant
-            record_wokspro_message(thread=thread, message=message)
-            run = client.beta.threads.runs.create(
-                thread_id=thread.thread_id, assistant_id=create_assistant()
-            )
-            # update thread last run
-            thread.last_run = run.id
-            thread.update()
-            # wait for response
-            while True:
-                run_status = client.beta.threads.runs.retrieve(
-                    thread_id=thread.thread_id, run_id=run.id
-                )
-                logger.info(f"Run status: {run_status.status}")
-                if run_status.status == "completed":
-                    break
-                elif run_status.status == "requires_action":
-                    # handle function call
-                    for (
-                        tool_call
-                    ) in run_status.required_action.submit_tool_outputs.tool_calls:
-                        logger.info(tool_call.function)
-                        function_name = tool_call.function.name
-                        callback = (
-                            False
-                            if FUNCTIONS[function_name]["type"] == "non-callback"
-                            else True
-                        )
-                        if FUNCTIONS.get(function_name):
-                            # get function arguments
-                            arguments = json.loads(tool_call.function.arguments)
-                            arguments["data"] = data
-                            arguments["message"] = message
-                            arguments["tokens"] = 0
-                            arguments["message_request"] = None
-                            arguments["wokspro_id"] = wokspro_id
-                            arguments["thread"] = thread
-                            output = FUNCTIONS[function_name]["function"](**arguments)
-                            logger.info(output)
-                            client.beta.threads.runs.submit_tool_outputs(
-                                thread_id=thread.thread_id,
-                                run_id=run.id,
-                                tool_outputs=[
-                                    {
-                                        "tool_call_id": tool_call.id,
-                                        "output": json.dumps(output),
-                                    }
-                                ],
-                            )
-                time.sleep(1)  # wait for a second before checking again
-
-            if callback:
-                # retrieve and return the latest message from the assistant
-                messages = client.beta.threads.messages.list(thread_id=thread.thread_id)
-                text = messages.data[0].content[0].text
-                annotations = text.annotations
-
-                # Iterate over the annotations and remove them
-                for _, annotation in enumerate(annotations):
-                    text.value = text.value.replace(annotation.text, "")
-                text = text.value
-
-                if text:
-                    if len(text) < WHATSAPP_CHAR_LIMIT:
-                        return (
-                            send_text(text, number, wokspro_id)
-                            if not isreply
-                            else reply_to_message(message_id, number, text, wokspro_id)
-                        )
-                    return (
-                        meta_split_and_respond(
-                            text, number, message_id, phone_id=wokspro_id
-                        )
-                        if not isreply
-                        else meta_split_and_respond(
-                            text, number, message_id, reply=True, phone_id=wokspro_id
-                        )
+            logger.info(f"Run status: {run_status.status}")
+            if run_status.status == "completed":
+                break
+            elif run_status.status == "requires_action":
+                # handle function call
+                for (
+                    tool_call
+                ) in run_status.required_action.submit_tool_outputs.tool_calls:
+                    logger.info(tool_call.function)
+                    function_name = tool_call.function.name
+                    callback = (
+                        False
+                        if FUNCTIONS[function_name]["type"] == "non-callback"
+                        else True
                     )
-                else:
-                    text = "I was unable to retrieve the requested information. Please try again later."
-                    record_wokspro_message(thread, message, "assistant")
-                    return reply_to_message(message_id, number, text, wokspro_id)
+                    if FUNCTIONS.get(function_name):
+                        # get function arguments
+                        arguments = json.loads(tool_call.function.arguments)
+                        arguments["data"] = data
+                        arguments["message"] = message
+                        arguments["tokens"] = 0
+                        arguments["message_request"] = None
+                        arguments["wokspro_id"] = wokspro_id
+                        arguments["thread"] = thread
+                        output = FUNCTIONS[function_name]["function"](**arguments)
+                        logger.info(output)
+                        client.beta.threads.runs.submit_tool_outputs(
+                            thread_id=thread.thread_id,
+                            run_id=run.id,
+                            tool_outputs=[
+                                {
+                                    "tool_call_id": tool_call.id,
+                                    "output": json.dumps(output),
+                                }
+                            ],
+                        )
+            time.sleep(1)  # wait for a second before checking again
+
+        if callback:
+            # retrieve and return the latest message from the assistant
+            messages = client.beta.threads.messages.list(thread_id=thread.thread_id)
+            text = messages.data[0].content[0].text
+            annotations = text.annotations
+
+            # Iterate over the annotations and remove them
+            for _, annotation in enumerate(annotations):
+                text.value = text.value.replace(annotation.text, "")
+            text = text.value
+            return speech_synthesis(
+                data=data,
+                text=text,
+                tokens=0,
+                message=transcript,
+            )
+
+    if message_type == "image":
+        callback = True
+        image = get_image(data)
+        image_url = get_media_url(image["id"])
+        image_path = download_media(
+            image_url,
+            f"{datetime.now().strftime('%M%S%f')}.jpg",
+        )
+        # convert to png
+        image_content = Image.open(image_path)
+        image_content = image_content.convert(
+            "RGBA"
+        )  # If the image has an alpha channel (transparency)
+        image_content.save(image_path, format="PNG")
+        prompt = image.get("caption", "What's in this image?")
+        base64_image = encode_image(image_path)
+
+        content = {
+            "type": "image_url",
+            "image_url": {"url": f"data:image/png;base64,{base64_image}"},
+        }
+        thread = record_wokspro_message(thread, prompt)
+        thread = record_wokspro_message(thread, content)
+
+        # run the assistant
+        thread = record_wokspro_message(thread=thread, message=message)
+        run = client.beta.threads.runs.create(
+            thread_id=thread.thread_id, assistant_id=create_assistant()
+        )
+        # update thread last run
+        thread.last_run = run.id
+        thread.update()
+        # wait for response
+        while True:
+            run_status = client.beta.threads.runs.retrieve(
+                thread_id=thread.thread_id, run_id=run.id
+            )
+            logger.info(f"Run status: {run_status.status}")
+            if run_status.status == "completed":
+                break
+            elif run_status.status == "requires_action":
+                # handle function call
+                for (
+                    tool_call
+                ) in run_status.required_action.submit_tool_outputs.tool_calls:
+                    logger.info(tool_call.function)
+                    function_name = tool_call.function.name
+                    callback = (
+                        False
+                        if FUNCTIONS[function_name]["type"] == "non-callback"
+                        else True
+                    )
+                    if FUNCTIONS.get(function_name):
+                        # get function arguments
+                        arguments = json.loads(tool_call.function.arguments)
+                        arguments["data"] = data
+                        arguments["message"] = message
+                        arguments["tokens"] = 0
+                        arguments["message_request"] = None
+                        arguments["wokspro_id"] = wokspro_id
+                        arguments["thread"] = thread
+                        output = FUNCTIONS[function_name]["function"](**arguments)
+                        logger.info(output)
+                        client.beta.threads.runs.submit_tool_outputs(
+                            thread_id=thread.thread_id,
+                            run_id=run.id,
+                            tool_outputs=[
+                                {
+                                    "tool_call_id": tool_call.id,
+                                    "output": json.dumps(output),
+                                }
+                            ],
+                        )
+            time.sleep(1)  # wait for a second before checking again
+        if callback:
+            # retrieve and return the latest message from the assistant
+            messages = client.beta.threads.messages.list(thread_id=thread.thread_id)
+            text = messages.data[0].content[0].text
+            annotations = text.annotations
+
+            # Iterate over the annotations and remove them
+            for _, annotation in enumerate(annotations):
+                text.value = text.value.replace(annotation.text, "")
+            text = text.value
+            return send_text(message, number, wokspro_id)
+
+    if message_type == "text":
+        from app.modules.functions import contains_greeting, contains_thanks
+
+        isreply = is_reply(data)
+        greeting = contains_greeting(message)
+        thanks = contains_thanks(message)
+        callback = True
+        # react to message
+        send_reaction(
+            chr(128075), message_id, number
+        ) if greeting else None  # react waving hand
+        send_reaction(
+            chr(128153), message_id, number
+        ) if thanks else None  # react blue love emoji
+
+        # run the assistant
+        thread = record_wokspro_message(thread=thread, message=message)
+        run = client.beta.threads.runs.create(
+            thread_id=thread.thread_id, assistant_id=create_assistant()
+        )
+        # update thread last run
+        thread.last_run = run.id
+        thread.update()
+        # wait for response
+        while True:
+            run_status = client.beta.threads.runs.retrieve(
+                thread_id=thread.thread_id, run_id=run.id
+            )
+            logger.info(f"Run status: {run_status.status}")
+            if run_status.status == "completed":
+                break
+            elif run_status.status == "requires_action":
+                # handle function call
+                for (
+                    tool_call
+                ) in run_status.required_action.submit_tool_outputs.tool_calls:
+                    logger.info(tool_call.function)
+                    function_name = tool_call.function.name
+                    callback = (
+                        False
+                        if FUNCTIONS[function_name]["type"] == "non-callback"
+                        else True
+                    )
+                    if FUNCTIONS.get(function_name):
+                        # get function arguments
+                        arguments = json.loads(tool_call.function.arguments)
+                        arguments["data"] = data
+                        arguments["message"] = message
+                        arguments["tokens"] = 0
+                        arguments["message_request"] = None
+                        arguments["wokspro_id"] = wokspro_id
+                        arguments["thread"] = thread
+                        output = FUNCTIONS[function_name]["function"](**arguments)
+                        logger.info(output)
+                        client.beta.threads.runs.submit_tool_outputs(
+                            thread_id=thread.thread_id,
+                            run_id=run.id,
+                            tool_outputs=[
+                                {
+                                    "tool_call_id": tool_call.id,
+                                    "output": json.dumps(output),
+                                }
+                            ],
+                        )
+            time.sleep(1)  # wait for a second before checking again
+
+        if callback:
+            # retrieve and return the latest message from the assistant
+            messages = client.beta.threads.messages.list(thread_id=thread.thread_id)
+            text = messages.data[0].content[0].text
+            annotations = text.annotations
+
+            # Iterate over the annotations and remove them
+            for _, annotation in enumerate(annotations):
+                text.value = text.value.replace(annotation.text, "")
+            text = text.value
+
+            if text:
+                if len(text) < WHATSAPP_CHAR_LIMIT:
+                    return (
+                        send_text(text, number, wokspro_id)
+                        if not isreply
+                        else reply_to_message(message_id, number, text, wokspro_id)
+                    )
+                return (
+                    meta_split_and_respond(
+                        text, number, message_id, phone_id=wokspro_id
+                    )
+                    if not isreply
+                    else meta_split_and_respond(
+                        text, number, message_id, reply=True, phone_id=wokspro_id
+                    )
+                )
+            else:
+                text = "I was unable to retrieve the requested information. Please try again later."
+                thread = record_wokspro_message(thread, message, "assistant")
+                return reply_to_message(message_id, number, text, wokspro_id)

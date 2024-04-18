@@ -272,49 +272,47 @@ def webhook():
                                 interactive=button, recipient=number
                             )
             # WOKSPRO
-            from app.models import Threads
-            from app.modules.wokspro import wokspro_response, record_wokspro_message
+            if not is_old(data):
+                from app.models import Threads
+                from app.modules.wokspro import wokspro_response, record_wokspro_message
 
-            wokspro_id = os.getenv("WOKSPRO_NUMBER_ID")
-            if get_phone_id(data) == wokspro_id:
-                number = f"+{get_number(data)}"
-                message_id = get_message_id(data)
-                message_type = get_message_type(data)
-                try:
-                    message = get_message(data)
-                except KeyError:
-                    message = ""
-                try:
-                    logger.info(number)
-                    mark_as_read(message_id, wokspro_id)
-                    # find message thread with number
-                    thread = Threads.query.filter(
-                        Threads.phone_no == number
-                    ).one_or_none()
-                    if thread:
-                        async_thread = threading.Thread(
-                            target=wokspro_response, args=(thread, data)
+                wokspro_id = os.getenv("WOKSPRO_NUMBER_ID")
+                if get_phone_id(data) == wokspro_id:
+                    number = f"+{get_number(data)}"
+                    message_id = get_message_id(data)
+                    message_type = get_message_type(data)
+                    try:
+                        message = get_message(data)
+                    except KeyError:
+                        message = ""
+                    try:
+                        logger.info(number)
+                        mark_as_read(message_id, wokspro_id)
+                        # find message thread with number
+                        thread = Threads.query.filter(
+                            Threads.phone_no == number
+                        ).one_or_none()
+                        if thread:
+                            wokspro_response(thread=thread, data=data)
+                        else:  # new user
+                            OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+                            client = OpenAI(api_key=OPENAI_API_KEY)
+                            thread_id = client.beta.threads.create().id
+                            logger.info(f"New thread created with ID: {thread_id}")
+                            thread = Threads(thread_id=thread_id, phone_no=number)
+                            wokspro_response(thread=thread, data=data)
+                    except:
+                        logger.error("WOKSPRO ERROR")
+                        logger.error(traceback.format_exc())
+                        text = "Sorry, I can't respond to that at the moment. Please try again later."
+                        thread = record_wokspro_message(thread, message)
+                        thread = record_wokspro_message(thread, text, "assistant")
+                        reply_to_message(
+                            message_id, number, text, wokspro_id
+                        ) if message_type == "text" else send_text(
+                            text, number, wokspro_id
                         )
-                        async_thread.start()
-                    else:  # new user
-                        OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-                        client = OpenAI(api_key=OPENAI_API_KEY)
-                        thread_id = client.beta.threads.create().id
-                        logger.info(f"New thread created with ID: {thread_id}")
-                        thread = Threads(thread_id=thread_id, phone_no=number)
-                        async_thread = threading.Thread(
-                            target=wokspro_response, args=(thread, data)
-                        )
-                        async_thread.start()
-                except:
-                    logger.error("WOKSPRO ERROR")
-                    logger.error(traceback.format_exc())
-                    text = "Sorry, I can't respond to that at the moment. Please try again later."
-                    record_wokspro_message(thread, message)
-                    record_wokspro_message(thread, text, "assistant")
-                    reply_to_message(
-                        message_id, number, text, wokspro_id
-                    ) if message_type == "text" else send_text(text, number, wokspro_id)
+
     except:
         logger.error(traceback.format_exc())
         text = "Sorry, I can't respond to that at the moment. Please try again later."
