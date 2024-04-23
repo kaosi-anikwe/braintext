@@ -169,9 +169,11 @@ def webhook():
                                     assistant=False,
                                 )
                                 record_message(name=name, number=number, message=text)
-                                reply_to_message(
-                                    message_id, number, text
-                                ) if message_type == "text" else send_text(text, number)
+                                (
+                                    reply_to_message(message_id, number, text)
+                                    if message_type == "text"
+                                    else send_text(text, number)
+                                )
                         else:
                             text = f"Please verify your number to access the service. Login to your profile to verify your number. {request.host_url}profile"
                             record_message(
@@ -181,9 +183,11 @@ def webhook():
                                 assistant=False,
                             )
                             record_message(name=name, number=number, message=text)
-                            reply_to_message(
-                                message_id, number, text
-                            ) if message_type == "text" else send_text(text, number)
+                            (
+                                reply_to_message(message_id, number, text)
+                                if message_type == "text"
+                                else send_text(text, number)
+                            )
                     else:  # no account found
                         # Anonymous user
                         user = AnonymousUsers.query.filter(
@@ -258,9 +262,11 @@ def webhook():
                                 )
                         elif not signup and not user.respond():
                             text = "Thank you for using our service. We're sorry to inform you that you have reached your limit of prompts. To continue receiving prompts, please consider signing up for an account at BrainText. Here, you can access more prompts and enhance your experience. Thank you for your understanding and support."
-                            reply_to_message(
-                                message_id, number, text
-                            ) if message_type == "text" else send_text(text, number)
+                            (
+                                reply_to_message(message_id, number, text)
+                                if message_type == "text"
+                                else send_text(text, number)
+                            )
                             # send option to sign up
                             body = "How would you like to register?"
                             header = "Register to continue"
@@ -295,6 +301,13 @@ def webhook():
                         if thread:
                             wokspro_response(thread=thread, data=data)
                         else:  # new user
+
+                            @after_this_request
+                            def first_time(response):
+                                text = "Thank you for using WOKSPRO Waste Solutions. A decision support system for managing waste issues in and around Enugu metropolis. Feel free to chat with me concerning your waste problems."
+                                send_text(text, number, wokspro_id)
+                                return response
+
                             OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
                             client = OpenAI(api_key=OPENAI_API_KEY)
                             thread_id = client.beta.threads.create().id
@@ -307,10 +320,10 @@ def webhook():
                         text = "Sorry, I can't respond to that at the moment. Please try again later."
                         thread = record_wokspro_message(thread, message)
                         thread = record_wokspro_message(thread, text, "assistant")
-                        reply_to_message(
-                            message_id, number, text, wokspro_id
-                        ) if message_type == "text" else send_text(
-                            text, number, wokspro_id
+                        (
+                            reply_to_message(message_id, number, text, wokspro_id)
+                            if message_type == "text"
+                            else send_text(text, number, wokspro_id)
                         )
 
     except:
@@ -318,9 +331,11 @@ def webhook():
         text = "Sorry, I can't respond to that at the moment. Please try again later."
         record_message(name=name, number=number, message=message, assistant=False)
         record_message(name=name, number=number, message=text)
-        reply_to_message(
-            message_id, number, text
-        ) if message_type == "text" else send_text(text, number)
+        (
+            reply_to_message(message_id, number, text)
+            if message_type == "text"
+            else send_text(text, number)
+        )
     finally:
         response = jsonify(success=True)
         response.status_code = 200
