@@ -1,0 +1,54 @@
+{
+  "wasteCompositions": [
+    {
+      "id": "waste_organic",
+      "title": "Organic Waste",
+      "description": "Food Scraps, Yard Waste"
+    },
+    {
+      "id": "waste_paper",
+      "title": "Paper Waste",
+      "description": "Newspapers, Magazines, Cardboard"
+    },
+    {
+      "id": "waste_plastic",
+      "title": "Plastic Waste",
+      "description": "Bottles, Packaging Materials"
+    },
+    {
+      "id": "waste_glass",
+      "title": "Glass Waste",
+      "description": "Bottles, Jars"
+    },
+    {
+      "id": "waste_metal",
+      "title": "Metal Waste",
+      "description": "Cans, Scrap Metal"
+    },
+    {
+      "id": "waste_electronic",
+      "title": "E-Waste",
+      "description": "Electronic Waste - Computers, Phones"
+    },
+    {
+      "id": "waste_hazardous",
+      "title": "Hazardous Waste",
+      "description": "Batteries, Chemicals"
+    },
+    {
+      "id": "waste_textile",
+      "title": "Textile Waste",
+      "description": "Clothing, Fabric"
+    },
+    {
+      "id": "waste_rubber",
+      "title": "Rubber Waste",
+      "description": "Tires, Rubber Products"
+    },
+    {
+      "id": "waste_medical",
+      "title": "Medical Waste",
+      "description": "Needles, Pharmaceuticals"
+    }
+  ]
+}

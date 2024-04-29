@@ -1,0 +1,1396 @@
+{
+  "coordinates": [
+    {
+      "S/N": 1,
+      "Name": "Bishop Aniogu by Uwani Sec. Sch.",
+      "Number of Bins": "5",
+      "Remark": "Overflowing bin",
+      "Latitude": 6.422788,
+      "Longitude": 7.494971
+    },
+    {
+      "S/N": 3,
+      "Name": "Onwudiwe Street by Ajali street",
+      "Number of Bins": "4",
+      "Remark": "Overflowing",
+      "Latitude": 6.425995,
+      "Longitude": 7.494113
+    },
+    {
+      "S/N": 4,
+      "Name": "Nnobi street by Enugu South Headquarters",
+      "Number of Bins": "3",
+      "Remark": "overflowing bins",
+      "Latitude": 6.425371,
+      "Longitude": 7.491856
+    },
+    {
+      "S/N": 5,
+      "Name": "Ngwo Park by Nnaji Street",
+      "Number of Bins": "4",
+      "Remark": "overflowing, beside an amusement park",
+      "Latitude": 6.421481,
+      "Longitude": 7.491359
+    },
+    {
+      "S/N": 6,
+      "Name": "Robinson Street",
+      "Number of Bins": "3",
+      "Remark": "overflowing, in front of church",
+      "Latitude": 6.421706,
+      "Longitude": 7.492361
+    },
+    {
+      "S/N": 7,
+      "Name": "Robinson Street by Bishop Aniogu street",
+      "Number of Bins": "8",
+      "Remark": "clean, former dump site location",
+      "Latitude": 6.420243,
+      "Longitude": 7.492783
+    },
+    {
+      "S/N": 8,
+      "Name": "Bishop Aniogu by Awkunaw Street",
+      "Number of Bins": "7",
+      "Remark": "Clean",
+      "Latitude": 6.421695,
+      "Longitude": 7.4943
+    },
+    {
+      "S/N": 9,
+      "Name": "Amaechi Street",
+      "Number of Bins": "4",
+      "Remark": "overflowing, beside a drainage channel",
+      "Latitude": 6.496883,
+      "Longitude": 7.499271
+    },
+    {
+      "S/N": 10,
+      "Name": "Timber shade",
+      "Number of Bins": "7",
+      "Remark": "clean, beside a drainage channel",
+      "Latitude": 6.41473,
+      "Longitude": 7.503003
+    },
+    {
+      "S/N": 11,
+      "Name": "Egwuekwe close by Mete close",
+      "Number of Bins": "Nil",
+      "Remark": "illegal dumping inside drainage channel",
+      "Latitude": 6.417981,
+      "Longitude": 7.505669
+    },
+    {
+      "S/N": 12,
+      "Name": "Egwuekwe Street",
+      "Number of Bins": "Nil",
+      "Remark": "illegal dumping in empty plot",
+      "Latitude": 6.418446,
+      "Longitude": 7.507098
+    },
+    {
+      "S/N": 13,
+      "Name": "Maryland",
+      "Number of Bins": "7",
+      "Remark": "overflowing",
+      "Latitude": 6.415959,
+      "Longitude": 7.50917
+    },
+    {
+      "S/N": 14,
+      "Name": "Maryland",
+      "Number of Bins": "Nil",
+      "Remark": "illegal dumping in empty plot",
+      "Latitude": 6.41477,
+      "Longitude": 7.511258
+    },
+    {
+      "S/N": 15,
+      "Name": "Ujam street",
+      "Number of Bins": "Nil",
+      "Remark": "illegal dumping inside drainage channel",
+      "Latitude": 6.405116,
+      "Longitude": 7.503635
+    },
+    {
+      "S/N": 16,
+      "Name": "Meniru street/one day",
+      "Number of Bins": "5",
+      "Remark": "Clean",
+      "Latitude": 6.400875,
+      "Longitude": 7.490395
+    },
+    {
+      "S/N": 17,
+      "Name": "One day road",
+      "Number of Bins": "6",
+      "Remark": "overflowing",
+      "Latitude": 6.39915,
+      "Longitude": 7.485511
+    },
+    {
+      "S/N": 18,
+      "Name": "Gariki near UBA bank",
+      "Number of Bins": "6",
+      "Remark": "under evacuation",
+      "Latitude": 6.383235,
+      "Longitude": 7.493016
+    },
+    {
+      "S/N": 19,
+      "Name": "Akwuke",
+      "Number of Bins": "Nil",
+      "Remark": "illegal open dump",
+      "Latitude": 6.386008,
+      "Longitude": 7.491121
+    },
+    {
+      "S/N": 20,
+      "Name": "Ebonyi Paint road",
+      "Number of Bins": "6",
+      "Remark": "overflowing very close to drainage",
+      "Latitude": 6.391271,
+      "Longitude": 7.495383
+    },
+    {
+      "S/N": 21,
+      "Name": "Ebonyi Paint road",
+      "Number of Bins": "4",
+      "Remark": "overflowing",
+      "Latitude": 6.392691,
+      "Longitude": 7.497863
+    },
+    {
+      "S/N": 22,
+      "Name": "Ebonyi Paint road",
+      "Number of Bins": "4",
+      "Remark": "overflowing",
+      "Latitude": 6.393503,
+      "Longitude": 7.49902
+    },
+    {
+      "S/N": 23,
+      "Name": "Agbani Road/Royal Palace Hotel",
+      "Number of Bins": "3",
+      "Remark": "Clean",
+      "Latitude": 6.395386,
+      "Longitude": 7.494523
+    },
+    {
+      "S/N": 24,
+      "Name": "Agbani Road/one day junction",
+      "Number of Bins": "3",
+      "Remark": "Full",
+      "Latitude": 6.399335,
+      "Longitude": 7.494278
+    },
+    {
+      "S/N": 25,
+      "Name": "Agbani Road/ Mount junction",
+      "Number of Bins": "6",
+      "Remark": "overflowing, near bus stop",
+      "Latitude": 6.403906,
+      "Longitude": 7.49464
+    },
+    {
+      "S/N": 26,
+      "Name": "Agbani Road/Amechi Juction",
+      "Number of Bins": "5",
+      "Remark": "clean, close to traffic light",
+      "Latitude": 6.406598,
+      "Longitude": 7.495509
+    },
+    {
+      "S/N": 27,
+      "Name": "Amechi road",
+      "Number of Bins": "4",
+      "Remark": "overflowing near drainage",
+      "Latitude": 6.40084,
+      "Longitude": 7.500676
+    },
+    {
+      "S/N": 28,
+      "Name": "Agbani Road/mayor market",
+      "Number of Bins": "7",
+      "Remark": "Clean",
+      "Latitude": 6.41114,
+      "Longitude": 7.495645
+    },
+    {
+      "S/N": 29,
+      "Name": "Emagu street",
+      "Number of Bins": "13",
+      "Remark": "overflowing near Old people\u2019s home",
+      "Latitude": 6.41109,
+      "Longitude": 7.497736
+    },
+    {
+      "S/N": 30,
+      "Name": "Nza street",
+      "Number of Bins": "8",
+      "Remark": "overflowing",
+      "Latitude": 6.410006,
+      "Longitude": 7.489064
+    },
+    {
+      "S/N": 31,
+      "Name": "College Avenue",
+      "Number of Bins": "8",
+      "Remark": "Clean, Opposite St. Vicent School.",
+      "Latitude": 6.41423,
+      "Longitude": 7.48886
+    },
+    {
+      "S/N": 32,
+      "Name": "Agbani/Amaokwe Bus stop",
+      "Number of Bins": "4",
+      "Remark": "Overflowing, close to drainage",
+      "Latitude": 6.415481,
+      "Longitude": 7.494775
+    },
+    {
+      "S/N": 33,
+      "Name": "Agbani Road",
+      "Number of Bins": "5",
+      "Remark": "Clean, in front of church",
+      "Latitude": 6.414181,
+      "Longitude": 7.494941
+    },
+    {
+      "S/N": 34,
+      "Name": "Agbani road/ Roban store",
+      "Number of Bins": "3",
+      "Remark": "overflowing, in front of shopping mall",
+      "Latitude": 6.41812,
+      "Longitude": 7.490473
+    },
+    {
+      "S/N": 35,
+      "Name": "Agbani road/ Arch. Bishop Dimo.",
+      "Number of Bins": "3",
+      "Remark": "overflowing, in front of school",
+      "Latitude": 6.41897,
+      "Longitude": 7.488815
+    },
+    {
+      "S/N": 36,
+      "Name": "Emeka Ebile street",
+      "Number of Bins": "4",
+      "Remark": "Evacuating",
+      "Latitude": 6.416295,
+      "Longitude": 7.487389
+    },
+    {
+      "S/N": 37,
+      "Name": "Agbani Road",
+      "Number of Bins": "2",
+      "Remark": "overflowing, in front of church",
+      "Latitude": 6.419325,
+      "Longitude": 7.487551
+    },
+    {
+      "S/N": 38,
+      "Name": "Zik avenue/ Agbani Road",
+      "Number of Bins": "3",
+      "Remark": "Clean",
+      "Latitude": 6.420445,
+      "Longitude": 7.486403
+    },
+    {
+      "S/N": 39,
+      "Name": "Nnaji street beside Sacred Heart Church",
+      "Number of Bins": "4",
+      "Remark": "clean, beside church",
+      "Latitude": 6.422581,
+      "Longitude": 7.487911
+    },
+    {
+      "S/N": 40,
+      "Name": "Zik avenue",
+      "Number of Bins": "3",
+      "Remark": "overflowing",
+      "Latitude": 6.424325,
+      "Longitude": 7.489618
+    },
+    {
+      "S/N": 41,
+      "Name": "Zik avenue",
+      "Number of Bins": "2",
+      "Remark": "Overflowing",
+      "Latitude": 6.426138,
+      "Longitude": 7.491691
+    },
+    {
+      "S/N": 42,
+      "Name": "Zik avenue",
+      "Number of Bins": "2",
+      "Remark": "Full",
+      "Latitude": 6.426865,
+      "Longitude": 7.492135
+    },
+    {
+      "S/N": 43,
+      "Name": "Zik avenue/ Amaigbo lane",
+      "Number of Bins": "2",
+      "Remark": "Evacuating",
+      "Latitude": 6.427544,
+      "Longitude": 7.492461
+    },
+    {
+      "S/N": 44,
+      "Name": "Zik avenue/ Amaigbo lane",
+      "Number of Bins": "4",
+      "Remark": "Clean",
+      "Latitude": 6.428226,
+      "Longitude": 7.493443
+    },
+    {
+      "S/N": 45,
+      "Name": "In front of CIC",
+      "Number of Bins": "2",
+      "Remark": "overflowing, in front of school",
+      "Latitude": 6.430758,
+      "Longitude": 7.489085
+    },
+    {
+      "S/N": 46,
+      "Name": "Agbani Road/ mgbemene",
+      "Number of Bins": "4",
+      "Remark": "Clean",
+      "Latitude": 6.432111,
+      "Longitude": 7.481961
+    },
+    {
+      "S/N": 47,
+      "Name": "Camp",
+      "Number of Bins": "Nil",
+      "Remark": "dumping inside drainage",
+      "Latitude": 6.433046,
+      "Longitude": 7.474876
+    },
+    {
+      "S/N": 48,
+      "Name": "Camp",
+      "Number of Bins": "Nil",
+      "Remark": "Open dumping in empty land",
+      "Latitude": 6.429788,
+      "Longitude": 7.478958
+    },
+    {
+      "S/N": 49,
+      "Name": "Agbani Road/Ogbunike",
+      "Number of Bins": "4",
+      "Remark": "Evacuating, near drainage",
+      "Latitude": 6.42359,
+      "Longitude": 7.479905
+    },
+    {
+      "S/N": 50,
+      "Name": "Asata Mine Road",
+      "Number of Bins": "Nil",
+      "Remark": "dumping inside drainage",
+      "Latitude": 6.41812,
+      "Longitude": 7.476256
+    },
+    {
+      "S/N": 51,
+      "Name": "Bishop Aniogu/UNEC",
+      "Number of Bins": "3",
+      "Remark": "overflowing",
+      "Latitude": 6.425348,
+      "Longitude": 7.49813
+    },
+    {
+      "S/N": 52,
+      "Name": "Bishop Aniogu/UNEC",
+      "Number of Bins": "2",
+      "Remark": "Overflowing",
+      "Latitude": 6.425348,
+      "Longitude": 7.49813
+    },
+    {
+      "S/N": 53,
+      "Name": "UNEC round about",
+      "Number of Bins": "4",
+      "Remark": "Clean",
+      "Latitude": 6.428548,
+      "Longitude": 7.497916
+    },
+    {
+      "S/N": 54,
+      "Name": "Maryland Estate",
+      "Number of Bins": "2",
+      "Remark": "Clean",
+      "Latitude": 6.417911,
+      "Longitude": 7.519236
+    },
+    {
+      "S/N": 55,
+      "Name": "Citipark Hotel/Sir Ken Nnamdi drive",
+      "Number of Bins": "3",
+      "Remark": "Overflowing",
+      "Latitude": 6.419708,
+      "Longitude": 7.517148
+    },
+    {
+      "S/N": 56,
+      "Name": "Opposite Citipark Hotel",
+      "Number of Bins": "4",
+      "Remark": "overflowing",
+      "Latitude": 6.422911,
+      "Longitude": 7.51854
+    },
+    {
+      "S/N": 57,
+      "Name": "Oboro street",
+      "Number of Bins": "2",
+      "Remark": "overflowing",
+      "Latitude": 6.425125,
+      "Longitude": 7.519101
+    },
+    {
+      "S/N": 58,
+      "Name": "Akpugo Street",
+      "Number of Bins": "4",
+      "Remark": "Overflowing",
+      "Latitude": 6.428504,
+      "Longitude": 7.520376
+    },
+    {
+      "S/N": 59,
+      "Name": "Isiuzo street",
+      "Number of Bins": "5",
+      "Remark": "Overflowing",
+      "Latitude": 6.427036,
+      "Longitude": 7.52154
+    },
+    {
+      "S/N": 60,
+      "Name": "Opposite EFCC",
+      "Number of Bins": "3",
+      "Remark": "Very Clean",
+      "Latitude": 6.425974,
+      "Longitude": 7.523211
+    },
+    {
+      "S/N": 61,
+      "Name": "EFFC road by Umuoji street",
+      "Number of Bins": "3",
+      "Remark": "Clean",
+      "Latitude": 6.426493,
+      "Longitude": 7.526209
+    },
+    {
+      "S/N": 62,
+      "Name": "EFCC road by Nwakanwa Street",
+      "Number of Bins": "2",
+      "Remark": "Full",
+      "Latitude": 6.42835,
+      "Longitude": 7.523131
+    },
+    {
+      "S/N": 63,
+      "Name": "EFCC road by Umukwa Street",
+      "Number of Bins": "3",
+      "Remark": "Full",
+      "Latitude": 6.42909,
+      "Longitude": 7.52251
+    },
+    {
+      "S/N": 64,
+      "Name": "Opposite ESBS",
+      "Number of Bins": "1",
+      "Remark": "Clean",
+      "Latitude": 6.429086,
+      "Longitude": 7.522493
+    },
+    {
+      "S/N": 65,
+      "Name": "INEC Enugu",
+      "Number of Bins": "2",
+      "Remark": "Clean",
+      "Latitude": 6.433003,
+      "Longitude": 7.521008
+    },
+    {
+      "S/N": 66,
+      "Name": "Ekweremmadu Drive",
+      "Number of Bins": "4",
+      "Remark": "Clean",
+      "Latitude": 6.433821,
+      "Longitude": 7.521721
+    },
+    {
+      "S/N": 67,
+      "Name": "Bricks",
+      "Number of Bins": "2",
+      "Remark": "Clean",
+      "Latitude": 6.430868,
+      "Longitude": 7.526461
+    },
+    {
+      "S/N": 68,
+      "Name": "Bricks",
+      "Number of Bins": "nil",
+      "Remark": "illegal dump site",
+      "Latitude": 6.423726,
+      "Longitude": 7.531343
+    },
+    {
+      "S/N": 69,
+      "Name": "Bricks",
+      "Number of Bins": "2",
+      "Remark": "Overflowing",
+      "Latitude": 6.423181,
+      "Longitude": 7.532029
+    },
+    {
+      "S/N": 70,
+      "Name": "Bricks",
+      "Number of Bins": "4",
+      "Remark": "Overflowing",
+      "Latitude": 6.423925,
+      "Longitude": 7.532018
+    },
+    {
+      "S/N": 71,
+      "Name": "Bricks",
+      "Number of Bins": "nil",
+      "Remark": "Open dumping in empty land",
+      "Latitude": 6.428043,
+      "Longitude": 7.533945
+    },
+    {
+      "S/N": 72,
+      "Name": "Ekweremmadu Drive",
+      "Number of Bins": "nil",
+      "Remark": "Open dumping in empty land",
+      "Latitude": 6.430176,
+      "Longitude": 7.537568
+    },
+    {
+      "S/N": 73,
+      "Name": "Umuawulu Street",
+      "Number of Bins": "5",
+      "Remark": "clean, in front of School",
+      "Latitude": 6.427725,
+      "Longitude": 7.530646
+    },
+    {
+      "S/N": 74,
+      "Name": "Awgu Street",
+      "Number of Bins": "1",
+      "Remark": "Overflowing",
+      "Latitude": 6.426808,
+      "Longitude": 7.528558
+    },
+    {
+      "S/N": 75,
+      "Name": "Umuoji Street",
+      "Number of Bins": "7",
+      "Remark": "Clean",
+      "Latitude": 6.435483,
+      "Longitude": 7.531123
+    },
+    {
+      "S/N": 76,
+      "Name": "Ofu Obi Africa Street",
+      "Number of Bins": "2",
+      "Remark": "Clean",
+      "Latitude": 6.438565,
+      "Longitude": 7.52777
+    },
+    {
+      "S/N": 77,
+      "Name": "Achi Street/Achi Street",
+      "Number of Bins": "2",
+      "Remark": "Clean",
+      "Latitude": 6.440148,
+      "Longitude": 7.526369
+    },
+    {
+      "S/N": 78,
+      "Name": "Opposite Cathedral of Good Shepherd",
+      "Number of Bins": "2",
+      "Remark": "Clean",
+      "Latitude": 6.439886,
+      "Longitude": 7.523813
+    },
+    {
+      "S/N": 79,
+      "Name": "In front of Providence High school",
+      "Number of Bins": "4",
+      "Remark": "Overflowing",
+      "Latitude": 6.437056,
+      "Longitude": 7.523088
+    },
+    {
+      "S/N": 80,
+      "Name": "Toscana Road",
+      "Number of Bins": "2",
+      "Remark": "Overflowing",
+      "Latitude": 6.435675,
+      "Longitude": 7.521808
+    },
+    {
+      "S/N": 81,
+      "Name": "Independence Avenue",
+      "Number of Bins": "2",
+      "Remark": "Clean",
+      "Latitude": 6.438006,
+      "Longitude": 7.521301
+    },
+    {
+      "S/N": 82,
+      "Name": "In front of Toscana hotel",
+      "Number of Bins": "3",
+      "Remark": "Clean",
+      "Latitude": 6.439768,
+      "Longitude": 7.521676
+    },
+    {
+      "S/N": 83,
+      "Name": "Aguleri Street",
+      "Number of Bins": "nil ",
+      "Remark": "open dumping",
+      "Latitude": 6.442809,
+      "Longitude": 7.524341
+    },
+    {
+      "S/N": 84,
+      "Name": "Ibusa Street",
+      "Number of Bins": "2",
+      "Remark": "Clean",
+      "Latitude": 6.445638,
+      "Longitude": 7.533965
+    },
+    {
+      "S/N": 85,
+      "Name": "Independence Avenue",
+      "Number of Bins": "1",
+      "Remark": "overflowing",
+      "Latitude": 6.445955,
+      "Longitude": 7.535968
+    },
+    {
+      "S/N": 86,
+      "Name": "Ocheaba street opposite Independence avenue",
+      "Number of Bins": "3",
+      "Remark": "Clean",
+      "Latitude": 6.448328,
+      "Longitude": 7.536971
+    },
+    {
+      "S/N": 87,
+      "Name": "Ezillo Street",
+      "Number of Bins": "4",
+      "Remark": "Clean",
+      "Latitude": 6.447998,
+      "Longitude": 7.537274
+    },
+    {
+      "S/N": 88,
+      "Name": "our Lord Shepherd (Ezillo Street)",
+      "Number of Bins": "3",
+      "Remark": "Clean",
+      "Latitude": 6.450765,
+      "Longitude": 7.537355
+    },
+    {
+      "S/N": 89,
+      "Name": "Ezillo Street",
+      "Number of Bins": "3",
+      "Remark": "Full",
+      "Latitude": 6.447093,
+      "Longitude": 7.53281
+    },
+    {
+      "S/N": 90,
+      "Name": "Ezillo Street",
+      "Number of Bins": "3",
+      "Remark": "Overflowing",
+      "Latitude": 6.44597,
+      "Longitude": 7.531231
+    },
+    {
+      "S/N": 91,
+      "Name": "Ishielu Street",
+      "Number of Bins": "3",
+      "Remark": "Full",
+      "Latitude": 6.445623,
+      "Longitude": 7.529451
+    },
+    {
+      "S/N": 92,
+      "Name": "Beside Nza bush Bar",
+      "Number of Bins": "nil",
+      "Remark": "Open dumping close to drainage",
+      "Latitude": 6.450058,
+      "Longitude": 7.525778
+    },
+    {
+      "S/N": 93,
+      "Name": "Edward Nnaji park",
+      "Number of Bins": "2",
+      "Remark": "Overflowing",
+      "Latitude": 6.451203,
+      "Longitude": 7.527356
+    },
+    {
+      "S/N": 94,
+      "Name": "Amawbia Close",
+      "Number of Bins": "4",
+      "Remark": "Overflowing",
+      "Latitude": 6.453971,
+      "Longitude": 7.524956
+    },
+    {
+      "S/N": 95,
+      "Name": "Upper Chime",
+      "Number of Bins": "2",
+      "Remark": "Full",
+      "Latitude": 6.457476,
+      "Longitude": 7.529931
+    },
+    {
+      "S/N": 96,
+      "Name": "upper Chime Round About",
+      "Number of Bins": "4",
+      "Remark": "Full",
+      "Latitude": 6.457845,
+      "Longitude": 7.531901
+    },
+    {
+      "S/N": 97,
+      "Name": "Upper Chime",
+      "Number of Bins": "3",
+      "Remark": "Clean",
+      "Latitude": 6.457951,
+      "Longitude": 7.534473
+    },
+    {
+      "S/N": 98,
+      "Name": "Nanka Street",
+      "Number of Bins": "3",
+      "Remark": "Full",
+      "Latitude": 6.458303,
+      "Longitude": 7.526521
+    },
+    {
+      "S/N": 99,
+      "Name": "Lumumba Street",
+      "Number of Bins": "4",
+      "Remark": "Clean",
+      "Latitude": 6.45794,
+      "Longitude": 7.521523
+    },
+    {
+      "S/N": 100,
+      "Name": "Nanka Street",
+      "Number of Bins": "5",
+      "Remark": "Clean",
+      "Latitude": 6.458214,
+      "Longitude": 7.519218
+    },
+    {
+      "S/N": 101,
+      "Name": "Abakaliki road/ in front of New Berries",
+      "Number of Bins": "2",
+      "Remark": "Clean",
+      "Latitude": 6.457855,
+      "Longitude": 7.516623
+    },
+    {
+      "S/N": 102,
+      "Name": "Abakaliki road/Beside school Board",
+      "Number of Bins": "2",
+      "Remark": "Clean",
+      "Latitude": 6.461291,
+      "Longitude": 7.508346
+    },
+    {
+      "S/N": 103,
+      "Name": "Abakaliki road/ beside Chase mall",
+      "Number of Bins": "3",
+      "Remark": "Clean",
+      "Latitude": 6.461275,
+      "Longitude": 7.507196
+    },
+    {
+      "S/N": 104,
+      "Name": "Park Avenue",
+      "Number of Bins": "2",
+      "Remark": "Overflowing",
+      "Latitude": 6.461375,
+      "Longitude": 7.504199
+    },
+    {
+      "S/N": 105,
+      "Name": "Park Avenue",
+      "Number of Bins": "2",
+      "Remark": "Clean",
+      "Latitude": 6.462993,
+      "Longitude": 7.50052
+    },
+    {
+      "S/N": 106,
+      "Name": "Park Avenue",
+      "Number of Bins": "3",
+      "Remark": "Overflowing",
+      "Latitude": 6.46435,
+      "Longitude": 7.500058
+    },
+    {
+      "S/N": 107,
+      "Name": "Nwodo Street off Ekulu Avenue",
+      "Number of Bins": "3",
+      "Remark": "Overflowing",
+      "Latitude": 6.463958,
+      "Longitude": 7.498311
+    },
+    {
+      "S/N": 108,
+      "Name": "Ekulu Avenue",
+      "Number of Bins": "3",
+      "Remark": "Full",
+      "Latitude": 6.465721,
+      "Longitude": 7.498244
+    },
+    {
+      "S/N": 109,
+      "Name": "New GRA/ Abakaliki express",
+      "Number of Bins": "2",
+      "Remark": "Full",
+      "Latitude": 6.467003,
+      "Longitude": 7.497314
+    },
+    {
+      "S/N": 110,
+      "Name": "Damija",
+      "Number of Bins": "5",
+      "Remark": "Overflowing",
+      "Latitude": 6.472329,
+      "Longitude": 7.49893
+    },
+    {
+      "S/N": 111,
+      "Name": "Estate Avenue",
+      "Number of Bins": "7",
+      "Remark": "Clean",
+      "Latitude": 6.47888,
+      "Longitude": 7.4954
+    },
+    {
+      "S/N": 112,
+      "Name": "Ekulu Junction",
+      "Number of Bins": "1 (big)",
+      "Remark": "overflowing",
+      "Latitude": 6.480765,
+      "Longitude": 7.495118
+    },
+    {
+      "S/N": 113,
+      "Name": "Nike Lake Road",
+      "Number of Bins": "5",
+      "Remark": "overflowing",
+      "Latitude": 6.494646,
+      "Longitude": 7.498166
+    },
+    {
+      "S/N": 114,
+      "Name": "Nike Lake Road",
+      "Number of Bins": "4",
+      "Remark": "Overflowing",
+      "Latitude": 6.491524,
+      "Longitude": 7.504076
+    },
+    {
+      "S/N": 115,
+      "Name": "Nike Lake Road",
+      "Number of Bins": "3",
+      "Remark": "Overflowing",
+      "Latitude": 6.488176,
+      "Longitude": 7.502154
+    },
+    {
+      "S/N": 116,
+      "Name": "Nike Lake Road",
+      "Number of Bins": "4",
+      "Remark": "Overflowing in front of hospital",
+      "Latitude": 6.486346,
+      "Longitude": 7.501029
+    },
+    {
+      "S/N": 117,
+      "Name": "Nike Lake Road",
+      "Number of Bins": "3",
+      "Remark": "Overflowing",
+      "Latitude": 6.48387,
+      "Longitude": 7.500256
+    },
+    {
+      "S/N": 118,
+      "Name": "Off Ekulu Avenue",
+      "Number of Bins": "2",
+      "Remark": "Overflowing",
+      "Latitude": 6.477391,
+      "Longitude": 7.504253
+    },
+    {
+      "S/N": 119,
+      "Name": "Beside Park Lane",
+      "Number of Bins": "3",
+      "Remark": "Clean",
+      "Latitude": 6.46482,
+      "Longitude": 7.496176
+    },
+    {
+      "S/N": 120,
+      "Name": "Beside Shop Rite",
+      "Number of Bins": "2",
+      "Remark": "Clean",
+      "Latitude": 6.460148,
+      "Longitude": 7.493041
+    },
+    {
+      "S/N": 121,
+      "Name": "Okpara avenue off NNPC",
+      "Number of Bins": "3",
+      "Remark": "Clean",
+      "Latitude": 6.459025,
+      "Longitude": 7.494375
+    },
+    {
+      "S/N": 122,
+      "Name": "Okpara avenue by Ilukwe street",
+      "Number of Bins": "2",
+      "Remark": "Clean",
+      "Latitude": 6.451611,
+      "Longitude": 7.493308
+    },
+    {
+      "S/N": 123,
+      "Name": "Okpara Avenue by Sports Club",
+      "Number of Bins": "2",
+      "Remark": "Clean",
+      "Latitude": 6.44917,
+      "Longitude": 7.492365
+    },
+    {
+      "S/N": 124,
+      "Name": "Okpara avenue by collary avenue",
+      "Number of Bins": "2",
+      "Remark": "Clean",
+      "Latitude": 6.446099,
+      "Longitude": 7.49103
+    },
+    {
+      "S/N": 125,
+      "Name": "Okpara avenue by ESWAMA",
+      "Number of Bins": "1",
+      "Remark": "Full",
+      "Latitude": 6.445328,
+      "Longitude": 7.491056
+    },
+    {
+      "S/N": 126,
+      "Name": "Holy Ghost Round about",
+      "Number of Bins": "4",
+      "Remark": "Overflowing",
+      "Latitude": 6.44431,
+      "Longitude": 7.490538
+    },
+    {
+      "S/N": 127,
+      "Name": "Holy Ghost",
+      "Number of Bins": "nil",
+      "Remark": "Open dumping along the road",
+      "Latitude": 6.439041,
+      "Longitude": 7.48725
+    },
+    {
+      "S/N": 128,
+      "Name": "Holy Ghost",
+      "Number of Bins": "nil",
+      "Remark": "Open dumping along the road",
+      "Latitude": 6.438435,
+      "Longitude": 7.487438
+    },
+    {
+      "S/N": 129,
+      "Name": "Holy Ghost",
+      "Number of Bins": "nil",
+      "Remark": "Open dumping along the road",
+      "Latitude": 6.437986,
+      "Longitude": 7.487731
+    },
+    {
+      "S/N": 130,
+      "Name": "Holy Ghost",
+      "Number of Bins": "nil",
+      "Remark": "Open dumping along the road",
+      "Latitude": 6.437673,
+      "Longitude": 7.487954
+    },
+    {
+      "S/N": 131,
+      "Name": "Holy Ghost/ ogbete market",
+      "Number of Bins": "2 (big)",
+      "Remark": "overflowing",
+      "Latitude": 6.433712,
+      "Longitude": 7.488351
+    },
+    {
+      "S/N": 132,
+      "Name": "Ogbete market",
+      "Number of Bins": "1 (big)",
+      "Remark": "Overflowing",
+      "Latitude": 6.435913,
+      "Longitude": 7.489408
+    },
+    {
+      "S/N": 133,
+      "Name": "Zik avenue/Albertina",
+      "Number of Bins": "3",
+      "Remark": "Clean",
+      "Latitude": 6.435283,
+      "Longitude": 7.494618
+    },
+    {
+      "S/N": 134,
+      "Name": "Zik avenue/First Bank",
+      "Number of Bins": "2",
+      "Remark": "Clean",
+      "Latitude": 6.434191,
+      "Longitude": 7.494381
+    },
+    {
+      "S/N": 135,
+      "Name": "Zik avenue/Anyaebgunam street",
+      "Number of Bins": "3",
+      "Remark": "Clean",
+      "Latitude": 6.43183,
+      "Longitude": 7.49399
+    },
+    {
+      "S/N": 136,
+      "Name": "Zik avenue/CIDJAB",
+      "Number of Bins": "3",
+      "Remark": "Clean",
+      "Latitude": 6.430948,
+      "Longitude": 7.493608
+    },
+    {
+      "S/N": 137,
+      "Name": "Zik avenue/Kamchizzy Nig. LTD",
+      "Number of Bins": "3",
+      "Remark": "Clean",
+      "Latitude": 6.430181,
+      "Longitude": 7.49397
+    },
+    {
+      "S/N": 138,
+      "Name": "Winners avenue",
+      "Number of Bins": "5",
+      "Remark": "Overflowing",
+      "Latitude": 6.445496,
+      "Longitude": 7.50781
+    },
+    {
+      "S/N": 139,
+      "Name": "Lagos Street",
+      "Number of Bins": "5",
+      "Remark": "Overflowing, near drainage channel",
+      "Latitude": 6.446283,
+      "Longitude": 7.505548
+    },
+    {
+      "S/N": 140,
+      "Name": "Oloko gate bus stop",
+      "Number of Bins": "4",
+      "Remark": "Clean",
+      "Latitude": 6.450306,
+      "Longitude": 7.501633
+    },
+    {
+      "S/N": 141,
+      "Name": "Ogui road",
+      "Number of Bins": "3",
+      "Remark": "Overflowing",
+      "Latitude": 6.447451,
+      "Longitude": 7.499591
+    },
+    {
+      "S/N": 142,
+      "Name": "poly bus stop",
+      "Number of Bins": "3",
+      "Remark": "Overflowing",
+      "Latitude": 6.442571,
+      "Longitude": 7.500325
+    },
+    {
+      "S/N": 143,
+      "Name": "Onuasata street",
+      "Number of Bins": "8",
+      "Remark": "Full",
+      "Latitude": 6.440931,
+      "Longitude": 7.502313
+    },
+    {
+      "S/N": 144,
+      "Name": "Council roundabout",
+      "Number of Bins": "7",
+      "Remark": "Overflowing",
+      "Latitude": 6.433628,
+      "Longitude": 7.497026
+    },
+    {
+      "S/N": 145,
+      "Name": "Awolowo street",
+      "Number of Bins": "2",
+      "Remark": "Overflowing",
+      "Latitude": 6.430376,
+      "Longitude": 7.496308
+    },
+    {
+      "S/N": 146,
+      "Name": "Along awolowo street",
+      "Number of Bins": "nil",
+      "Remark": "illegal dump site in railway line",
+      "Latitude": 6.430351,
+      "Longitude": 7.497675
+    },
+    {
+      "S/N": 147,
+      "Name": "Neni street",
+      "Number of Bins": "7",
+      "Remark": "Overflowing",
+      "Latitude": 6.433916,
+      "Longitude": 7.501676
+    },
+    {
+      "S/N": 148,
+      "Name": "Obioma Street",
+      "Number of Bins": "nil",
+      "Remark": "illegal dump site inside drain",
+      "Latitude": 6.419396,
+      "Longitude": 7.498906
+    },
+    {
+      "S/N": 149,
+      "Name": "infront of Enugu North headquarters",
+      "Number of Bins": "1",
+      "Remark": "Overflowing",
+      "Latitude": 6.438198,
+      "Longitude": 7.486251
+    },
+    {
+      "S/N": 150,
+      "Name": "In Front of Peace park(old park)",
+      "Number of Bins": "nil",
+      "Remark": "illegal dumping In between road.",
+      "Latitude": 6.438256,
+      "Longitude": 7.48488
+    },
+    {
+      "S/N": 151,
+      "Name": "In front of Enugu Prison",
+      "Number of Bins": "2",
+      "Remark": "Overflowing",
+      "Latitude": 6.438208,
+      "Longitude": 7.482121
+    },
+    {
+      "S/N": 152,
+      "Name": "Kingsway road",
+      "Number of Bins": "2",
+      "Remark": "Full",
+      "Latitude": 6.439821,
+      "Longitude": 7.481113
+    },
+    {
+      "S/N": 154,
+      "Name": "In front of Radio Nigeria Enugu",
+      "Number of Bins": "2",
+      "Remark": "Overflowing",
+      "Latitude": 6.446858,
+      "Longitude": 7.482773
+    },
+    {
+      "S/N": 155,
+      "Name": "Hillview avenue",
+      "Number of Bins": "2",
+      "Remark": "Overflowing",
+      "Latitude": 6.453346,
+      "Longitude": 7.504681
+    },
+    {
+      "S/N": 156,
+      "Name": "Rangers avenue",
+      "Number of Bins": "3",
+      "Remark": "Overflowing",
+      "Latitude": 6.50059,
+      "Longitude": 7.514378
+    },
+    {
+      "S/N": 158,
+      "Name": "Abakaliki Road in front of Shoprite",
+      "Number of Bins": "3",
+      "Remark": "Clean",
+      "Latitude": 6.453346,
+      "Longitude": 7.504681
+    },
+    {
+      "S/N": 159,
+      "Name": "Nike Road",
+      "Number of Bins": "3 (big)",
+      "Remark": "Clean, beside bridge",
+      "Latitude": 6.476583,
+      "Longitude": 7.516926
+    },
+    {
+      "S/N": 160,
+      "Name": "Nike Road",
+      "Number of Bins": "nil",
+      "Remark": "illegal dumping along the road",
+      "Latitude": 6.480693,
+      "Longitude": 7.519196
+    },
+    {
+      "S/N": 161,
+      "Name": "Nike Road",
+      "Number of Bins": "nil",
+      "Remark": "overflowing illegal dump site",
+      "Latitude": 6.484345,
+      "Longitude": 7.525701
+    },
+    {
+      "S/N": 162,
+      "Name": "ozorudo street",
+      "Number of Bins": "nil",
+      "Remark": "illegal dumping inside drainage channel",
+      "Latitude": 6.485295,
+      "Longitude": 7.524044
+    },
+    {
+      "S/N": 163,
+      "Name": "Obinagu Road",
+      "Number of Bins": "nil",
+      "Remark": "illegal dump inside water channel",
+      "Latitude": 6.488964,
+      "Longitude": 7.519144
+    },
+    {
+      "S/N": 164,
+      "Name": "Obinagu Road",
+      "Number of Bins": "nil",
+      "Remark": "illegal dumping",
+      "Latitude": 6.492651,
+      "Longitude": 7.514943
+    },
+    {
+      "S/N": 165,
+      "Name": "Obinagu Road",
+      "Number of Bins": "nil",
+      "Remark": "illegal dumping in drain ",
+      "Latitude": 6.492453,
+      "Longitude": 7.514905
+    },
+    {
+      "S/N": 166,
+      "Name": "Amangwu Village",
+      "Number of Bins": "nil",
+      "Remark": "illegal, in front of town hall",
+      "Latitude": 6.494936,
+      "Longitude": 7.516253
+    },
+    {
+      "S/N": 167,
+      "Name": "Amangwu Village",
+      "Number of Bins": "nil",
+      "Remark": "illegal dumping inside drainage channel",
+      "Latitude": 6.495448,
+      "Longitude": 7.516621
+    },
+    {
+      "S/N": 168,
+      "Name": "Amangwu Village",
+      "Number of Bins": "nil",
+      "Remark": "illegal dump site",
+      "Latitude": 6.498613,
+      "Longitude": 7.518448
+    },
+    {
+      "S/N": 169,
+      "Name": "Amangwu Village",
+      "Number of Bins": "nil",
+      "Remark": "illegal dumping inside drainage channel",
+      "Latitude": 6.499953,
+      "Longitude": 7.519276
+    },
+    {
+      "S/N": 170,
+      "Name": "Amangwu Village",
+      "Number of Bins": "nil",
+      "Remark": "illegal dumping inside drainage channel",
+      "Latitude": 6.501388,
+      "Longitude": 7.520061
+    },
+    {
+      "S/N": 171,
+      "Name": "Amangwu Village",
+      "Number of Bins": "nil",
+      "Remark": "illegal dump site in empty plot of land",
+      "Latitude": 6.506143,
+      "Longitude": 7.520836
+    },
+    {
+      "S/N": 172,
+      "Name": "Amangwu Village",
+      "Number of Bins": "nil",
+      "Remark": "illegal dumping along the road",
+      "Latitude": 6.509481,
+      "Longitude": 7.521051
+    },
+    {
+      "S/N": 173,
+      "Name": "Elder Mathias Anike Avenue",
+      "Number of Bins": "nil",
+      "Remark": "illegal dumping at T-junction road",
+      "Latitude": 6.507451,
+      "Longitude": 7.521626
+    },
+    {
+      "S/N": 174,
+      "Name": "Kamsiyochukwu Street",
+      "Number of Bins": "nil",
+      "Remark": "illegal dumping along the road",
+      "Latitude": 6.508968,
+      "Longitude": 7.518153
+    },
+    {
+      "S/N": 175,
+      "Name": "Harmony Road",
+      "Number of Bins": "4",
+      "Remark": "Clean",
+      "Latitude": 6.509913,
+      "Longitude": 7.51586
+    },
+    {
+      "S/N": 176,
+      "Name": "Harmony Road",
+      "Number of Bins": "nil",
+      "Remark": "illegal dump inside poll of water",
+      "Latitude": 6.502968,
+      "Longitude": 7.514835
+    },
+    {
+      "S/N": 177,
+      "Name": "Harmony Road",
+      "Number of Bins": "6",
+      "Remark": "clean, located at T-Junction in a busy traffic",
+      "Latitude": 6.50021,
+      "Longitude": 7.5144
+    }
+  ]
+}

@@ -292,6 +292,34 @@ def webhook():
                     except KeyError:
                         message = ""
                     try:
+                        # Event to signal the status update function to stop if OpenAI responds on time
+                        stop_event = threading.Event()
+
+                        def status_update():
+                            """Wait ```n``` seconds and send status update."""
+                            if not stop_event.wait(15):
+                                import random
+
+                                text = random.choice(WAIT_MESSAGES)
+                                (
+                                    send_text(
+                                        message=text,
+                                        recipient=number,
+                                        phone_number_id=wokspro_id,
+                                    )
+                                    if not message_id
+                                    else reply_to_message(
+                                        message_id=message_id,
+                                        recipient=number,
+                                        message=text,
+                                        phone_number_id=wokspro_id,
+                                    )
+                                )
+
+                        # set timer
+                        timer_thread = threading.Thread(target=status_update)
+                        timer_thread.start()
+
                         logger.info(number)
                         mark_as_read(message_id, wokspro_id)
                         # find message thread with number
@@ -301,13 +329,8 @@ def webhook():
                         if thread:
                             wokspro_response(thread=thread, data=data)
                         else:  # new user
-
-                            @after_this_request
-                            def first_time(response):
-                                text = "Thank you for using WOKSPRO Waste Solutions. A decision support system for managing waste issues in and around Enugu metropolis. Feel free to chat with me concerning your waste problems."
-                                send_text(text, number, wokspro_id)
-                                return response
-
+                            text = "Thank you for using WOKSPRO Waste Solutions. A decision support system for managing waste issues in and around Enugu metropolis. Feel free to chat with me concerning your waste problems."
+                            send_text(text, number, wokspro_id)
                             OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
                             client = OpenAI(api_key=OPENAI_API_KEY)
                             thread_id = client.beta.threads.create().id
@@ -325,6 +348,11 @@ def webhook():
                             if message_type == "text"
                             else send_text(text, number, wokspro_id)
                         )
+                    finally:
+                        # Signal the status update function to stop
+                        stop_event.set()
+                        # Wait for status update thread to complete
+                        timer_thread.join()
 
     except:
         logger.error(traceback.format_exc())

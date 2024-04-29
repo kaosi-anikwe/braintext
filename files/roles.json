@@ -1,0 +1,44 @@
+{
+  "roles": [
+    {
+      "id": "role_001",
+      "title": "Student",
+      "description": ""
+    },
+    {
+      "id": "role_002",
+      "title": "Community Leader",
+      "description": ""
+    },
+    {
+      "id": "role_003",
+      "title": "Resident",
+      "description": ""
+    },
+    {
+      "id": "role_004",
+      "title": "Business Owner",
+      "description": ""
+    },
+    {
+      "id": "role_005",
+      "title": "Consumers",
+      "description": ""
+    },
+    {
+      "id": "role_006",
+      "title": "Environmental Advocates",
+      "description": ""
+    },
+    {
+      "id": "role_007",
+      "title": "Waste Collectors",
+      "description": ""
+    },
+    {
+      "id": "role_008",
+      "title": "Gardeners",
+      "description": ""
+    }
+  ]
+}

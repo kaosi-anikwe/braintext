@@ -1,0 +1,54 @@
+{
+  "wasteManagementPractices": [
+    {
+      "id": "wmp_001",
+      "title": "Source Separation",
+      "description": "Sorting waste into categories like recyclables."
+    },
+    {
+      "id": "wmp_002",
+      "title": "Recycling",
+      "description": "Converting waste into new products."
+    },
+    {
+      "id": "wmp_003",
+      "title": "Composting",
+      "description": "Decomposing organic waste to create nutrient-rich soil."
+    },
+    {
+      "id": "wmp_004",
+      "title": "Waste Minimization",
+      "description": "Reducing waste generation by using resources efficiently."
+    },
+    {
+      "id": "wmp_005",
+      "title": "Landfill Management",
+      "description": "Managing landfills by compacting waste and controlling emissions."
+    },
+    {
+      "id": "wmp_006",
+      "title": "Incineration",
+      "description": "Burning waste at high temperatures to convert it into energy."
+    },
+    {
+      "id": "wmp_007",
+      "title": "Manage Hazardous Waste",
+      "description": "Disposal and treatment of hazardous waste to prevent risks."
+    },
+    {
+      "id": "wmp_008",
+      "title": "Waste-to-Energy",
+      "description": "Converting waste into energy through anaerobic digestion."
+    },
+    {
+      "id": "wmp_009",
+      "title": "Public and Education",
+      "description": "Educating communities on proper waste disposal and recycling."
+    },
+    {
+      "id": "wmp_010",
+      "title": "I don't know",
+      "description": ""
+    }
+  ]
+}
