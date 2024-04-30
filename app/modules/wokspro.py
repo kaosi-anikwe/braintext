@@ -542,12 +542,16 @@ def wokspro_response(thread: Threads, data: Dict[Any, Any]):
             # delete audio file
             delete_file(audio_file)
         # reactions
-        send_reaction(
-            chr(128075), message_id, number, wokspro_id
-        ) if greeting else None  # react waving hand
-        send_reaction(
-            chr(128153), message_id, number, wokspro_id
-        ) if thanks else None  # react blue love emoji
+        (
+            send_reaction(chr(128075), message_id, number, wokspro_id)
+            if greeting
+            else None
+        )  # react waving hand
+        (
+            send_reaction(chr(128153), message_id, number, wokspro_id)
+            if thanks
+            else None
+        )  # react blue love emoji
 
         # run the assistant
         thread = record_wokspro_message(thread=thread, message=message)
@@ -629,7 +633,7 @@ def wokspro_response(thread: Threads, data: Dict[Any, Any]):
                         sections=choices,
                         footer=WOKSPRO_MOTTO,
                     )
-                    thread = record_wokspro_message(thread, body, "assistant")
+                    thread = record_wokspro_message(check_thread, body, "assistant")
                     send_interactive_message(
                         message_list,
                         thread.phone_no,
@@ -750,12 +754,16 @@ def wokspro_response(thread: Threads, data: Dict[Any, Any]):
         callback = True
         function_name = ""
         # react to message
-        send_reaction(
-            chr(128075), message_id, number, wokspro_id
-        ) if greeting else None  # react waving hand
-        send_reaction(
-            chr(128153), message_id, number, wokspro_id
-        ) if thanks else None  # react blue love emoji
+        (
+            send_reaction(chr(128075), message_id, number, wokspro_id)
+            if greeting
+            else None
+        )  # react waving hand
+        (
+            send_reaction(chr(128153), message_id, number, wokspro_id)
+            if thanks
+            else None
+        )  # react blue love emoji
 
         # run the assistant
         thread = record_wokspro_message(thread=thread, message=message)
@@ -837,7 +845,7 @@ def wokspro_response(thread: Threads, data: Dict[Any, Any]):
                         sections=choices,
                         footer=WOKSPRO_MOTTO,
                     )
-                    thread = record_wokspro_message(thread, body, "assistant")
+                    thread = record_wokspro_message(check_thread, body, "assistant")
                     send_interactive_message(
                         message_list,
                         thread.phone_no,
