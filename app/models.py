@@ -410,7 +410,7 @@ class Threads(db.Model, TimestampMixin, DatabaseHelperMixin):
     waste_comp = db.Column(db.String(200))
     practice = db.Column(db.String(200))
     recommended = db.Column(db.Text)
-    role = db.Column(db.String(20))
+    role = db.Column(db.String(50))
 
     def __init__(self, thread_id, phone_no):
         self.thread_id = thread_id
@@ -419,7 +419,6 @@ class Threads(db.Model, TimestampMixin, DatabaseHelperMixin):
 
     def export(self):
         return {
-            "Phone Number": self.phone_no,
             "Location": self.location,
             "Latitude": self.latitude,
             "Longitude": self.longitude,
@@ -427,6 +426,7 @@ class Threads(db.Model, TimestampMixin, DatabaseHelperMixin):
             "Role": self.role,
             "Current Practice": self.practice,
             "Recommended Practice": str(self.recommended)
+            .replace("\n", "")
             .replace("*", "")
             .replace("#", ""),
         }

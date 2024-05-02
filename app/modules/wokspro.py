@@ -424,6 +424,7 @@ def record_user_location(thread: Threads = None, **kwargs):
 
 
 def update_spreadsheet(data: dict, sheetname: str = "Users"):
+    """Function for writing data to spreadsheet."""
     # Get worksheet
     if sheetname not in [worksheet.title for worksheet in spreadsheet.worksheets()]:
         worksheet = spreadsheet.add_worksheet(sheetname, rows=100, cols=20)
