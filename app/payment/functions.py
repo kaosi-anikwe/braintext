@@ -152,7 +152,7 @@ def recharge_account(data, **kwargs):
 
 
 def exchange_rates(currency: str):
-    return 1395
+    return 1500
 
 
 def generate_tx_ref(mode: str, user_uid: str):
