@@ -645,7 +645,7 @@ def image_recognition(
             message_list=message_list,
         )
         response = openai_client.chat.completions.create(
-            model="gpt-4-vision-preview",
+            model="gpt-4-turbo",
             messages=messages,
             temperature=1,
             max_tokens=4000,
@@ -739,12 +739,12 @@ def meta_chat_response(
             record_message(name=name, number=number, message=text)
             return send_text(text, number)
         # react to message
-        send_reaction(
-            chr(128075), message_id, number
-        ) if greeting else None  # react waving hand
-        send_reaction(
-            chr(128153), message_id, number
-        ) if thanks else None  # react blue love emoji
+        (
+            send_reaction(chr(128075), message_id, number) if greeting else None
+        )  # react waving hand
+        (
+            send_reaction(chr(128153), message_id, number) if thanks else None
+        )  # react blue love emoji
 
         try:
             response = chatgpt_response(
@@ -875,12 +875,12 @@ def meta_audio_response(
             # delete audio file
             delete_file(audio_file)
         # reactions
-        send_reaction(
-            chr(128075), message_id, number
-        ) if greeting else None  # react waving hand
-        send_reaction(
-            chr(128153), message_id, number
-        ) if thanks else None  # react blue love emoji
+        (
+            send_reaction(chr(128075), message_id, number) if greeting else None
+        )  # react waving hand
+        (
+            send_reaction(chr(128153), message_id, number) if thanks else None
+        )  # react blue love emoji
 
         try:
             user_db_path = get_user_db(name, number)
@@ -993,7 +993,7 @@ def meta_image_response(
                 "RGBA"
             )  # If the image has an alpha channel (transparency)
             image_content.save(image_path, format="PNG")
-            prompt = image.get("caption", "What's in this image?")
+            prompt = image.get("caption", "")
             base64_image = encode_image(image_path)
             message_list = [
                 {
@@ -1081,7 +1081,7 @@ def meta_interactive_response(
                                 "description": f"Recharge with {bank}.",
                             }
                             for bank, code in list(BANK_CODES.items())[:10]
-                        ]
+                        ],
                     }
                 ]
                 message_list = generate_list_message(
@@ -1209,7 +1209,7 @@ def meta_interactive_response(
         # RECHARGE ACCOUNT
         if "bank_" in reply_id:
             from ..payment.routes import BANK_CODES
-            
+
             user_code = reply_id.removeprefix("bank_")
             user_bank = ""
             for bank_name, bank_code in BANK_CODES.items():
@@ -1217,7 +1217,7 @@ def meta_interactive_response(
                     user_bank = bank_name
             if not user_bank:
                 raise Exception(f"Bank with code: '{user_code}' not found")
-            
+
             header = "Select amount"
             body = f"Select amount to recharge with {user_bank}"
             choices = [
@@ -1259,7 +1259,7 @@ def meta_interactive_response(
                 message=message,
                 amount=int(amount),
                 currency="NGN",
-                bank_name=user_bank
+                bank_name=user_bank,
             )
         # CHATBOT SETTINGS
         # Handle Context and Responses settings
@@ -1443,9 +1443,11 @@ def meta_interactive_response(
                         {
                             "id": f"audio_voice_{voice['name']}",
                             "title": voice["name"],
-                            "description": "Male voice"
-                            if voice["gender"] == "male"
-                            else "Female voice",
+                            "description": (
+                                "Male voice"
+                                if voice["gender"] == "male"
+                                else "Female voice"
+                            ),
                         }
                         for voice in voices
                     ],
@@ -1699,7 +1701,7 @@ def whatsapp_signup(
                             _external=True,
                             _scheme="https",
                         )
-                        message = f"Awesome! You're all set up.\nCheck your inbox for a verification link.\nLogin to edit your profile or change settings. {request.host_url}profile?settings=True. Settings can also be changed from here.\n*Your password the number you're texting with in the international format.*\nFollow the link below to change your password.\nThank you for choosing BrainText 💙."
+                        message = f"Awesome! You're all set up.\nCheck your inbox for a verification link.\nLogin to edit your profile or change settings. {request.host_url}profile?settings=True. Settings can also be changed from here.\n*Your password is the number you're texting with in the international format.*\nFollow the link below to change your password.\nThank you for choosing BrainText 💙"
                         cta_action = generate_cta_action(
                             header="Account Created!",
                             body=message,
@@ -1710,6 +1712,14 @@ def whatsapp_signup(
                         # send welcome audio
                         media_url = f"{url_for('chatbot.send_voice_note', _external=True, _scheme='https')}?filename=welcome.ogg"
                         send_audio(media_url, number)
+                        # send account settings
+                        body = f"The user settings interface provides you with the ability to manage both your account and chatbot settings in one place. You can access and update your personal information, notification preferences, chatbot interactions, and more. With this interface, you can customize your experience to best suit your needs and preferences."
+                        header = "Change settings"
+                        button_texts = ["Chatbot settings", "User settings"]
+                        button = generate_interactive_button(
+                            body=body, header=header, button_texts=button_texts
+                        )
+                        send_interactive_message(interactive=button, recipient=number)
     except:
         logger.error(traceback.format_exc())
         text = "Something went wrong. Please try again later."
