@@ -81,7 +81,7 @@ class Users(db.Model, TimestampMixin, UserMixin, DatabaseHelperMixin):
     last_name = db.Column(db.String(50), nullable=False)
     email = db.Column(db.String(100), nullable=False)
     account_type = db.Column(db.String(20), default="regular")
-    balance = db.Column(db.Float, default=2)
+    balance = db.Column(db.Float, default=0.5)
     timezone_offset = db.Column(db.Integer)
     phone_no = db.Column(db.String(20))
     phone_verified = db.Column(db.Boolean, default=False)
@@ -96,7 +96,7 @@ class Users(db.Model, TimestampMixin, UserMixin, DatabaseHelperMixin):
         self.first_name = first_name
         self.last_name = last_name
         self.email = email
-        self.password_hash = self.get_password_hash(password) if password else None
+        self.password_hash = self.get_password_hash(str(password)) if password else None
         self.uid = uuid.uuid4().hex
         self.timezone_offset = timezone_offset
 
@@ -213,7 +213,7 @@ class AnonymousUsers(db.Model, TimestampMixin, DatabaseHelperMixin):
     email = db.Column(db.String(100))
     phone_no = db.Column(db.String(20))
     signup_stage = db.Column(db.String(50))
-    balance = db.Column(db.Float, default=2)
+    balance = db.Column(db.Float, default=0.5)
 
     def __init__(self, phone_no) -> None:
         self.phone_no = phone_no
