@@ -95,7 +95,9 @@ def webhook():
                                         body = "Instantly top up your balance directly on WhatsApp"
                                         button_texts = ["Yes", "No"]
                                         button = generate_interactive_button(
-                                            header=header, body=body, button_texts=button_texts
+                                            header=header,
+                                            body=body,
+                                            button_texts=button_texts,
                                         )
                                         # record messages
                                         record_message(
@@ -108,7 +110,9 @@ def webhook():
                                             name=name, number=number, message=text
                                         )
                                         send_text(text, number)
-                                        return send_interactive_message(interactive=button, recipient=user.phone_no)
+                                        return send_interactive_message(
+                                            interactive=button, recipient=user.phone_no
+                                        )
 
                                     # charge base cost
                                     user.balance -= BASE_COST

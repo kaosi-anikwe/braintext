@@ -82,7 +82,13 @@ def register():
         timezone_offset = round((browser_time - datetime.utcnow()).seconds, -2)
 
         # create user class instance / database record
-        new_user = Users(first_name, last_name, email, password, timezone_offset)
+        new_user = Users(
+            first_name=first_name,
+            last_name=last_name,
+            email=email,
+            password=password,
+            timezone_offset=timezone_offset,
+        )
         new_user.insert()
         # create user setting instance / database record
         user_settings = UserSettings(new_user.id)
