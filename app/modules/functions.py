@@ -1131,7 +1131,7 @@ def speech_synthesis(
         if not text:
             text = "Error synthesizing speech. Please try again later."
             record_message(name=name, number=number, message=text)
-            return send_text(text, number)            
+            return send_text(text, number)
         cost = tts_cost(len(text))
         logger.info(f"TTS COST: {len(text)} CHARACTERS")
         bt_cost = cost * USD2BT
