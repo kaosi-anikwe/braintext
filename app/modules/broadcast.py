@@ -10,7 +10,7 @@ from flask import render_template
 
 # local imports
 from app import create_app
-from app.models import Users, PremiumSubscription, AnonymousUsers
+from app.models import User, PremiumSubscription, AnonymousUser
 from app.modules.email_utility import send_email
 from app.modules.functions import get_last_message_time, user_dir
 from app.chatbot.functions import send_text
@@ -109,10 +109,10 @@ try:
     app = create_app()
     with app.app_context():
         people = []
-        anonymous_users = AnonymousUsers.query.filter(
-            AnonymousUsers.phone_no != None, AnonymousUsers.signup_stage != "completed"
+        anonymous_users = AnonymousUser.query.filter(
+            AnonymousUser.phone_no != None, AnonymousUser.signup_stage != "completed"
         ).all()
-        users = Users.query.filter(Users.phone_no != None).all()
+        users = User.query.filter(User.phone_no != None).all()
         [people.append(user) for user in users]
         [people.append(user) for user in anonymous_users]
         print(len(users), "users")

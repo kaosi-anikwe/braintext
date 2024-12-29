@@ -38,7 +38,7 @@ from botocore.exceptions import BotoCoreError, ClientError
 from .. import logger
 from ..modules.calculate import *
 from ..payment.routes import BANK_CODES
-from ..models import Voices, Users, AnonymousUsers, MessageRequests
+from ..models import Voice, User, AnonymousUser, MessageRequest
 from ..modules.messages import create_all, get_engine, Messages
 
 # chatgpt functions
@@ -374,7 +374,7 @@ def get_last_message_time(user_dir: str) -> datetime | None:
 
 
 def load_messages(
-    user: Users,
+    user: User,
     db_path: str,
     prompt: str = None,
     message_list: list = [],
@@ -389,7 +389,7 @@ def load_messages(
     message.insert()
     # load previous messages
     session = message.session()
-    if isinstance(user, Users):
+    if isinstance(user, User):
         context_limit = int(user.user_settings().context_messages) or 1
     else:
         context_limit = 10
@@ -417,7 +417,7 @@ def load_messages(
                     You operate on a currency know as BrainText Tokens (BT)
                     If asked about this currency, refer the user to the usage page ({request.host_url}usage)
                     or pricing page({request.host_url}pricing) based on the nature of the enquire to learn more.
-                    Always give {user.user_settings().response_type if isinstance(user, Users) else 'elaborated'} answers.
+                    Always give {user.user_settings().response_type if isinstance(user, User) else 'elaborated'} answers.
                     You are in a WhatsApp environment, use the appropriate formatting style.
                     Don't make assumptions about what values to plug into functions and never return an empty response.
                     The user's first name is {user.first_name if user.first_name else 'not known'},
@@ -537,7 +537,7 @@ def google_text_to_speech(text: str, voice_name: str) -> str | None:
 
         # Build the voice request, select the language code
         # Get voice code from db
-        voice_code = Voices.query.filter(Voices.name == voice_name).first().code
+        voice_code = Voice.query.filter(Voice.name == voice_name).first().code
 
         voice = texttospeech.VoiceSelectionParams(
             language_code="en-US",
@@ -591,7 +591,7 @@ def openai_text_to_speech(text: str, voice_name: str, speed: float = 1.0):
     """Performs TTS with the latest TTS model from OpenAI"""
     try:
         # Get voice code from db
-        voice_code = Voices.query.filter(Voices.name == voice_name).first().code
+        voice_code = Voice.query.filter(Voice.name == voice_name).first().code
         filename = f"{str(datetime.now().strftime('%d-%m-%Y_%H-%M-%S'))}.ogg"
         output = os.path.join(TEMP_FOLDER, filename)
         response = openai_client.audio.speech.create(
@@ -652,15 +652,15 @@ def split_text(text):
 
 def get_active_users(timeframe=24):
     from app import create_app
-    from app.models import AnonymousUsers
+    from app.models import AnonymousUser
 
     try:
         app = create_app()
         with app.app_context():
-            users = Users.query.filter(Users.phone_no != None).all()
-            anonymous_users = AnonymousUsers.query.filter(
-                AnonymousUsers.phone_no != None,
-                AnonymousUsers.signup_stage != "completed",
+            users = User.query.filter(User.phone_no != None).all()
+            anonymous_users = AnonymousUser.query.filter(
+                AnonymousUser.phone_no != None,
+                AnonymousUser.signup_stage != "completed",
             ).all()
             people = [*users, *anonymous_users]
             print(len(users), "users")
@@ -722,10 +722,10 @@ def encode_image(image_path):
 
 
 def debit_user(
-    user: Users,
+    user: User,
     name: str,
     bt_cost: float,
-    message_request: MessageRequests,
+    message_request: MessageRequest,
     reason: str = None,
 ):
     """Debit user and check/alert low balance"""
@@ -734,7 +734,7 @@ def debit_user(
     logger.info(
         f"DEDUCTED {bt_cost} FROM USER #{user.id} {reason}. BALANCE IS {user.balance}"
     )
-    if isinstance(user, Users):
+    if isinstance(user, User):
         if user.balance < user.user_settings().warn_low_balance:
             if not message_request.alert_low:
                 from ..chatbot.functions import (
@@ -839,11 +839,11 @@ def scrape_website(url, max_words=5000):
 
 def chatgpt_response(
     data: Dict[Any, Any],
-    user: Users,
+    user: User,
     messages: list,
     message: str,
     number: str,
-    message_request: MessageRequests,
+    message_request: MessageRequest,
     message_id: str = None,
 ) -> tuple | None:
     """Get response from ChatGPT"""
@@ -875,7 +875,7 @@ def chatgpt_response(
         tokens = [0, 0]
 
         # get enabled functions
-        if isinstance(user, Users):
+        if isinstance(user, User):
             enabled_functions = [
                 description
                 for function in user.user_settings().functions()
@@ -896,7 +896,7 @@ def chatgpt_response(
             functions=enabled_functions,
             function_call="auto",
             max_tokens=user.user_settings().max_response_length
-            if isinstance(user, Users)
+            if isinstance(user, User)
             else None,
         )
         # update tokens
@@ -994,7 +994,7 @@ def generate_image(
     tokens: int,
     message: str,
     prompt: str,
-    message_request: MessageRequests,
+    message_request: MessageRequest,
     **kwargs,
 ) -> str:
     """Genereates an image with the given prompt and returns the URL to the image."""
@@ -1008,7 +1008,7 @@ def generate_image(
     name = get_name(data)
     number = f"+{get_number(data)}"
     response = kwargs.get("response")
-    user = Users.query.filter(Users.phone_no == number).one_or_none()
+    user = User.query.filter(User.phone_no == number).one_or_none()
     image_confg = (
         user.user_settings().image_confg()
         if user
@@ -1016,8 +1016,8 @@ def generate_image(
     )
     image_type = image_confg.split(".")[0]
     if not user:
-        user = AnonymousUsers.query.filter(
-            AnonymousUsers.phone_no == number
+        user = AnonymousUser.query.filter(
+            AnonymousUser.phone_no == number
         ).one_or_none()
     logger.info(f"DALLE CONFG: {image_confg}")
     if "dalle2" in image_type:
@@ -1107,7 +1107,7 @@ def speech_synthesis(
     tokens: tuple,
     message: str,
     text: str,
-    message_request: MessageRequests,
+    message_request: MessageRequest,
     speed: float = 1.0,
 ):
     """Synthesize audio output and send to user."""
@@ -1121,11 +1121,11 @@ def speech_synthesis(
     # get user
     name = get_name(data)
     number = f"+{get_number(data)}"
-    user = Users.query.filter(Users.phone_no == number).one_or_none()
+    user = User.query.filter(User.phone_no == number).one_or_none()
     if not user:
         anonymous = True
-        user = AnonymousUsers.query.filter(
-            AnonymousUsers.phone_no == number
+        user = AnonymousUser.query.filter(
+            AnonymousUser.phone_no == number
         ).one_or_none()
     try:
         if not text:

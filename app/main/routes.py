@@ -23,7 +23,7 @@ from .. import logger, csrf
 from ..payment.functions import exchange_rates
 from ..modules.email_utility import send_email
 from ..chatbot.functions import send_text, send_otp_message, send_audio
-from ..models import OTP, get_otp, Users, Voices, MessageRequests, Transactions, FAQ
+from ..models import OTP, get_otp, User, Voice, MessageRequest, Transaction, FAQ
 
 load_dotenv()
 
@@ -50,12 +50,12 @@ def profile():
 
     # get voices
     voices = {}
-    male_voices = Voices.query.filter(
-        Voices.gender == "male", Voices.type == "openai"
+    male_voices = Voice.query.filter(
+        Voice.gender == "male", Voice.type == "openai"
     ).all()
     male_voices = [voice.name for voice in male_voices]
-    female_voices = Voices.query.filter(
-        Voices.gender == "female", Voices.type == "openai"
+    female_voices = Voice.query.filter(
+        Voice.gender == "female", Voice.type == "openai"
     ).all()
     female_voices = [voice.name for voice in female_voices]
     voices["male"] = male_voices
@@ -91,8 +91,8 @@ def send_otp():
     try:
         check_otp = OTP.query.filter(OTP.phone_no == phone_no).one_or_none()
         if check_otp:
-            check_user = Users.query.filter(
-                Users.phone_no == phone_no, Users.phone_verified == True
+            check_user = User.query.filter(
+                User.phone_no == phone_no, User.phone_verified == True
             ).one_or_none()
             if check_user:
                 # number already used by another user
@@ -200,7 +200,7 @@ def send_contact_email():
     subject = data["subject"]
     body = data["body"]
 
-    user = Users.query.filter(Users.email == email).one_or_none()
+    user = User.query.filter(User.email == email).one_or_none()
     if user:
         body = f"Name: {name} \nEmail: {email} \nUser ID: {user.uid} \n\n{body}"
     else:
@@ -236,10 +236,10 @@ def usage():
             data = request.get_json()
             month = int(data.get("month", datetime.utcnow().month))
             year = int(data.get("year", datetime.utcnow().year))
-            records = MessageRequests.query.filter(
-                extract("month", MessageRequests.created_at) == month,
-                extract("year", MessageRequests.created_at) == year,
-                MessageRequests.user_id == current_user.id,
+            records = MessageRequest.query.filter(
+                extract("month", MessageRequest.created_at) == month,
+                extract("year", MessageRequest.created_at) == year,
+                MessageRequest.user_id == current_user.id,
             ).all()
             usage = []
             usage_total = 0
@@ -259,11 +259,11 @@ def usage():
                         day_cost[key] = total
                     usage.append({label: day_cost})
                 else:
-                    usage.append({label: MessageRequests.empty()})
+                    usage.append({label: MessageRequest.empty()})
             # get user's range
             oldest = (
-                MessageRequests.query.filter(MessageRequests.user_id == current_user.id)
-                .order_by(MessageRequests.created_at.asc())
+                MessageRequest.query.filter(MessageRequest.user_id == current_user.id)
+                .order_by(MessageRequest.created_at.asc())
                 .first()
             )
             usage_range = (
@@ -294,10 +294,10 @@ def recharge_history():
         data = request.get_json()
         month = int(data.get("month", datetime.utcnow().month))
         year = int(data.get("year", datetime.utcnow().year))
-        records = Transactions.query.filter(
-            extract("year", Transactions.created_at) == year,
-            Transactions.user_id == current_user.id,
-            Transactions.status == "completed",
+        records = Transaction.query.filter(
+            extract("year", Transaction.created_at) == year,
+            Transaction.user_id == current_user.id,
+            Transaction.status == "completed",
         ).all()
         tx_records = [
             {"date": row.created_at.strftime("%d %b"), "amount": row.usd_value}

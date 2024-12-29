@@ -12,9 +12,9 @@ from .functions import *
 from ..modules.functions2 import record_message
 from ..modules.functions import *
 from ..models import (
-    Users,
-    AnonymousUsers,
-    MessageRequests,
+    User,
+    AnonymousUser,
+    MessageRequest,
 )
 
 
@@ -80,7 +80,7 @@ def webhook():
                     except KeyError:
                         message = ""
                     # try to get user
-                    user = Users.query.filter(Users.phone_no == number).one_or_none()
+                    user = User.query.filter(User.phone_no == number).one_or_none()
                     if user:  # user account exists
                         if user.phone_verified:
                             if user.email_verified:
@@ -120,7 +120,7 @@ def webhook():
                                     logger.info(
                                         f"DEDUCTED {BASE_COST} (BASE COST) FROM USER BALANCE IS {user.balance}"
                                     )
-                                message_request = MessageRequests(user.id)
+                                message_request = MessageRequest(user.id)
                                 message_request.interactive = (
                                     True if is_interative_reply(data) else False
                                 )
@@ -178,11 +178,11 @@ def webhook():
                             ) if message_type == "text" else send_text(text, number)
                     else:  # no account found
                         # Anonymous user
-                        user = AnonymousUsers.query.filter(
-                            AnonymousUsers.phone_no == number
+                        user = AnonymousUser.query.filter(
+                            AnonymousUser.phone_no == number
                         ).one_or_none()
                         if not user:
-                            user = AnonymousUsers(phone_no=number)
+                            user = AnonymousUser(phone_no=number)
                             user.insert()
 
                             # first time message. send tos and pp
@@ -222,7 +222,7 @@ def webhook():
                             logger.info(
                                 f"DEDUCTED {BASE_COST} (BASE COST) FROM USER BALANCE IS {user.balance}"
                             )
-                            message_request = MessageRequests(user.id, True)
+                            message_request = MessageRequest(user.id, True)
                             message_request.insert()
                             if message_type == "image":
                                 # Image editing/variation

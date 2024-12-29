@@ -21,7 +21,7 @@ from flask import (
 
 # local imports
 from app import logger
-from app.models import Users, Transactions
+from app.models import User, Transaction
 from flask_login import login_required, current_user
 from app.payment.functions import exchange_rates, generate_tx_ref
 
@@ -124,8 +124,8 @@ def payment_callback():
         tx_ref = payload.get("tx_ref")
         flw_tx_id = payload.get("transaction_id")
 
-        tx = Transactions.query.filter(
-            Transactions.tx_ref == tx_ref,
+        tx = Transaction.query.filter(
+            Transaction.tx_ref == tx_ref,
         ).one_or_none()
         if not tx:  # new transaction
             # get transaction status
@@ -148,8 +148,8 @@ def payment_callback():
                         currency = data["data"]["currency"]
                         user_id = data["data"]["meta"]["user_id"]
                         bt_amount = float(data["data"]["meta"]["bt_amount"])
-                        user = Users.query.filter(Users.uid == user_id).one_or_none()
-                        tx = Transactions(
+                        user = User.query.filter(User.uid == user_id).one_or_none()
+                        tx = Transaction(
                             message="",
                             mode="web",
                             amount=amount,
@@ -250,8 +250,8 @@ def payment_webhook():
             tx_ref = payload["data"]["tx_ref"]
             flw_tx_id = payload["data"]["id"]
 
-            tx = Transactions.query.filter(
-                Transactions.tx_ref == tx_ref,
+            tx = Transaction.query.filter(
+                Transaction.tx_ref == tx_ref,
             ).one_or_none()
             if not tx:  # new transaction
                 # get transaction status
@@ -274,11 +274,11 @@ def payment_webhook():
                             currency = data["data"]["currency"]
                             user_id = data["data"]["meta"]["user_id"]
                             bt_amount = float(data["data"]["meta"]["bt_amount"])
-                            user = Users.query.filter(
-                                Users.uid == user_id
+                            user = User.query.filter(
+                                User.uid == user_id
                             ).one_or_none()
 
-                            tx = Transactions(
+                            tx = Transaction(
                                 message="",
                                 mode="web",
                                 amount=amount,

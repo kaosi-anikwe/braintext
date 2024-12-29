@@ -69,10 +69,10 @@ class DatabaseHelperMixin(object):
 
 @login_manager.user_loader
 def load_user(id):
-    return Users.query.get(int(id))
+    return User.query.get(int(id))
 
 
-class Users(db.Model, TimestampMixin, UserMixin, DatabaseHelperMixin):
+class User(db.Model, TimestampMixin, UserMixin, DatabaseHelperMixin):
     __tablename__ = "user"
 
     id = db.Column(db.Integer, primary_key=True)
@@ -129,11 +129,11 @@ class Users(db.Model, TimestampMixin, UserMixin, DatabaseHelperMixin):
             )["reset_password"]
         except:
             return None
-        return Users.query.get(id)
+        return User.query.get(id)
 
     def user_settings(self):
-        settings: UserSettings
-        settings = UserSettings.query.filter(UserSettings.user_id == self.id).one()
+        settings: UserSetting
+        settings = UserSetting.query.filter(UserSetting.user_id == self.id).one()
         return settings
 
     # get local timezone
@@ -156,7 +156,7 @@ class Users(db.Model, TimestampMixin, UserMixin, DatabaseHelperMixin):
             return datetime.utcnow()
 
 
-class UserSettings(db.Model, TimestampMixin, DatabaseHelperMixin):
+class UserSetting(db.Model, TimestampMixin, DatabaseHelperMixin):
     __tablename__ = "user_setting"
 
     id = db.Column(db.Integer, primary_key=True)
@@ -203,7 +203,7 @@ class UserSettings(db.Model, TimestampMixin, DatabaseHelperMixin):
         ]
 
 
-class AnonymousUsers(db.Model, TimestampMixin, DatabaseHelperMixin):
+class AnonymousUser(db.Model, TimestampMixin, DatabaseHelperMixin):
     __tablename__ = "anonymous_user"
 
     id = db.Column(db.Integer, primary_key=True)
@@ -245,7 +245,7 @@ class AnonymousUsers(db.Model, TimestampMixin, DatabaseHelperMixin):
         return datetime.now(self.timezone())
 
 
-class MessageRequests(db.Model, TimestampMixin, DatabaseHelperMixin):
+class MessageRequest(db.Model, TimestampMixin, DatabaseHelperMixin):
     __tablename__ = "usage"
 
     id = db.Column(db.Integer, primary_key=True)
@@ -304,7 +304,7 @@ class MessageRequests(db.Model, TimestampMixin, DatabaseHelperMixin):
         }
 
 
-class Transactions(db.Model, TimestampMixin, DatabaseHelperMixin):
+class Transaction(db.Model, TimestampMixin, DatabaseHelperMixin):
     __tablename__ = "transaction"
 
     id = db.Column(db.Integer, primary_key=True)
@@ -365,7 +365,7 @@ class OTP(db.Model, TimestampMixin, DatabaseHelperMixin):
         self.verified = False
 
 
-class Voices(db.Model, TimestampMixin, DatabaseHelperMixin):
+class Voice(db.Model, TimestampMixin, DatabaseHelperMixin):
     __tablename__ = "voice"
 
     id = db.Column(db.Integer, primary_key=True)
