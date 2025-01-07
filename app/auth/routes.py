@@ -10,7 +10,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from app import db, csrf, logger
 from app.modules.verification import confirm_token
 from app.modules.functions import send_text
-from app.models import Users, UserSettings
+from app.models import User, UserSetting
 from app.modules.email_utility import (
     send_registration_email,
     send_forgot_password_email,
@@ -34,7 +34,7 @@ def login():
         email = request.form.get("email")
         password = request.form.get("password")
 
-        user = Users.query.filter(Users.email == email).first()
+        user = User.query.filter(User.email == email).first()
         if not user or not user.check_password(password):
             flash("Invalid username or password.", "danger")
             return redirect(url_for("auth.login"))
@@ -66,7 +66,7 @@ def register():
         password = request.form.get("password").strip()
         get_browser_time = request.form.get("time").split()[:5]
 
-        check = Users.query.filter(Users.email == email).first()
+        check = User.query.filter(User.email == email).first()
         if check:
             flash(
                 "An account already exists with this email. Please use a different email to sign up",
@@ -82,7 +82,7 @@ def register():
         timezone_offset = round((browser_time - datetime.utcnow()).seconds, -2)
 
         # create user class instance / database record
-        new_user = Users(
+        new_user = User(
             first_name=first_name,
             last_name=last_name,
             email=email,
@@ -91,7 +91,7 @@ def register():
         )
         new_user.insert()
         # create user setting instance / database record
-        user_settings = UserSettings(new_user.id)
+        user_settings = UserSetting(new_user.id)
         user_settings.insert()
 
         send_registration_email(new_user)
@@ -154,8 +154,8 @@ def edit_settings():
     voice_respnse = request.form.get("voice_response")
 
     try:
-        user_settings = UserSettings.query.filter(
-            UserSettings.user_id == current_user.id
+        user_settings = UserSetting.query.filter(
+            UserSetting.user_id == current_user.id
         ).one()
         user_settings.notify_on_profile_change = (
             True if notify_on_profile_change else False
@@ -181,7 +181,7 @@ def confirm_email(token):
     try:
         email = confirm_token(token)
         if email:
-            user = Users.query.filter(Users.email == email).one()
+            user = User.query.filter(User.email == email).one()
             if user:
                 user.email_verified = True
                 user.update()
@@ -226,7 +226,7 @@ def change_password(token):
 @auth.post("/forgot-password")
 def forgot_password():
     email = request.form.get("email")
-    user = Users.query.filter(Users.email == email).one_or_none()
+    user = User.query.filter(User.email == email).one_or_none()
     if user:
         try:
             send = send_forgot_password_email(user)
@@ -254,7 +254,7 @@ def confirm_new_password():
         email = request.form.get("email")
         password = request.form.get("password")
 
-        user = Users.query.filter(Users.email == email).one_or_none()
+        user = User.query.filter(User.email == email).one_or_none()
         if user:
             user.password_hash = user.get_password_hash(password)
             user.update()

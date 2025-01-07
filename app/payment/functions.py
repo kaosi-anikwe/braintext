@@ -12,7 +12,7 @@ from dotenv import load_dotenv
 # local imports
 from app import logger
 from app.modules.messages import Messages
-from app.models import Users, Transactions
+from app.models import User, Transaction
 
 load_dotenv()
 
@@ -39,7 +39,7 @@ def get_account_balance(data: Dict[Any, Any], **kwargs):
     try:
         try:
             # get user
-            user = Users.query.filter(Users.phone_no == number).one_or_none()
+            user = User.query.filter(User.phone_no == number).one_or_none()
             if not user:
                 text = "Access to this feature requires an account. Please create an account to proceed."
                 return send_text(text, number)
@@ -82,7 +82,7 @@ def recharge_account(data, **kwargs):
     tokens = kwargs.get("tokens")
     message = kwargs.get("message")
     try:
-        user = Users.query.filter(Users.phone_no == number).one_or_none()
+        user = User.query.filter(User.phone_no == number).one_or_none()
         if not user:
             text = "Access to this feature requires an account. Please create an account to proceed."
             return send_text(text, number)

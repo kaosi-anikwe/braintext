@@ -13,10 +13,10 @@ from PIL import Image
 
 # local imports
 from ..models import (
-    Users,
-    AnonymousUsers,
-    UserSettings,
-    MessageRequests,
+    User,
+    AnonymousUser,
+    UserSetting,
+    MessageRequest,
 )
 from .. import logger
 from ..modules.functions import *
@@ -625,11 +625,11 @@ def meta_split_and_respond(
 
 
 def image_recognition(
-    user: Users,
+    user: User,
     data: Dict[Any, Any],
     prompt: str,
     message_list: list,
-    message_request: MessageRequests,
+    message_request: MessageRequest,
 ):
     """Perform image recognition with OpenAI's GPT-4V"""
     name = get_name(data)
@@ -703,8 +703,8 @@ def image_recognition(
 
 def meta_chat_response(
     data: Dict[Any, Any],
-    user: Users,
-    message_request: MessageRequests,
+    user: User,
+    message_request: MessageRequest,
     message: str = None,
     anonymous: bool = None,
 ):
@@ -818,9 +818,9 @@ def meta_chat_response(
 
 
 def meta_audio_response(
-    user: Users,
+    user: User,
     data: Dict[Any, Any],
-    message_request: MessageRequests,
+    message_request: MessageRequest,
     anonymous: bool = False,
 ):
     """WhatsApp audio response with Meta functions."""
@@ -964,16 +964,16 @@ def meta_audio_response(
 
 
 def meta_image_response(
-    user: Users,
+    user: User,
     data: Dict[Any, Any],
-    message_request: MessageRequests,
+    message_request: MessageRequest,
     anonymous: bool = False,
 ):
     """WhatsApp image response wtih Meta functions."""
     name = get_name(data)
     number = f"+{get_number(data)}"
     run = False
-    if isinstance(user, Users):
+    if isinstance(user, User):
         if user.user_settings().image_recognition:
             run = True
     else:
@@ -1033,8 +1033,8 @@ def meta_interactive_response(
     response = get_interactive_response(data)
     logger.info(response)
     number = f"+{get_number(data)}"
-    user: Users
-    user = Users.query.filter(Users.phone_no == number).one_or_none()
+    user: User
+    user = User.query.filter(User.phone_no == number).one_or_none()
     if not user:
         text = "Access to this feature requires an account. Please create an account to proceed."
         return send_text(text, number)
@@ -1589,7 +1589,7 @@ def meta_interactive_response(
 
 
 def whatsapp_signup(
-    data: Dict[Any, Any], user: AnonymousUsers, interactive_reply: bool = False
+    data: Dict[Any, Any], user: AnonymousUser, interactive_reply: bool = False
 ):
     message_id = get_message_id(data)
     number = f"+{get_number(data)}"
@@ -1663,7 +1663,7 @@ def whatsapp_signup(
                     message = "Please enter a valid email address."
                     send_text(message, number)
                 else:
-                    check = Users.query.filter(Users.email == email).first()
+                    check = User.query.filter(User.email == email).first()
                     if check:  # email already used
                         message = "An account already exists with this email. Please use a different email address to continue."
                         send_text(message, number)
@@ -1673,7 +1673,7 @@ def whatsapp_signup(
                         user.update()
                         # setup account
                         password = number
-                        new_user = Users(
+                        new_user = User(
                             first_name=user.first_name,
                             last_name=user.last_name,
                             email=user.email,
@@ -1687,7 +1687,7 @@ def whatsapp_signup(
                         new_user.balance = user.balance
                         new_user.insert()
                         # create user setting instance
-                        user_settings = UserSettings(new_user.id)
+                        user_settings = UserSetting(new_user.id)
                         user_settings.insert()
 
                         send_registration_email(new_user)
