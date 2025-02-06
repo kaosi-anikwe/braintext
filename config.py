@@ -27,5 +27,5 @@ class Config(object):
     SENDER_EMAIL = os.environ.get("SENDER_EMAIL")
     PASSWORD = os.environ.get("PASSWORD")
     # app
-    HOSTNAME = os.environ.get("HOSTNAME")
+    SERVER_NAME = os.environ.get("HOSTNAME")
     PREFERRED_URL_SCHEME = "https"
