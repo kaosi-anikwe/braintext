@@ -8,11 +8,12 @@ from dotenv import load_dotenv
 
 # local imports
 from app import logger
+from config import Config
 from ..models import User
 
 load_dotenv()
 
-FILES = os.getenv("FILES")
+FILES = Config.FILES
 
 
 def account_settings(data: Dict[Any, Any], **kwargs):

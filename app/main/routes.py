@@ -19,6 +19,7 @@ from flask import (
 )
 
 # local imports
+from config import Config
 from .. import logger, csrf
 from ..payment.functions import exchange_rates
 from ..modules.email_utility import send_email
@@ -27,7 +28,7 @@ from ..models import OTP, get_otp, User, Voice, MessageRequest, Transaction, FAQ
 
 load_dotenv()
 
-TEMP_FOLDER = os.getenv("TEMP_FOLDER")
+TEMP_FOLDER = Config.TEMP_FOLDER
 
 main = Blueprint("main", __name__)
 

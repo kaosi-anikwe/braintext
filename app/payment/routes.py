@@ -8,6 +8,7 @@ from datetime import datetime
 # installed imports
 import requests
 from dotenv import load_dotenv
+from flask_login import login_required, current_user
 from flask import (
     Blueprint,
     request,
@@ -20,9 +21,9 @@ from flask import (
 )
 
 # local imports
+from config import Config
 from app import logger
 from app.models import User, Transaction
-from flask_login import login_required, current_user
 from app.payment.functions import exchange_rates, generate_tx_ref
 
 
@@ -34,8 +35,7 @@ load_dotenv()
 USD2BT = int(os.getenv("USD2BT"))
 RAVE_PUB_KEY = os.getenv("RAVE_PUBLIC_KEY")
 RAVE_SEC_KEY = os.getenv("RAVE_SECRET_KEY")
-LOG_DIR = os.getenv("LOG_DIR")
-WEBHOOK_LOG = os.path.join(LOG_DIR, "webhooks")
+WEBHOOK_LOG = Config.WEBHOOK_LOG
 BANK_CODES = {
     "Access Bank": "044",
     "First Bank of Nigeria": "011",

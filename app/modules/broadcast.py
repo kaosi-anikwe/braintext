@@ -6,18 +6,16 @@ from datetime import datetime, timedelta
 
 # installed imports
 from dotenv import load_dotenv
-from flask import render_template
 
 # local imports
+from config import Config
 from app import create_app
-from app.models import User, PremiumSubscription, AnonymousUser
-from app.modules.email_utility import send_email
+from app.models import User, AnonymousUser
 from app.modules.functions import get_last_message_time, user_dir
-from app.chatbot.functions import send_text
 
 load_dotenv()
 
-TEMP_FOLDER = os.getenv("TEMP_FOLDER")
+TEMP_FOLDER = Config.TEMP_FOLDER
 # try:
 #     app = create_app()
 #     with app.app_context():
