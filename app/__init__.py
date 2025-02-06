@@ -1,22 +1,30 @@
+# python imports
 import os
 import logging
+from logging.handlers import RotatingFileHandler
+
+# installed imports
 from flask import Flask
+from dotenv import load_dotenv
+from flask_migrate import Migrate
 from flask_wtf import CSRFProtect
 from flask_login import LoginManager
-from config import Config
-from dotenv import load_dotenv
 from flask_sqlalchemy import SQLAlchemy
-from flask_migrate import Migrate
+
+# local imports
+from config import Config
 
 load_dotenv()
 
-chatlog_dir = os.getenv("CHATBOT_LOG")
-log_dir = os.getenv("LOG_DIR")
-tmp_folder = os.getenv("TEMP_FOLDER")
+base_dir = os.getenv("BASE_DIR")
+log_dir = os.path.join(base_dir, "logs")
+tmp_folder = os.path.join(base_dir, "tmp")
+chatlog_dir = os.path.join(log_dir, "chatbot")
+weblog_dir = os.path.join(log_dir, "website")
 
 # create folder if not exists
 os.makedirs(chatlog_dir, exist_ok=True)
-os.makedirs(log_dir, exist_ok=True)
+os.makedirs(weblog_dir, exist_ok=True)
 os.makedirs(tmp_folder, exist_ok=True)
 
 db = SQLAlchemy()
@@ -25,13 +33,25 @@ login_manager.login_view = "auth.login"
 csrf = CSRFProtect()
 migrate = Migrate()
 
-# configure logger
-logging.basicConfig(
-    filename=os.path.join(log_dir, "website", "debug.log"),
-    level=logging.INFO,
-    format="%(levelname)s - %(name)s - %(message)s",
-)
+# Configure logger
+log_filename = "run.log"
+log_max_size = 1 * 1024 * 1024  # 1 MB
+
+# Create a logger
 logger = logging.getLogger("braintext")
+logger.setLevel(logging.INFO)
+
+# Create a file handler with log rotation
+handler = RotatingFileHandler(
+    os.path.join(weblog_dir, log_filename), maxBytes=log_max_size, backupCount=5
+)
+
+# Create a formatter
+formatter = logging.Formatter("%(asctime)s [%(levelname)s] - %(message)s")
+handler.setFormatter(formatter)
+
+# Add the handler to the logger
+logger.addHandler(handler)
 
 
 def create_app(config=Config):

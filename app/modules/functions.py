@@ -28,14 +28,15 @@ from pydub import AudioSegment
 from datetime import timedelta
 from dotenv import load_dotenv
 from flask import url_for, request
-from google.cloud import texttospeech, storage
 from google.oauth2 import service_account
+from google.cloud import texttospeech, storage
 from google.cloud.speech_v2 import SpeechClient
 from google.cloud.speech_v2.types import cloud_speech
 from botocore.exceptions import BotoCoreError, ClientError
 
 # local imports
 from .. import logger
+from config import Config
 from ..modules.calculate import *
 from ..payment.routes import BANK_CODES
 from ..models import Voice, User, AnonymousUser, MessageRequest
@@ -49,8 +50,8 @@ from ..payment.functions import get_account_balance, recharge_account
 load_dotenv()
 
 USD2BT = int(os.getenv("USD2BT"))
-LOG_DIR = os.getenv("CHATBOT_LOG")
-TEMP_FOLDER = os.getenv("TEMP_FOLDER")
+CHATLOG_DIR = Config.CHATLOG_DIR
+TEMP_FOLDER = Config.TEMP_FOLDER
 WHATSAPP_NUMBER = os.getenv("WHATSAPP_NUMBER")
 WHATSAPP_TEMPLATE_NAMESPACE = os.getenv("WHATSAPP_TEMPLATE_NAMESPACE")
 WHATSAPP_TEMPLATE_NAME = os.getenv("WHATSAPP_TEMPLATE_NAME")
@@ -184,7 +185,7 @@ def log_location(name: str, number: str) -> str:
     """
     first_char = str(name[0]).upper()
     if first_char.isalpha():  # first character is a letter
-        directory = f"{LOG_DIR}/{first_char}{first_char}{first_char}"
+        directory = f"{CHATLOG_DIR}/{first_char}{first_char}{first_char}"
         if not os.path.exists(directory):
             os.mkdir(directory)
         user_directory = f"{directory}/{name.replace(' ', '_').strip()}_{number}"
@@ -199,7 +200,7 @@ def log_location(name: str, number: str) -> str:
         return day_log
 
     else:  # first character is not a letter
-        directory = f"{LOG_DIR}/###"
+        directory = f"{CHATLOG_DIR}/###"
         if not os.path.exists(directory):
             os.mkdir(directory)
         user_directory = f"{directory}/{name.replace(' ', '_').strip()}_{number}"
@@ -281,13 +282,13 @@ def user_dir(number: str, name: str = None) -> str:
             first_char = str(name[0]).upper()
             if first_char.isalpha():
                 log_path = os.path.join(
-                    LOG_DIR,
+                    CHATLOG_DIR,
                     f"{first_char}{first_char}{first_char}",
                     f"{name.replace(' ', '_').strip()}_{number}",
                 )
             else:
                 log_path = os.path.join(
-                    LOG_DIR,
+                    CHATLOG_DIR,
                     "###",
                     f"{name.replace(' ', '_').strip()}_{number}",
                 )
@@ -297,7 +298,7 @@ def user_dir(number: str, name: str = None) -> str:
             # get newest folder in log dir with number
             log_path = None
             newest_timestamp = 0
-            for root, dirs, _ in os.walk(LOG_DIR):
+            for root, dirs, _ in os.walk(CHATLOG_DIR):
                 for dir_name in dirs:
                     if number in dir_name:
                         dir_path = os.path.join(root, dir_name)

@@ -7,9 +7,9 @@ from datetime import timedelta
 from typing import Any, Dict, Union, Literal
 
 # installed imports
-from flask import url_for, request
-from dotenv import load_dotenv
 from PIL import Image
+from dotenv import load_dotenv
+from flask import url_for, request
 
 # local imports
 from ..models import (
@@ -19,6 +19,7 @@ from ..models import (
     MessageRequest,
 )
 from .. import logger
+from config import Config
 from ..modules.functions import *
 from ..modules.calculate import *
 from ..modules.functions2 import record_message
@@ -28,8 +29,8 @@ from ..modules.verification import generate_confirmation_token
 load_dotenv()
 
 USD2BT = int(os.getenv("USD2BT"))
-FILES = os.getenv("FILES")
-TEMP_FOLDER = os.getenv("TEMP_FOLDER")
+FILES = Config.FILES
+TEMP_FOLDER = Config.TEMP_FOLDER
 TOKEN = os.getenv("META_VERIFY_TOKEN")
 PHONE_NUMBER_ID = os.getenv("PHONE_NUMBER_ID")
 BASE_URL = "https://graph.facebook.com/v17.0"

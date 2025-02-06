@@ -4,17 +4,18 @@ import os
 import time
 import subprocess
 
+BASE_DIR = os.getenv("BASE_DIR")
 
 def cleanup():
     # print("Cleaning up...")
     files = os.listdir("tmp")
     for tmp_file in files:
         print(
-            f"find /home/braintext/website/tmp/{tmp_file} -mmin +1 -exec rm -rf {{}} +"
+            f"find {BASE_DIR}/tmp/{tmp_file} -mmin +1 -exec rm -rf {{}} +"
         )
-        if os.path.exists(f"/home/braintext/website/tmp/{tmp_file}"):
+        if os.path.exists(f"{BASE_DIR}/tmp/{tmp_file}"):
             subprocess.run(
-                f"find /home/braintext/website/tmp/{tmp_file} -mmin +2 -exec rm -rf {{}} +",
+                f"find {BASE_DIR}/tmp/{tmp_file} -mmin +2 -exec rm -rf {{}} +",
                 shell=True,
             )
 
