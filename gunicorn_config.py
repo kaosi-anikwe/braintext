@@ -4,7 +4,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # gunicorn config
-bind = f"{os.getenv('HOSTNAME')}:{os.getenv('PORT')}"
+bind = "unix:app.sock"
+workers = 2
 reload = True
 # track changes to static files and templates
 static_dir = os.path.join(os.getenv("BASE_DIR"), "app", "static")
