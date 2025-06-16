@@ -1,6 +1,7 @@
 # braintext
 
 ChatGPT WhatsApp chatbot
+A Python-based chatbot that connects ChatGPT to WhatsApp, enabling intelligent, conversational AI interactions directly within your WhatsApp chats. Braintext is designed for easy setup, secure API integration, and persistent chat history, making it ideal for personal productivity, customer support, or group conversations.
 
 ## Features
 
